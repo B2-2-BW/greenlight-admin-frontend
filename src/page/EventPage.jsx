@@ -1,20 +1,20 @@
 import EventListTable from '../component/EventListTable.jsx';
-import EventDetailModal from '../component/EventDetailModal.jsx';
-import { useDisclosure } from '@heroui/react';
+import { useNavigate } from 'react-router';
+import EventListTopContent from '../component/EventListTopContent.jsx';
 
 export default function EventPage() {
-  const {
-    isOpen: isEventDetailOpen,
-    onOpen: onEventDetailOpen,
-    onOpenChange: onEventDetailOpenChange,
-  } = useDisclosure();
+  const navigate = useNavigate();
+
+  const onPress = (eventName) => {
+    navigate(`/events/${eventName}`);
+  };
   return (
     <>
-      <EventListTable onOpen={onEventDetailOpen} />
-      <EventDetailModal
-        isOpen={isEventDetailOpen}
-        onOpenChange={onEventDetailOpenChange}
-      />
+      <div className="p-4 max-w-[1080px]">
+        <div className="font-bold text-3xl mt-8 mb-4">이벤트 목록</div>
+        <EventListTopContent /> {/* 이거는 기능 동작 필요 없어서 일단 무시 */}
+        <EventListTable onPress={onPress} />
+      </div>
     </>
   );
 }

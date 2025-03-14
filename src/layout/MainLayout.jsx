@@ -4,37 +4,51 @@ import { Outlet, useNavigate } from 'react-router';
 import { useState } from 'react';
 import ShoppingBagSvg from '../icon/ShoppingBagSvg.jsx';
 import PeopleSvg from '../icon/PeopleSvg.jsx';
+import { ExternalLinkIcon } from '../icon/Icons.jsx';
+import { GRAFANA_URL, JENKINS_URL } from '../client/config.js';
 
 const menuLists = [
   [
     {
       title: '이벤트 관리',
-      icon: <ShoppingBagSvg />,
+      prependIcon: <ShoppingBagSvg />,
       path: '/events',
       menuId: 1,
     },
   ],
   [
-    { title: '메뉴 2', icon: <ShoppingBagSvg />, path: '#', menuId: 2 },
-    { title: '메뉴 3', icon: <ShoppingBagSvg />, path: '#', menuId: 3 },
-    { title: '메뉴 4', icon: <PeopleSvg />, path: '#', menuId: 4 },
-    { title: '메뉴 5', icon: <PeopleSvg />, path: '#', menuId: 5 },
-    { title: '메뉴 6', icon: <PeopleSvg />, path: '#', menuId: 6 },
+    { title: '메뉴 2', prependIcon: <ShoppingBagSvg />, path: '#', menuId: 2 },
+    { title: '메뉴 3', prependIcon: <PeopleSvg />, path: '#', menuId: 4 },
+    { title: '메뉴 4', prependIcon: <PeopleSvg />, path: '#', menuId: 5 },
+    { title: '메뉴 5', prependIcon: <PeopleSvg />, path: '#', menuId: 6 },
   ],
 ];
-
+const externalMenuList = [
+  {
+    title: 'Grafana',
+    path: GRAFANA_URL,
+    prependIcon: <ExternalLinkIcon size={20} color="#111827" />,
+    menuId: 7,
+  },
+  {
+    title: 'Jenkins',
+    path: JENKINS_URL,
+    prependIcon: <ExternalLinkIcon size={20} color="#111827" />,
+    menuId: 8,
+  },
+];
 export default function MainLayout() {
   const [currentMenuId, setCurrentMenuId] = useState(null);
   // if (currentMenu == null) do something
   const handleMenuClick = (menu) => {
-    // const item = navItems.find((it) => it.key === key);
-    // if (item.path) {
-    //   navigate(item.path);
-    // }
-    // if (item.label === '만들기') {
-    //   openCreatePost();
-    // }
-    console.log(menu);
+    if (!menu.path && !menu.link) return;
+
+    if (menu.path) {
+      navigate(menu.path);
+    }
+    if (menu.link) {
+      window.open(menu.link);
+    }
   };
   const navigate = useNavigate();
   return (
@@ -43,9 +57,10 @@ export default function MainLayout() {
         menuLists={menuLists}
         currentMenuId={currentMenuId}
         onClick={handleMenuClick}
+        externalMenuList={externalMenuList}
       />
       <NavBar />
-      <div className="ml-[256px] overflow-auto">
+      <div className="ml-52 overflow-none">
         <Outlet />
       </div>
     </div>

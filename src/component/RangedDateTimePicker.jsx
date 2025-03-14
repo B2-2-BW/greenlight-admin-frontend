@@ -1,18 +1,18 @@
 import { DateRangePicker } from '@heroui/react';
-import { parseZonedDateTime } from '@internationalized/date';
 
-export default function RangedDateTimePicker() {
+export default function RangedDateTimePicker({ value, onChange }) {
   return (
-    <div className="w-full max-w-xl flex flex-row gap-4">
-      <DateRangePicker
-        hideTimeZone
-        defaultValue={{
-          start: parseZonedDateTime('2024-04-01T00:45[Asia/Seoul]'),
-          end: parseZonedDateTime('2024-04-08T11:15[Asia/Seoul]'),
-        }}
-        label="Event duration"
-        visibleMonths={2}
-      />
-    </div>
+    <DateRangePicker
+      isRequired
+      hideTimeZone
+      granularity="minute"
+      label="이벤트 기간"
+      labelPlacement="outside"
+      visibleMonths={2}
+      description="대기열에 입장할 수 있는 시작시간과 종료시간을 입력해주세요."
+      hourCycle={24}
+      value={value}
+      onChange={onChange}
+    />
   );
 }

@@ -1,13 +1,13 @@
-export default function SideBarMenuListItem({ title, append, onClick }) {
+import { Link } from 'react-router';
+
+export default function SideBarMenuListItem({ title, append, prepend, onClick, path }) {
   return (
     <li onClick={onClick}>
-      <a
-        href="#"
-        className="flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group"
-      >
-        {append != null && append}
+      <Link to={path} className="flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group">
+        {prepend != null && prepend}
         <span className="ms-3">{title}</span>
-      </a>
+        {append != null && append}
+      </Link>
     </li>
   );
 }
