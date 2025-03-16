@@ -2,9 +2,10 @@ import { addToast, Button, DateRangePicker, Form, Input, NumberInput, Skeleton }
 import EventDetailSectionTitle from './EventDetailSectionTitle.jsx';
 import { useEffect, useState } from 'react';
 import { parseDateTime } from '@internationalized/date';
-import { useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import EventStatusChip from './EventStatusChip.jsx';
 import ArrowBackSvg from '../icon/ArrowBackSvg.jsx';
+import { CoreCacheReload, getEventInfo, updateEventInfo } from '../api/event/index.js';
 
 export default function EventDetailForm({ onPressBack }) {
   const location = useLocation();
@@ -20,20 +21,8 @@ export default function EventDetailForm({ onPressBack }) {
   const [editQueueBackpressure, setEditQueueBackpressure] = useState(0);
   const [editEventRange, setEditEventRange] = useState(null);
 
-  const eventFakeData = {
-    eventSeq: 2,
-    eventName: 'test',
-    eventDescription: '테스트 이벤트',
-    eventType: '타입',
-    eventUrl: 'https://www.thehyundai.com/front/pda/itemPtc.thd?slitmCd=40A1901936',
-    queueBackpressure: 5,
-    eventStartTime: '2025-03-13T11:50:30.143',
-    eventEndTime: '2025-03-14T02:48:58.143',
-    createdBy: 'SYSTEM',
-    createdAt: '2025-02-27T20:14:00.418071',
-    updatedBy: 'SYSTEM',
-    updatedAt: '2025-03-13T11:49:48.464422',
-  };
+  const eventName = location.pathname.split('/').pop();
+  const navigate = useNavigate();
 
   const clearForm = () => {
     setEditEventName('');
@@ -46,50 +35,72 @@ export default function EventDetailForm({ onPressBack }) {
 
   // Location 이동 시 실행
   useEffect(() => {
-    setIsEventLoading(true);
-    clearForm();
-    setTimeout(() => {
-      setEvent(eventFakeData);
-      // 가짜 데이터 로딩
-      setEditEventName(eventFakeData.eventName);
-      setEditEventDescription(eventFakeData.eventDescription);
-      setEditEventType(eventFakeData.eventType);
-      setEditEventUrl(eventFakeData.eventUrl);
-      setEditQueueBackpressure(eventFakeData.queueBackpressure);
-      setEditEventRange({
-        start: parseDateTime(eventFakeData.eventStartTime),
-        end: parseDateTime(eventFakeData.eventEndTime),
-      });
-      setIsEventLoading(false);
-    }, 1000);
+    const fetchEvent = async () => {
+      setIsEventLoading(true);
+      clearForm();
+  
+      try {
+        const data = await getEventInfo(eventName);
+        setEvent(data);
+  
+        setEditEventName(data.eventName || '');
+        setEditEventDescription(data.eventDescription || '');
+        setEditEventType(data.eventType || '');
+        setEditEventUrl(data.eventUrl || '');
+        setEditQueueBackpressure(data.queueBackpressure ?? 0);
+        setEditEventRange({
+          start: parseDateTime(data.eventStartTime),
+          end: parseDateTime(data.eventEndTime),
+        });
+  
+      } catch (error) {
+        console.error('Error fetching event:', error);
+
+        if (error.status === 404) {
+          navigate('/404');
+        }
+      } finally {
+        setIsEventLoading(false);
+      }
+    };
+  
+    fetchEvent();
   }, [location]);
 
-  // 이벤트 저장 시 사용
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitLoading(true);
-    let data = Object.fromEntries(new FormData(e.currentTarget));
-    setTimeout(() => {
-      console.log(`${JSON.stringify(data)}`);
-      // JSON 통신
-      if (true) {
-        // 성공 시
-        addToast({
-          title: '이벤트 상세',
-          description: '성공적으로 저장했습니다.',
-          color: 'success',
-        });
-      } else {
-        // 실패 시
-        addToast({
-          title: '이벤트 상세',
-          description: '저장에 실패했습니다.',
-          color: 'danger',
-        });
-      }
+    
+    const updatedData = {
+      eventDescription: editEventDescription,
+      eventType: editEventType,
+      eventUrl: editEventUrl,
+      queueBackpressure: editQueueBackpressure,
+      eventStartTime: editEventRange?.start ? new Date(editEventRange.start).toISOString() : null,
+      eventEndTime: editEventRange?.end ? new Date(editEventRange.end).toISOString() : null,
+    };
+
+    console.log(updatedData);
+    
+    
+    try {
+      await updateEventInfo(eventName, updatedData);
+      await CoreCacheReload(eventName);
+      addToast({
+        title: '이벤트 상세',
+        description: '성공적으로 저장했습니다.',
+        color: 'success',
+      });
+    } catch (error) {
+      console.log(error)
+      addToast({
+        title: '이벤트 상세',
+        description: '저장에 실패했습니다.',
+        color: 'danger',
+      });
+    } finally {
       setIsSubmitLoading(false);
-      console.log(e);
-    }, 1000);
+    }
   };
 
   const renderEventStatusChip = (start, end) => {

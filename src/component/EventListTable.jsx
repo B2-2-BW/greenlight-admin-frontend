@@ -1,6 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, User, Chip, Tooltip } from '@heroui/react';
 import EventStatusChip from './EventStatusChip.jsx';
+import { getEventList } from '../api/event/index.js';
 
 export const columns = [
   { name: '이벤트', uid: 'eventName' },
@@ -8,48 +9,6 @@ export const columns = [
   { name: '시작일자', uid: 'eventStartTime' },
   { name: '종료일자', uid: 'eventEndTime' },
   { name: '수정일자', uid: 'updatedAt' },
-];
-
-export const events = [
-  {
-    eventName: 'test',
-    eventDescription: '테스트 이벤트',
-    eventType: '타입',
-    eventUrl: 'https://www.thehyundai.com/front/pda/itemPtc.thd?slitmCd=40A1901936',
-    queueBackpressure: 5,
-    eventStartTime: '2025-03-11T11:50:30.143',
-    eventEndTime: '2025-03-17T02:48:58.143',
-    createdBy: 'SYSTEM',
-    createdAt: '2025-02-27T20:14:00.418071',
-    updatedBy: 'SYSTEM',
-    updatedAt: '2025-03-13T11:49:48.464422',
-  },
-  {
-    eventName: 'test2',
-    eventDescription: '테스트 이벤트2',
-    eventType: '타입',
-    eventUrl: 'https://www.thehyundai.com/front/pda/itemPtc.thd?slitmCd=40A1901936',
-    queueBackpressure: 5,
-    eventStartTime: '2025-03-16T11:50:30.143',
-    eventEndTime: '2025-03-20T02:48:58.143',
-    createdBy: 'SYSTEM',
-    createdAt: '2025-02-27T20:14:00.418071',
-    updatedBy: 'SYSTEM',
-    updatedAt: '2025-03-13T11:49:48.464422',
-  },
-  {
-    eventName: 'test3',
-    eventDescription: '테스트 이벤트3',
-    eventType: '타입',
-    eventUrl: 'https://www.thehyundai.com/front/pda/itemPtc.thd?slitmCd=40A1901936',
-    queueBackpressure: 5,
-    eventStartTime: '2025-03-11T11:50:30.143',
-    eventEndTime: '2025-03-12T02:48:58.143',
-    createdBy: 'SYSTEM',
-    createdAt: '2025-02-27T20:14:00.418071',
-    updatedBy: 'SYSTEM',
-    updatedAt: '2025-03-13T11:49:48.464422',
-  },
 ];
 
 const formatDate = (isoString) => {
@@ -110,6 +69,23 @@ const renderEventStatusChip = (start, end) => {
 };
 
 export default function EventListTable({ onPress }) {
+  const [events, setEvents] = useState([]);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const data = await getEventList();
+        console.log('Fetched events:', data);
+        setEvents(Array.isArray(data.events) ? data.events : []);
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        setEvents([]);
+      }
+    };
+    fetchEvents();
+  }, []);
+  
+  
   const renderCell = useCallback((event, columnKey) => {
     const cellValue = event[columnKey];
 
@@ -158,12 +134,14 @@ export default function EventListTable({ onPress }) {
             </TableColumn>
           )}
         </TableHeader>
-        <TableBody items={events}>
-          {(item) => (
+        <TableBody>
+          {events.map((item) => (
             <TableRow key={item.eventName} className="cursor-pointer">
-              {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}
+              {columns.map((column) => (
+                <TableCell key={column.uid}>{renderCell(item, column.uid)}</TableCell>
+              ))}
             </TableRow>
-          )}
+          ))}
         </TableBody>
       </Table>
     </>

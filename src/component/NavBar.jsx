@@ -12,6 +12,7 @@ import {
   Avatar,
 } from '@heroui/react';
 import { SearchIcon } from '../icon/Icons.jsx';
+import logo from '../icon/logo.png';
 
 export const AcmeLogo = () => {
   return (
@@ -33,7 +34,7 @@ export default function NavBar() {
         <NavbarBrand className="mr-4">
           {/*<AcmeLogo />*/}
           <p className="block font-bold text-inherit">
-            <span className="text-[#1D9641]">Green</span>light Admin
+            <img src={logo} alt="GreenLight 로고" className="h-auto" />
           </p>
         </NavbarBrand>
         <NavbarContent className="flex gap-3">
