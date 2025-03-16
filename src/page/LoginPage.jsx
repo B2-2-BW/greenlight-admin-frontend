@@ -33,7 +33,7 @@ export default function LoginPage() {
   return (
     <div className="flex flex-col items-center justify-center h-screen">
       <div className="flex flex-col w-full max-w-[1080px] p-6 bg-white rounded-lg items-center justify-center">
-        <img src={logo} alt="GreenLight 로고" className="w-[320px] h-auto" />
+        <img src={logo} alt="GreenLight 로고" className="w-full h-auto" />
         
         <div className="w-90 flex flex-col items-center justify-center">
           <Input
