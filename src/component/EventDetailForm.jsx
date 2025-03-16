@@ -1,11 +1,13 @@
-import { addToast, Button, DateRangePicker, Form, Input, NumberInput, Skeleton } from '@heroui/react';
+import { addToast, Button, DateRangePicker, Form, Input, NumberInput, Skeleton, useDisclosure } from '@heroui/react';
 import EventDetailSectionTitle from './EventDetailSectionTitle.jsx';
 import { useEffect, useState } from 'react';
 import { parseDateTime } from '@internationalized/date';
 import { useLocation, useNavigate } from 'react-router';
 import EventStatusChip from './EventStatusChip.jsx';
 import ArrowBackSvg from '../icon/ArrowBackSvg.jsx';
-import { CoreCacheReload, getEventInfo, updateEventInfo } from '../api/event/index.js';
+import { CoreCacheReload, deleteEventInfo, getEventInfo, updateEventInfo } from '../api/event/index.js';
+import DeleteSvg from '../icon/Delete.jsx';
+import ConfirmModal from './ConfirmModal.jsx';
 
 export default function EventDetailForm({ onPressBack }) {
   const location = useLocation();
@@ -23,6 +25,8 @@ export default function EventDetailForm({ onPressBack }) {
 
   const eventName = location.pathname.split('/').pop();
   const navigate = useNavigate();
+
+  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
 
   const clearForm = () => {
     setEditEventName('');
@@ -103,6 +107,28 @@ export default function EventDetailForm({ onPressBack }) {
     }
   };
 
+  const handleDeleteConfirmed = async () => {
+    setIsSubmitLoading(true);
+    try {
+      deleteEventInfo(eventName);
+      addToast({
+        title: "이벤트 삭제",
+        description: "이벤트가 성공적으로 삭제되었습니다.",
+        color: "success",
+      });
+      navigate("/events")
+    } catch (error) {
+      console.log("삭제 실패:", error);
+      addToast({
+        title: "이벤트 삭제",
+        description: "삭제에 실패했습니다.",
+        color: "danger",
+      });
+    } finally {
+      setIsSubmitLoading(false);
+    }
+  };
+
   const renderEventStatusChip = (start, end) => {
     if (start == null || end == null) return;
     let now = new Date();
@@ -127,9 +153,14 @@ export default function EventDetailForm({ onPressBack }) {
           <div className="w-full">
             <div className="flex justify-between items-center">
               <div className="text-sm text-default-400 mb-1">이벤트 상세</div>
-              <Button size="sm" isIconOnly variant="light" onPress={onPressBack}>
-                <ArrowBackSvg />
-              </Button>
+              <div className='flex flex-row gap-4'>
+                <Button size="sm" className='p-1' isIconOnly variant="light" onPress={onOpen}>
+                  <DeleteSvg />
+                </Button>
+                <Button size="sm" isIconOnly variant="light" onPress={() => setIsDeleteModalOpen(true)}>
+                  <ArrowBackSvg />
+                </Button>
+              </div>
             </div>
             <Skeleton className="rounded-lg w-full h-10" isLoaded={!isEventLoading}>
               <div className="flex items-baseline gap-2">
@@ -220,6 +251,15 @@ export default function EventDetailForm({ onPressBack }) {
           </Button>
         </div>
       </Form>
+
+      <ConfirmModal
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        title="이벤트 삭제"
+        message="정말로 이 이벤트를 삭제하시겠습니까?"
+        onConfirm={handleDeleteConfirmed}
+        onCancel={onClose}
+      />
     </>
   );
 }
