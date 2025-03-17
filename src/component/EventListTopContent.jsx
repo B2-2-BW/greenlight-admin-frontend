@@ -59,7 +59,7 @@ export default function EventListTopContent() {
             </DropdownMenu>
           </Dropdown>
           <Button color="primary" endContent={<PlusIcon />}>
-            Add New
+            추가하기
           </Button>
         </div>
       </div>

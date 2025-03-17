@@ -1,12 +1,15 @@
 import EventDetailForm from '../component/EventDetailForm.jsx';
-import { Card } from '@heroui/react';
 import { useNavigate } from 'react-router';
+import { useEffect } from 'react';
 
 export default function EventDetailPage() {
   const navigate = useNavigate();
   const onPressBack = () => {
-    navigate(-1);
+    navigate('/events');
   };
+  useEffect(() => {
+    document.title = '이벤트 상세 | Greenlight Admin';
+  }, []);
   return (
     <>
       <div className="p-4 max-w-[720px] h-[100vh-64px]">

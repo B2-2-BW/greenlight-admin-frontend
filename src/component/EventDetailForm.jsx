@@ -1,29 +1,35 @@
 import { addToast, Button, DateRangePicker, Form, Input, NumberInput, Skeleton, useDisclosure } from '@heroui/react';
 import EventDetailSectionTitle from './EventDetailSectionTitle.jsx';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { parseDateTime } from '@internationalized/date';
-import { useLocation, useNavigate } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import EventStatusChip from './EventStatusChip.jsx';
 import ArrowBackSvg from '../icon/ArrowBackSvg.jsx';
-import { CoreCacheReload, deleteEventInfo, getEventInfo, updateEventInfo } from '../api/event/index.js';
+import {
+  invalidateCoreEventCache,
+  deleteEventByEventName,
+  getEventByEventName,
+  updateEventByEventName,
+} from '../api/event/index.js';
 import DeleteSvg from '../icon/Delete.jsx';
 import ConfirmModal from './ConfirmModal.jsx';
 
 export default function EventDetailForm({ onPressBack }) {
   const location = useLocation();
+  const { eventName } = useParams();
+
   const [isEventLoading, setIsEventLoading] = useState(false);
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
 
   const [event, setEvent] = useState(null);
-
   const [editEventName, setEditEventName] = useState('');
   const [editEventDescription, setEditEventDescription] = useState('');
   const [editEventType, setEditEventType] = useState('');
   const [editEventUrl, setEditEventUrl] = useState('');
   const [editQueueBackpressure, setEditQueueBackpressure] = useState(0);
+
   const [editEventRange, setEditEventRange] = useState(null);
 
-  const eventName = location.pathname.split('/').pop();
   const navigate = useNavigate();
 
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
@@ -37,66 +43,78 @@ export default function EventDetailForm({ onPressBack }) {
     setEditEventRange(null);
   };
 
+  const handleQueueBackpressureChange = (val) => {
+    console.log(val);
+    setEditQueueBackpressure(val);
+  };
+
+  const fetchEvent = async () => {
+    setIsEventLoading(true);
+    clearForm();
+
+    try {
+      const data = await getEventByEventName(eventName);
+      setEvent(data);
+
+      setEditEventName(data.eventName || '');
+      setEditEventDescription(data.eventDescription || '');
+      setEditEventType(data.eventType || '');
+      setEditEventUrl(data.eventUrl || '');
+      setEditQueueBackpressure(data.queueBackpressure ?? 0);
+      setEditEventRange({
+        start: parseDateTime(data.eventStartTime),
+        end: parseDateTime(data.eventEndTime),
+      });
+    } catch (error) {
+      console.error('Error fetching event:', error);
+      if (error.status === 404) {
+        navigate('/404');
+      }
+    } finally {
+      setIsEventLoading(false);
+    }
+  };
   // Location 이동 시 실행
   useEffect(() => {
-    const fetchEvent = async () => {
-      setIsEventLoading(true);
-      clearForm();
-  
-      try {
-        const data = await getEventInfo(eventName);
-        setEvent(data);
-  
-        setEditEventName(data.eventName || '');
-        setEditEventDescription(data.eventDescription || '');
-        setEditEventType(data.eventType || '');
-        setEditEventUrl(data.eventUrl || '');
-        setEditQueueBackpressure(data.queueBackpressure ?? 0);
-        setEditEventRange({
-          start: parseDateTime(data.eventStartTime),
-          end: parseDateTime(data.eventEndTime),
-        });
-  
-      } catch (error) {
-        console.error('Error fetching event:', error);
+    fetchEvent(eventName);
+  }, [eventName]);
 
-        if (error.status === 404) {
-          navigate('/404');
-        }
-      } finally {
-        setIsEventLoading(false);
-      }
-    };
-  
-    fetchEvent();
-  }, [location]);
+  const applySeoulOffset = (date) => {
+    const offset = new Date().getTimezoneOffset() * 60000;
+    date.setSeconds(0);
+    date.setMilliseconds(0);
+    return new Date(date - offset);
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitLoading(true);
-    
+
+    console.log(editEventRange.start);
+    console.log(typeof editEventRange.start);
+    const startDate = applySeoulOffset(editEventRange.start.toDate()); // toISOString은 9시간 시차가 발생하여 수동으로 맞춰줌.
+    const endDate = applySeoulOffset(editEventRange.end.toDate());
+
     const updatedData = {
       eventDescription: editEventDescription,
       eventType: editEventType,
       eventUrl: editEventUrl,
       queueBackpressure: editQueueBackpressure,
-      eventStartTime: editEventRange?.start ? new Date(editEventRange.start).toISOString() : null,
-      eventEndTime: editEventRange?.end ? new Date(editEventRange.end).toISOString() : null,
+      eventStartTime: editEventRange?.start ? startDate.toISOString() : null,
+      eventEndTime: editEventRange?.end ? endDate.toISOString() : null,
     };
 
-    console.log(updatedData);
-    
-    
     try {
-      await updateEventInfo(eventName, updatedData);
-      await CoreCacheReload(eventName);
+      await updateEventByEventName(eventName, updatedData);
+      await invalidateCoreEventCache(eventName);
+      await fetchEvent(eventName);
       addToast({
         title: '이벤트 상세',
         description: '성공적으로 저장했습니다.',
         color: 'success',
       });
     } catch (error) {
-      console.log(error)
+      console.log(error);
       addToast({
         title: '이벤트 상세',
         description: '저장에 실패했습니다.',
@@ -110,19 +128,20 @@ export default function EventDetailForm({ onPressBack }) {
   const handleDeleteConfirmed = async () => {
     setIsSubmitLoading(true);
     try {
-      deleteEventInfo(eventName);
+      await deleteEventByEventName(eventName);
+      await invalidateCoreEventCache(eventName);
       addToast({
-        title: "이벤트 삭제",
-        description: "이벤트가 성공적으로 삭제되었습니다.",
-        color: "success",
+        title: '이벤트 삭제',
+        description: '이벤트가 성공적으로 삭제되었습니다.',
+        color: 'success',
       });
-      navigate("/events")
+      navigate('/events');
     } catch (error) {
-      console.log("삭제 실패:", error);
+      console.log('삭제 실패:', error);
       addToast({
-        title: "이벤트 삭제",
-        description: "삭제에 실패했습니다.",
-        color: "danger",
+        title: '이벤트 삭제',
+        description: '삭제에 실패했습니다.',
+        color: 'danger',
       });
     } finally {
       setIsSubmitLoading(false);
@@ -153,11 +172,11 @@ export default function EventDetailForm({ onPressBack }) {
           <div className="w-full">
             <div className="flex justify-between items-center">
               <div className="text-sm text-default-400 mb-1">이벤트 상세</div>
-              <div className='flex flex-row gap-4'>
-                <Button size="sm" className='p-1' isIconOnly variant="light" onPress={onOpen}>
+              <div className="flex flex-row gap-4">
+                <Button size="sm" className="p-1" isIconOnly variant="light" onPress={onOpen}>
                   <DeleteSvg />
                 </Button>
-                <Button size="sm" isIconOnly variant="light" onPress={() => setIsDeleteModalOpen(true)}>
+                <Button size="sm" isIconOnly variant="light" onPress={onPressBack}>
                   <ArrowBackSvg />
                 </Button>
               </div>
@@ -178,8 +197,8 @@ export default function EventDetailForm({ onPressBack }) {
                 errorMessage="이벤트 ID는 필수값입니다."
                 label="이벤트 ID"
                 labelPlacement="outside"
-                name="eventName"
                 placeholder="이벤트 ID를 입력하세요."
+                name="eventName"
                 description="이벤트의 고유한 ID 입니다."
                 type="text"
                 value={editEventName}
@@ -211,11 +230,16 @@ export default function EventDetailForm({ onPressBack }) {
                 label="유입량(초)"
                 labelPlacement="outside"
                 name="queueBackpressure"
-                description="1초당 유입량을 입력해주세요."
-                defaultValue={10}
+                placeholder="1초당 유입량"
                 minValue={0}
+                description={
+                  <div className="flex flex-col">
+                    <span>1초당 유입시킬 고객의 숫자입니다.</span> <span>0으로 설정하면 이동이 멈춥니다.</span>
+                  </div>
+                }
                 value={editQueueBackpressure}
-                onChange={setEditQueueBackpressure}
+                // onChange={handleQueueBackpressureChange}
+                onValueChange={handleQueueBackpressureChange}
               />
               <DateRangePicker
                 isRequired
@@ -245,7 +269,7 @@ export default function EventDetailForm({ onPressBack }) {
             />
           </Skeleton>
         </div>
-        <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl">
+        <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
           <Button color="primary" type="submit" isLoading={isSubmitLoading} fullWidth>
             저장하기
           </Button>

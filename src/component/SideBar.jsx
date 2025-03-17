@@ -42,6 +42,7 @@ export default function SideBar({ menuLists, currentMenuId, onClick, externalMen
                   active={currentMenuId === menu.menuId}
                   title={menu.title}
                   prepend={menu.prependIcon}
+                  newtab
                 />
               ))}
             </SideBarMenuList>

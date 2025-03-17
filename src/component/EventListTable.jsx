@@ -75,7 +75,6 @@ export default function EventListTable({ onPress }) {
     const fetchEvents = async () => {
       try {
         const data = await getEventList();
-        console.log('Fetched events:', data);
         setEvents(Array.isArray(data.events) ? data.events : []);
       } catch (error) {
         console.error('Error fetching events:', error);
@@ -84,8 +83,7 @@ export default function EventListTable({ onPress }) {
     };
     fetchEvents();
   }, []);
-  
-  
+
   const renderCell = useCallback((event, columnKey) => {
     const cellValue = event[columnKey];
 

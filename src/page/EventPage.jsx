@@ -1,6 +1,7 @@
 import EventListTable from '../component/EventListTable.jsx';
 import { useNavigate } from 'react-router';
 import EventListTopContent from '../component/EventListTopContent.jsx';
+import { useEffect } from 'react';
 
 export default function EventPage() {
   const navigate = useNavigate();
@@ -8,6 +9,10 @@ export default function EventPage() {
   const onPress = (eventName) => {
     navigate(`/events/${eventName}`);
   };
+
+  useEffect(() => {
+    document.title = '이벤트 목록 | Greenlight Admin';
+  }, []);
   return (
     <>
       <div className="p-4 max-w-[1080px]">

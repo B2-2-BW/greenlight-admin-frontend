@@ -5,7 +5,7 @@ import { useState } from 'react';
 import ShoppingBagSvg from '../icon/ShoppingBagSvg.jsx';
 import PeopleSvg from '../icon/PeopleSvg.jsx';
 import { ExternalLinkIcon } from '../icon/Icons.jsx';
-import { GRAFANA_URL, JENKINS_URL } from '../client/config.js';
+import { GRAFANA_URL, JENKINS_URL, ZIPKIN_URL } from '../client/config.js';
 
 const menuLists = [
   [
@@ -35,6 +35,12 @@ const externalMenuList = [
     path: JENKINS_URL,
     prependIcon: <ExternalLinkIcon size={20} color="#111827" />,
     menuId: 8,
+  },
+  {
+    title: 'Zipkin',
+    path: ZIPKIN_URL,
+    prependIcon: <ExternalLinkIcon size={20} color="#111827" />,
+    menuId: 9,
   },
 ];
 export default function MainLayout() {

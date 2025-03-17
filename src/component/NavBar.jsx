@@ -10,45 +10,54 @@ import {
   Dropdown,
   DropdownMenu,
   Avatar,
+  Divider,
+  DropdownSection,
+  User,
 } from '@heroui/react';
-import { SearchIcon } from '../icon/Icons.jsx';
-import logo from '../icon/logo.png';
+import logo from '/logo.png';
 import { useNavigate } from 'react-router';
-
 
 export default function NavBar() {
   const navigate = useNavigate();
 
   const goToHome = () => {
-    navigate("/events")
-  }
+    navigate('/events');
+  };
+
+  const handleLogout = () => {
+    navigate('/');
+  };
 
   return (
     <Navbar isBordered className="min-w-[800px] flex justify-between" maxWidth="full">
       <NavbarContent justify="start">
         <NavbarBrand className="mr-4">
-          {/*<AcmeLogo />*/}
           <p className="block font-bold text-inherit">
-            <img src={logo} alt="GreenLight 로고" className="h-auto cursor-pointer hover:opacity-80 transition-opacity" onClick={goToHome}/>
+            <img
+              src={logo}
+              alt="GreenLight 로고"
+              className="h-10 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={goToHome}
+            />
           </p>
         </NavbarBrand>
-        <NavbarContent className="flex gap-3">
-          <NavbarItem isActive>
-            <Link aria-current="page" color="secondary" href="#">
-              Navbar는
-            </Link>
-          </NavbarItem>
-          <NavbarItem>
-            <Link color="foreground" href="#">
-              유지할지말지
-            </Link>
-          </NavbarItem>
-          <NavbarItem>
-            <Link href="#" color="foreground">
-              미정
-            </Link>
-          </NavbarItem>
-        </NavbarContent>
+        {/*<NavbarContent className="flex gap-3">*/}
+        {/*  <NavbarItem isActive>*/}
+        {/*    <Link aria-current="page" color="secondary" href="#">*/}
+        {/*      Navbar는*/}
+        {/*    </Link>*/}
+        {/*  </NavbarItem>*/}
+        {/*  <NavbarItem>*/}
+        {/*    <Link color="foreground" href="#">*/}
+        {/*      유지할지말지*/}
+        {/*    </Link>*/}
+        {/*  </NavbarItem>*/}
+        {/*  <NavbarItem>*/}
+        {/*    <Link href="#" color="foreground">*/}
+        {/*      미정*/}
+        {/*    </Link>*/}
+        {/*  </NavbarItem>*/}
+        {/*</NavbarContent>*/}
       </NavbarContent>
 
       <NavbarContent as="div" className="items-center" justify="end">
@@ -64,32 +73,48 @@ export default function NavBar() {
         {/*  startContent={<SearchIcon size={18} />}*/}
         {/*  type="search"*/}
         {/*/>*/}
-        <Dropdown placement="bottom-end">
+        <Dropdown
+          showArrow
+          classNames={{
+            base: 'before:bg-default-200', // change arrow background
+            content: 'p-0 border-small border-divider bg-background',
+          }}
+          radius="sm"
+        >
           <DropdownTrigger>
-            <Avatar
-              isBordered
-              as="button"
-              className="transition-transform"
-              color="secondary"
-              name="Jason Hughes"
-              size="sm"
-              src="https://i.pravatar.cc/150?u=a042581f4e29026704d"
-            />
+            <Avatar isBordered as="button" className="transition-transform" color="primary" name="Admin" size="sm" />
           </DropdownTrigger>
-          <DropdownMenu aria-label="Profile Actions" variant="flat">
-            <DropdownItem key="profile" className="h-14 gap-2">
-              <p className="font-semibold">Signed in as</p>
-              <p className="font-semibold">zoey@example.com</p>
-            </DropdownItem>
-            <DropdownItem key="settings">My Settings</DropdownItem>
-            <DropdownItem key="team_settings">Team Settings</DropdownItem>
-            <DropdownItem key="analytics">Analytics</DropdownItem>
-            <DropdownItem key="system">System</DropdownItem>
-            <DropdownItem key="configurations">Configurations</DropdownItem>
-            <DropdownItem key="help_and_feedback">Help & Feedback</DropdownItem>
-            <DropdownItem key="logout" color="danger">
-              Log Out
-            </DropdownItem>
+          <DropdownMenu aria-label="Custom item styles" className="p-3" disabledKeys={['profile']} variant="flat">
+            <DropdownSection showDivider aria-label="Profile & Actions">
+              <DropdownItem key="profile" isReadOnly className="h-14 gap-2 opacity-100">
+                <User
+                  avatarProps={{
+                    name: 'Admin',
+                    size: 'sm',
+                    className: 'transition-transform',
+                    color: 'primary',
+                  }}
+                  classNames={{
+                    name: 'text-default-600',
+                    description: 'text-default-500',
+                  }}
+                  description="@더현대닷컴"
+                  name="admin"
+                />
+              </DropdownItem>
+              <DropdownItem key="dashboard">계정관리</DropdownItem>
+            </DropdownSection>
+
+            <DropdownSection showDivider aria-label="Help & Feedback">
+              <DropdownItem key="settings">설정</DropdownItem>
+              <DropdownItem key="settings_2">작업</DropdownItem>
+              <DropdownItem key="help_and_feedback">도움말</DropdownItem>
+            </DropdownSection>
+            <DropdownSection aria-label="Logout">
+              <DropdownItem onPress={handleLogout} key="logout" color="danger">
+                로그아웃
+              </DropdownItem>
+            </DropdownSection>
           </DropdownMenu>
         </Dropdown>
       </NavbarContent>
