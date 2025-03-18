@@ -36,7 +36,6 @@ export default function SideBar({ menuLists, currentMenuId, onClick, externalMen
               {externalMenuList.map((menu, idx) => (
                 <SideBarMenuListItem
                   key={menu.menuId}
-                  onClick={() => onClick(menu)}
                   id={menu.menuId}
                   path={menu.path}
                   active={currentMenuId === menu.menuId}
