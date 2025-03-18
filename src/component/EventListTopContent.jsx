@@ -1,8 +1,15 @@
+import { useNavigate } from 'react-router';
 import { ChevronDownIcon, PlusIcon, SearchIcon } from '../icon/Icons.jsx';
 import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input } from '@heroui/react';
 
 // 이거는 기능 동작 필요 없어서 일단 무시
 export default function EventListTopContent() {
+  const navigate = useNavigate();
+
+  const onClickCreateButton  = () => {
+    navigate('/events/new');
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-between gap-3 items-end">
@@ -58,7 +65,7 @@ export default function EventListTopContent() {
               {/*))}*/}
             </DropdownMenu>
           </Dropdown>
-          <Button color="primary" endContent={<PlusIcon />}>
+          <Button color="primary" onPress={onClickCreateButton} endContent={<PlusIcon />}>
             추가하기
           </Button>
         </div>
