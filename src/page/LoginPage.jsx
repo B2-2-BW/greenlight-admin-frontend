@@ -12,7 +12,6 @@ export default function LoginPage() {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.currentTarget));
 
-    console.log(data, !data.username);
     if (!data.username) {
       setErrors({ username: '사용자 ID는 필수값입니다.' });
       return;

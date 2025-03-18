@@ -2,13 +2,11 @@ import { addToast, Button, DateRangePicker, Form, Input, NumberInput, Skeleton, 
 import EventDetailSectionTitle from './EventDetailSectionTitle.jsx';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import EventStatusChip from './EventStatusChip.jsx';
 import ArrowBackSvg from '../icon/ArrowBackSvg.jsx';
 import { createEvent } from '../api/event/index.js';
 import ConfirmModal from './ConfirmModal.jsx';
 
 export default function EventCreateForm({ onPressBack }) {
-  const [isEventLoading, setIsEventLoading] = useState(false);
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
 
   const [editEventName, setEditEventName] = useState('');
@@ -24,7 +22,6 @@ export default function EventCreateForm({ onPressBack }) {
   const { isOpen, onOpenChange, onClose } = useDisclosure();
 
   const handleQueueBackpressureChange = (val) => {
-    console.log(val);
     setEditQueueBackpressure(val);
   };
 
@@ -39,8 +36,6 @@ export default function EventCreateForm({ onPressBack }) {
     e.preventDefault();
     setIsSubmitLoading(true);
 
-    console.log(editEventRange.start);
-    console.log(typeof editEventRange.start);
     const startDate = applySeoulOffset(editEventRange.start.toDate()); // toISOString은 9시간 시차가 발생하여 수동으로 맞춰줌.
     const endDate = applySeoulOffset(editEventRange.end.toDate());
 
@@ -65,7 +60,7 @@ export default function EventCreateForm({ onPressBack }) {
       });
       navigate('/events');
     } catch (error) {
-      console.log(error);
+      console.error(error);
       addToast({
         title: '이벤트 생성',
         description: '저장에 실패했습니다.',
@@ -74,19 +69,6 @@ export default function EventCreateForm({ onPressBack }) {
     } finally {
       setIsSubmitLoading(false);
     }
-  };
-
-  const renderEventStatusChip = (start, end) => {
-    if (start == null || end == null) return;
-    let now = new Date();
-    let startDate = new Date(start);
-    let endDate = new Date(end);
-    if (now < startDate) {
-      return <EventStatusChip status="upcoming" />;
-    } else if (now > endDate) {
-      return <EventStatusChip status="closed" />;
-    }
-    return <EventStatusChip status="open" />;
   };
 
   return (
@@ -104,110 +86,95 @@ export default function EventCreateForm({ onPressBack }) {
             </div>
             <div className="flex items-baseline gap-2">
               <div className="font-bold text-3xl">이벤트 신규 생성</div>
-              {renderEventStatusChip(event?.eventStartTime, event?.eventEndTime)}
             </div>
-            <Skeleton className="rounded-lg w-full h-10" isLoaded={!isEventLoading}>
-              <div className="flex items-baseline gap-2">
-                <div className="font-bold text-3xl">{event?.eventDescription}</div>
-                {renderEventStatusChip(event?.eventStartTime, event?.eventEndTime)}
-              </div>
-            </Skeleton>
           </div>
           <EventDetailSectionTitle title="기본 설정" />
-          <Skeleton className="rounded-lg w-full" isLoaded={!isEventLoading}>
-            <div className="flex flex-col  w-full gap-4">
-              <div className="flex flex-row gap-4">
-                <Input
-                  className="w-80"
-                  isRequired
-                  errorMessage="이벤트 ID는 필수값입니다."
-                  label="이벤트 ID"
-                  labelPlacement="outside"
-                  placeholder="이벤트 ID를 입력하세요."
-                  name="eventName"
-                  description="이벤트의 고유한 ID 입니다."
-                  type="text"
-                  value={editEventName}
-                  onChange={(e) => setEditEventName(e.target.value)}
-                />
-                <Input
-                  className="grow"
-                  isRequired
-                  errorMessage="이벤트 유형은 필수값입니다."
-                  label="이벤트 유형"
-                  labelPlacement="outside"
-                  name="eventDescription"
-                  placeholder="어떤 유형의 이벤트인지 알려주세요."
-                  type="text"
-                  description="이벤트의 유형입니다."
-                  value={editEventType}
-                  onChange={(e) => setEditEventType(e.target.value)}
-                />
-              </div>
+          <div className="flex flex-col  w-full gap-4">
+            <div className="flex flex-row gap-4">
+              <Input
+                className="w-80"
+                isRequired
+                errorMessage="이벤트 ID는 필수값입니다."
+                label="이벤트 ID"
+                labelPlacement="outside"
+                placeholder="이벤트 ID를 입력하세요."
+                name="eventName"
+                description="이벤트의 고유한 ID 입니다."
+                type="text"
+                value={editEventName}
+                onChange={(e) => setEditEventName(e.target.value)}
+              />
               <Input
                 className="grow"
                 isRequired
-                errorMessage="이벤트 설명은 필수값입니다."
-                label="이벤트 설명"
+                errorMessage="이벤트 유형은 필수값입니다."
+                label="이벤트 유형"
                 labelPlacement="outside"
                 name="eventDescription"
-                placeholder="어떤 이벤트인지 알려주세요."
+                placeholder="어떤 유형의 이벤트인지 알려주세요."
                 type="text"
-                description="고객이 보게 될 이벤트 설명입니다."
-                value={editEventDescription}
-                onChange={(e) => setEditEventDescription(e.target.value)}
+                description="이벤트의 유형입니다."
+                value={editEventType}
+                onChange={(e) => setEditEventType(e.target.value)}
               />
             </div>
-          </Skeleton>
-          {/*<Skeleton className="rounded-lg w-full" isLoaded={!isEventLoading}></Skeleton>*/}
-          <EventDetailSectionTitle title="흐름 제어" />
-          <Skeleton className="rounded-lg w-full" isLoaded={!isEventLoading}>
-            <div className="flex w-full gap-4">
-              <NumberInput
-                isRequired
-                className="w-60"
-                errorMessage="유입량은 필수값입니다."
-                label="유입량(초)"
-                labelPlacement="outside"
-                name="queueBackpressure"
-                placeholder="1초당 유입량"
-                minValue={0}
-                description={
-                  <div className="flex flex-col">
-                    <span>1초당 유입시킬 고객의 숫자입니다.</span> <span>0으로 설정하면 이동이 멈춥니다.</span>
-                  </div>
-                }
-                value={editQueueBackpressure}
-                // onChange={handleQueueBackpressureChange}
-                onValueChange={handleQueueBackpressureChange}
-              />
-              <DateRangePicker
-                isRequired
-                hideTimeZone
-                granularity="minute"
-                label="입장 가능 기간"
-                labelPlacement="outside"
-                visibleMonths={2}
-                description="대기열에 입장할 수 있는 시작시간과 종료시간을 입력해주세요."
-                hourCycle={24}
-                value={editEventRange}
-                onChange={setEditEventRange}
-              />
-            </div>
-          </Skeleton>
-          <Skeleton className="rounded-lg" isLoaded={!isEventLoading}>
             <Input
+              className="grow"
               isRequired
-              label="이동 URL"
+              errorMessage="이벤트 설명은 필수값입니다."
+              label="이벤트 설명"
               labelPlacement="outside"
-              name="eventUrl"
-              placeholder="https://www.example.com"
-              type="url"
-              description="대기가 끝난 고객이 이동하게 될 URL을 입력해 주세요."
-              value={editEventUrl}
-              onChange={(e) => setEditEventUrl(e.target.value)}
+              name="eventDescription"
+              placeholder="어떤 이벤트인지 알려주세요."
+              type="text"
+              description="고객이 보게 될 이벤트 설명입니다."
+              value={editEventDescription}
+              onChange={(e) => setEditEventDescription(e.target.value)}
             />
-          </Skeleton>
+          </div>
+          <EventDetailSectionTitle title="흐름 제어" />
+          <div className="flex w-full gap-4">
+            <NumberInput
+              isRequired
+              className="w-60"
+              errorMessage="유입량은 필수값입니다."
+              label="유입량(초)"
+              labelPlacement="outside"
+              name="queueBackpressure"
+              placeholder="1초당 유입량"
+              minValue={0}
+              description={
+                <div className="flex flex-col">
+                  <span>1초당 유입시킬 고객의 숫자입니다.</span> <span>0으로 설정하면 이동이 멈춥니다.</span>
+                </div>
+              }
+              value={editQueueBackpressure}
+              onValueChange={handleQueueBackpressureChange}
+            />
+            <DateRangePicker
+              isRequired
+              hideTimeZone
+              granularity="minute"
+              label="입장 가능 기간"
+              labelPlacement="outside"
+              visibleMonths={2}
+              description="대기열에 입장할 수 있는 시작시간과 종료시간을 입력해주세요."
+              hourCycle={24}
+              value={editEventRange}
+              onChange={setEditEventRange}
+            />
+          </div>
+          <Input
+            isRequired
+            label="이동 URL"
+            labelPlacement="outside"
+            name="eventUrl"
+            placeholder="https://www.example.com"
+            type="url"
+            description="대기가 끝난 고객이 이동하게 될 URL을 입력해 주세요."
+            value={editEventUrl}
+            onChange={(e) => setEditEventUrl(e.target.value)}
+          />
         </div>
         <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
           <Button color="primary" type="submit" isLoading={isSubmitLoading} fullWidth>

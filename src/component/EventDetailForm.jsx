@@ -44,7 +44,6 @@ export default function EventDetailForm({ onPressBack }) {
   };
 
   const handleQueueBackpressureChange = (val) => {
-    console.log(val);
     setEditQueueBackpressure(val);
   };
 
@@ -90,8 +89,6 @@ export default function EventDetailForm({ onPressBack }) {
     e.preventDefault();
     setIsSubmitLoading(true);
 
-    console.log(editEventRange.start);
-    console.log(typeof editEventRange.start);
     const startDate = applySeoulOffset(editEventRange.start.toDate()); // toISOString은 9시간 시차가 발생하여 수동으로 맞춰줌.
     const endDate = applySeoulOffset(editEventRange.end.toDate());
 
@@ -114,7 +111,7 @@ export default function EventDetailForm({ onPressBack }) {
         color: 'success',
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       addToast({
         title: '이벤트 상세',
         description: '저장에 실패했습니다.',
@@ -137,7 +134,7 @@ export default function EventDetailForm({ onPressBack }) {
       });
       navigate('/events');
     } catch (error) {
-      console.log('삭제 실패:', error);
+      console.error('삭제 실패:', error);
       addToast({
         title: '이벤트 삭제',
         description: '삭제에 실패했습니다.',
