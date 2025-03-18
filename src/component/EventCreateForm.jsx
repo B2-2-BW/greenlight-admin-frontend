@@ -4,13 +4,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import EventStatusChip from './EventStatusChip.jsx';
 import ArrowBackSvg from '../icon/ArrowBackSvg.jsx';
-import {
-  createEvent
-} from '../api/event/index.js';
+import { createEvent } from '../api/event/index.js';
 import ConfirmModal from './ConfirmModal.jsx';
 
 export default function EventCreateForm({ onPressBack }) {
-
   const [isEventLoading, setIsEventLoading] = useState(false);
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
 
@@ -55,8 +52,8 @@ export default function EventCreateForm({ onPressBack }) {
       queueBackpressure: editQueueBackpressure,
       eventStartTime: editEventRange?.start ? startDate.toISOString() : null,
       eventEndTime: editEventRange?.end ? endDate.toISOString() : null,
-      createdBy: "admin",
-      updatedBy: "admin",
+      createdBy: 'admin',
+      updatedBy: 'admin',
     };
 
     try {
@@ -94,10 +91,7 @@ export default function EventCreateForm({ onPressBack }) {
 
   return (
     <>
-      <Form
-        className="w-full flex flex-col"
-        onSubmit={onSubmit}
-      >
+      <Form className="w-full flex flex-col" onSubmit={onSubmit}>
         <div className="relative w-full flex flex-col gap-4">
           <div className="w-full">
             <div className="flex justify-between items-center">
@@ -107,6 +101,10 @@ export default function EventCreateForm({ onPressBack }) {
                   <ArrowBackSvg />
                 </Button>
               </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <div className="font-bold text-3xl">이벤트 신규 생성</div>
+              {renderEventStatusChip(event?.eventStartTime, event?.eventEndTime)}
             </div>
             <Skeleton className="rounded-lg w-full h-10" isLoaded={!isEventLoading}>
               <div className="flex items-baseline gap-2">
@@ -118,7 +116,7 @@ export default function EventCreateForm({ onPressBack }) {
           <EventDetailSectionTitle title="기본 설정" />
           <Skeleton className="rounded-lg w-full" isLoaded={!isEventLoading}>
             <div className="flex flex-col  w-full gap-4">
-              <div className='flex flex-row gap-4'>
+              <div className="flex flex-row gap-4">
                 <Input
                   className="w-80"
                   isRequired

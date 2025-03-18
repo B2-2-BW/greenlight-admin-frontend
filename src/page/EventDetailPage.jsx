@@ -12,7 +12,7 @@ export default function EventDetailPage() {
   }, []);
   return (
     <>
-      <div className="p-4 max-w-[720px] h-[100vh-64px]">
+      <div className="p-4 max-w-[1080px] h-[100vh-64px]">
         <EventDetailForm onPressBack={onPressBack} />
       </div>
     </>

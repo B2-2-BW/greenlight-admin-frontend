@@ -16,11 +16,10 @@ export default function EventCreatePage() {
   }, []);
 
   return (
-      <>
-        <div className="p-4 max-w-[1080px]">
-            <div className="font-bold text-3xl mt-8 mb-4">이벤트 신규 생성</div>
-            <EventCreateForm onPressBack={onPressBack}/>   
-        </div>
-      </>
-    );
+    <>
+      <div className="p-4 max-w-[1080px]">
+        <EventCreateForm onPressBack={onPressBack} />
+      </div>
+    </>
+  );
 }
