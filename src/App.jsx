@@ -6,6 +6,7 @@ import MainLayout from './layout/MainLayout.jsx';
 import EventDetailPage from './page/EventDetailPage.jsx';
 import NotFoundPage from './page/404ErrorPage.jsx';
 import LoginPage from './page/LoginPage.jsx';
+import EventCreatePage from './page/EventCreatePage.jsx';
 import DashboardPage from './page/DashboardPage.jsx';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/events" element={<EventPage />} />
+            <Route path="/events/new" element={<EventCreatePage />} />
             <Route path="/events/:eventName" element={<EventDetailPage />} />
             <Route path="/404" element={<NotFoundPage />} />
             <Route path="*" element={<NotFoundPage />} />
