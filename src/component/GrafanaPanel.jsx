@@ -1,4 +1,4 @@
-import { GRAFANA_INTERNAL_URL } from '../client/config.js';
+import { GRAFANA_EXTERNAL_URL } from '../client/config.js';
 
 export default function GrafanaPanel({ path }) {
   const range = () => {
@@ -6,7 +6,7 @@ export default function GrafanaPanel({ path }) {
   };
   return (
     <div className="w-full h-full">
-      <iframe className="w-full h-full" src={GRAFANA_INTERNAL_URL + path.url + range() + path.params}></iframe>
+      <iframe className="w-full h-full" src={GRAFANA_EXTERNAL_URL + path.url + range() + path.params}></iframe>
     </div>
   );
 }
