@@ -2,23 +2,30 @@ import { Link, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import { addToast, Button, Card, CardBody, CardFooter, CardHeader, Form, Input, Switch } from '@heroui/react';
 import logo from '/logo.png';
+import { useUserStore } from '../store/user.jsx';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberUser, setRememberUser] = useState(false);
   const [errors, setErrors] = useState({});
-
+  const { user, setUser } = useUserStore();
   const handleLogin = (e) => {
     e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.currentTarget));
 
-    if (!data.username) {
+    if (!username) {
       setErrors({ username: '사용자 ID는 필수값입니다.' });
       return;
     }
 
-    if (data.username === 'admin' && data.password === 'admin') {
-      navigate('/events');
+    if (username === 'admin' && password === 'admin') {
+      const userData = { username };
+      setUser(userData);
+      if (rememberUser) {
+        window.localStorage.setItem('user', JSON.stringify(userData));
+      }
+      navigate(0);
     } else {
       addToast({
         title: '로그인 실패',
@@ -27,9 +34,11 @@ export default function LoginPage() {
       });
     }
   };
-
   useEffect(() => {
     document.title = '로그인 | Greenlight Admin';
+    if (user?.username) {
+      navigate('/');
+    }
   }, []);
 
   return (
@@ -55,6 +64,8 @@ export default function LoginPage() {
               radius="sm"
               name="username"
               type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
             />
             <Input
               size="sm"
@@ -62,9 +73,18 @@ export default function LoginPage() {
               label="비밀번호"
               name="password"
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
 
-            <Switch className="mt-2 mb-8" color="primary" size="sm">
+            <Switch
+              className="mt-2 mb-8"
+              color="primary"
+              size="sm"
+              name="rememberUser"
+              checked={rememberUser}
+              onChange={(e) => setRememberUser(e.target.checked)}
+            >
               <span className="text-default-500">로그인 유지</span>
             </Switch>
             <Button className="h-12" color="primary" type="submit" fullWidth isLoading={false}>

@@ -1,5 +1,5 @@
 import './App.css';
-import { Route, Routes } from 'react-router';
+import { Navigate, Route, Routes } from 'react-router';
 import { HeroUIProvider, ToastProvider } from '@heroui/react';
 import EventPage from './page/EventPage.jsx';
 import MainLayout from './layout/MainLayout.jsx';
@@ -8,6 +8,7 @@ import NotFoundPage from './page/404ErrorPage.jsx';
 import LoginPage from './page/LoginPage.jsx';
 import EventCreatePage from './page/EventCreatePage.jsx';
 import DashboardPage from './page/DashboardPage.jsx';
+import PrivateRoute from './router/PrivateRoute.jsx';
 
 function App() {
   return (
@@ -16,7 +17,14 @@ function App() {
         <ToastProvider placement="top-right" toastOffset={60} />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route element={<MainLayout />}>
+          <Route
+            element={
+              <PrivateRoute>
+                <MainLayout />
+              </PrivateRoute>
+            }
+          >
+            <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/events" element={<EventPage />} />
             <Route path="/events/new" element={<EventCreatePage />} />

@@ -16,16 +16,22 @@ import {
 } from '@heroui/react';
 import logo from '/logo.png';
 import { useNavigate } from 'react-router';
+import { useUserStore } from '../store/user.jsx';
 
 export default function NavBar() {
   const navigate = useNavigate();
+
+  const { user, setUser } = useUserStore();
 
   const goToHome = () => {
     navigate('/events');
   };
 
   const handleLogout = () => {
-    navigate('/');
+    setUser(null);
+    useUserStore.persist.clearStorage();
+    window.localStorage.removeItem('user');
+    navigate(0);
   };
 
   return (
