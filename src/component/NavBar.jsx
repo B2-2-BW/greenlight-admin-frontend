@@ -21,7 +21,7 @@ import { useUserStore } from '../store/user.jsx';
 export default function NavBar() {
   const navigate = useNavigate();
 
-  const { user, setUser } = useUserStore();
+  const { setUser } = useUserStore();
 
   const goToHome = () => {
     navigate('/events');

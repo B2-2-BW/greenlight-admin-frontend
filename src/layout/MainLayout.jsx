@@ -2,7 +2,7 @@ import SideBar from '../component/SideBar.jsx';
 import NavBar from '../component/NavBar.jsx';
 import { Outlet, useNavigate } from 'react-router';
 import { useState } from 'react';
-import { CalendarIcon, ExternalLinkIcon, HomeIcon } from '../icon/Icons.jsx';
+import { CalendarIcon, DockerIcon, ExternalLinkIcon, HomeIcon } from '../icon/Icons.jsx';
 import { GRAFANA_EXTERNAL_URL, JENKINS_EXTERNAL_URL, ZIPKIN_EXTERNAL_URL } from '../client/config.js';
 
 const menuLists = [
@@ -13,6 +13,14 @@ const menuLists = [
       prependIcon: <CalendarIcon color="#6b7280" />,
       path: '/events',
       menuId: 1,
+    },
+  ],
+  [
+    {
+      title: '인스턴스 관리',
+      prependIcon: <DockerIcon color="#6b7280" />,
+      path: '/instances',
+      menuId: 3,
     },
   ],
 ];
