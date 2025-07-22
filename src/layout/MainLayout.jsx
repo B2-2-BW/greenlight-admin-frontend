@@ -9,9 +9,9 @@ const menuLists = [
   [
     { title: '대시보드', prependIcon: <HomeIcon color="#6b7280" />, path: '/dashboard', menuId: 2 },
     {
-      title: '이벤트 관리',
+      title: '액션 그룹',
       prependIcon: <CalendarIcon color="#6b7280" />,
-      path: '/events',
+      path: '/action-groups',
       menuId: 1,
     },
   ],

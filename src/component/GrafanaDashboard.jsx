@@ -36,7 +36,11 @@ const embedLinks = {
   },
   springCoreP95: {
     url: '/d-solo/dLsDQIUnzb/spring-core-api-eb8c80-ec8b9c-ebb3b4-eb939c?',
-    params: 'orgId=1&timezone=browser&var-app_name=&var-log_keyword=&refresh=10s&panelId=23',
+    params: 'orgId=1&var-app_name=&var-log_keyword=&panelId=23',
+  },
+  springCoreP99: {
+    url: '/d-solo/dLsDQIUnzb/spring-core-api-eb8c80-ec8b9c-ebb3b4-eb939c?',
+    params: 'orgId=1&var-app_name=&var-log_keyword=&panelId=8',
   },
 };
 
@@ -68,8 +72,8 @@ export default function GrafanaDashboard() {
         <Card shadow="sm">
           <CardBody className="flex flex-col gap-2 w-full">
             <div className="flex gap-2 w-full h-[200px]">
-              <GrafanaPanel path={embedLinks.springCoreRps} />
               <GrafanaPanel path={embedLinks.springCoreP95} />
+              <GrafanaPanel path={embedLinks.springCoreP99} />
             </div>
             <div className="h-[120px]">
               <GrafanaPanel path={embedLinks.springCoreAverageResponseTime} />

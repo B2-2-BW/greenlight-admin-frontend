@@ -17,6 +17,7 @@ import {
 import logo from '/logo.png';
 import { useNavigate } from 'react-router';
 import { useUserStore } from '../store/user.jsx';
+import { LoginUtil } from '../util/loginUtil.js';
 
 export default function NavBar() {
   const navigate = useNavigate();
@@ -24,14 +25,13 @@ export default function NavBar() {
   const { setUser } = useUserStore();
 
   const goToHome = () => {
-    navigate('/events');
+    navigate('/action-groups');
   };
 
   const handleLogout = () => {
-    setUser(null);
     useUserStore.persist.clearStorage();
-    window.localStorage.removeItem('user');
-    navigate(0);
+    setUser(null);
+    LoginUtil.clearToken();
   };
 
   return (
