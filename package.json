@@ -12,9 +12,13 @@
   "dependencies": {
     "@heroui/react": "2.7.11",
     "@internationalized/date": "^3.8.2",
+    "@react-aria/i18n": "^3.12.11",
     "axios": "^1.10.0",
+    "countup.js": "^2.9.0",
+    "event-source-polyfill": "^1.0.31",
     "framer-motion": "^12.23.6",
     "jwt-decode": "^4.0.0",
+    "lodash": "^4.17.21",
     "prettier": "^3.6.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

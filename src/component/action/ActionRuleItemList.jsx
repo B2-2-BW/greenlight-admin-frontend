@@ -44,6 +44,7 @@ export default function ActionRuleItemList({ rules, onAdd, onChange, onDelete })
                   <Select
                     size="sm"
                     isRequired
+                    variant="bordered"
                     className={className}
                     items={MATCH_OPERATORS}
                     label="규칙 검사 연산자"
@@ -72,9 +73,10 @@ export default function ActionRuleItemList({ rules, onAdd, onChange, onDelete })
                     className={className}
                     label="파라미터명"
                     isRequired
+                    variant="bordered"
                     errorMessage="필수 항목을 입력해 주세요."
                     labelPlacement="outside"
-                    placeholder="slitmCd"
+                    placeholder="예시) slitmCd"
                     name="paramName"
                     type="text"
                     value={rule.paramName}
@@ -85,9 +87,10 @@ export default function ActionRuleItemList({ rules, onAdd, onChange, onDelete })
                     className={className}
                     label="파라미터값"
                     isRequired
+                    variant="bordered"
                     errorMessage="필수 항목을 입력해 주세요."
                     labelPlacement="outside"
-                    placeholder="40A000001"
+                    placeholder="예시) 40A000001"
                     name="paramValue"
                     type="text"
                     value={rule.paramValue}
@@ -96,6 +99,7 @@ export default function ActionRuleItemList({ rules, onAdd, onChange, onDelete })
                   <Input
                     size="sm"
                     className={className}
+                    variant="bordered"
                     label="비고"
                     labelPlacement="outside"
                     name="description"

@@ -1,8 +1,8 @@
 import { useCallback, useState, useEffect } from 'react';
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from '@heroui/react';
-import { getActionGroupList } from '../../api/action-group/index.js';
 import ActionGroupStatusChip from './ActionGroupStatusChip.jsx';
 import { toDateHtml } from '../../util/dateUtil.jsx';
+import { ActionGroupClient } from '../../api/action-group/index.js';
 
 const columns = [
   { name: 'ID', uid: 'id' },
@@ -18,7 +18,7 @@ export default function ActionGroupListTable({ onPress }) {
   useEffect(() => {
     const fetchActionGroupList = async () => {
       try {
-        const data = await getActionGroupList();
+        const data = await ActionGroupClient.getActionGroupList();
         setActionGroups(Array.isArray(data) ? data : []);
       } catch (error) {
         setActionGroups([]);
@@ -41,6 +41,13 @@ export default function ActionGroupListTable({ onPress }) {
         return <ActionGroupStatusChip enabled={cellValue} />;
       case 'updatedAt':
         return toDateHtml(cellValue);
+      case 'maxActiveCustomers':
+        return (
+          <div>
+            <span>{cellValue}</span>
+            <span className="ml-1 text-xs text-neutral-500">{cellValue === 0 ? '(진입불가)' : ''}</span>
+          </div>
+        );
       default:
         return cellValue;
     }
@@ -53,7 +60,7 @@ export default function ActionGroupListTable({ onPress }) {
         selectionBehavior="toggle"
         selectionMode="multiple"
         // onRowAction={(key) => alert(`Opening item ${key}...`)}
-
+        aria-label="테이블"
         onRowAction={(key) => onPress(key)}
         style={{ padding: 0, margin: 0 }}
       >

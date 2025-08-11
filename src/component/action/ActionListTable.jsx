@@ -8,7 +8,7 @@ import ActionTypeChip from './ActionTypeChip.jsx';
 const columns = [
   { name: 'ID', uid: 'id' },
   { name: '이름', uid: 'name' },
-  { name: 'URL', uid: 'actionUrl' },
+  // { name: 'URL', uid: 'actionUrl' },
   { name: '액션유형', uid: 'actionType' },
   { name: '기본 룰 유형', uid: 'defaultRuleType' },
   { name: '수정일자', uid: 'updatedAt' },
@@ -28,7 +28,7 @@ export default function ActionListTable({ actions, onPress }) {
       case 'actionType':
         return <ActionTypeChip type={cellValue} />;
       case 'actionUrl':
-        return <ActionUrl action={action} />;
+        return <ActionUrl action={action} className="max-w-[240px] overflow-ellipsis overflow-hidden" />;
       case 'defaultRuleType':
         return <ActionDefaultRuleTypeChip type={cellValue} />;
       case 'updatedAt':

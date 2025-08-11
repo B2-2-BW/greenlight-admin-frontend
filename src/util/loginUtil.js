@@ -50,8 +50,8 @@ function isTokenValid() {
 }
 
 export const LoginUtil = {
-  getToken: () => getToken(),
-  clearToken: () => clearToken(),
-  saveToken: (accessToken, rememberUser) => saveToken(accessToken, rememberUser),
-  isTokenValid: () => isTokenValid(),
+  getToken,
+  clearToken,
+  saveToken,
+  isTokenValid,
 };

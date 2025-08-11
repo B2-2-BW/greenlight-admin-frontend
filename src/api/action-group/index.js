@@ -1,43 +1,47 @@
 import { commonAxiosInstance, coreAxiosInstance } from '../index.js';
 
 // 단일 액션그룹 정보 조회
-export const getActionGroupById = async (actionGroupId) => {
+const getActionGroupById = async (actionGroupId) => {
   const { data } = await commonAxiosInstance.get(`/action-groups/${actionGroupId}`);
   return data;
 };
 
 // 액션그룹 리스트 정보 조회
-export const getActionGroupList = async () => {
-  const { data } = await commonAxiosInstance.get(`/action-groups`);
+const getActionGroupList = async (query) => {
+  const { data } = await commonAxiosInstance.get(`/action-groups`, { params: query });
   return data;
 };
 
-// 이벤트 정보 업데이트
-export const updateEventByEventName = async (eventName, body) => {
-  const { data } = await commonAxiosInstance.put(`/events/${eventName}`, body, {});
-  return data;
+const createAction = async (actionGroupId, data) => {
+  return commonAxiosInstance.post(`/action-groups/${actionGroupId}/actions`, data);
 };
 
-// 이벤트 삭제
-export const deleteEventByEventName = async (eventName) => {
-  const { data } = await commonAxiosInstance.delete(`/events/${eventName}`);
-  return data;
+const createActionGroup = async (data) => {
+  return commonAxiosInstance.post(`/action-groups`, data);
 };
 
-// 이벤트 생성
-export const createEvent = async (body) => {
-  const { data } = await commonAxiosInstance.post(`/events`, body, {});
-  return data;
+const updateActionGroupById = async (actionGroupId, data) => {
+  return commonAxiosInstance.put(`/action-groups/${actionGroupId}`, data);
+};
+
+const deleteActionGroupById = async (actionGroupId) => {
+  return commonAxiosInstance.delete(`/action-groups/${actionGroupId}`);
 };
 
 // 캐시 초기화
-export const requestEventsCacheReload = async () => {
-  const { data } = await commonAxiosInstance.put(`/events/cache/reload`);
+export const invalidateCoreActionGroupCache = async (actionGroupId) => {
+  const { data } = await coreAxiosInstance.delete(`/action-groups/${actionGroupId}/cache`);
   return data;
 };
 
-// 캐시 초기화
-export const invalidateCoreEventCache = async (eventName) => {
-  const { data } = await coreAxiosInstance.delete(`/events/${eventName}/cache`);
-  return data;
+const ActionGroupClient = {
+  getActionGroupById,
+  getActionGroupList,
+  createAction,
+  invalidateCoreActionGroupCache,
+  createActionGroup,
+  updateActionGroupById,
+  deleteActionGroupById,
 };
+
+export { ActionGroupClient };

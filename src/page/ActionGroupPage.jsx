@@ -1,6 +1,4 @@
-import EventListTable from '../component/EventListTable.jsx';
 import { useNavigate } from 'react-router';
-import EventListTopContent from '../component/EventListTopContent.jsx';
 import { useEffect } from 'react';
 import ActionGroupTopContent from '../component/action-group/ActionGroupTopContent.jsx';
 import ActionGroupListTable from '../component/action-group/ActionGroupListTable.jsx';

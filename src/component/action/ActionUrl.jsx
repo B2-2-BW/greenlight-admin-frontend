@@ -1,11 +1,6 @@
+import { ActionUtil } from '../../util/actionUtil.js';
+
 export default function ActionUrl({ action }) {
-  let innerText;
-  if (action == null || !action?.actionType) {
-    innerText = '';
-  } else if (action.actionType === 'LANDING') {
-    innerText = `/land/${action.landingId}`;
-  } else {
-    innerText = action.actionUrl;
-  }
+  let innerText = ActionUtil.getActionUrl(action?.actionType, action);
   return <div>{innerText}</div>;
 }

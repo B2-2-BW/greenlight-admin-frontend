@@ -13,6 +13,7 @@ import ActionGroupPage from './page/ActionGroupPage.jsx';
 import ActionGroupDetailPage from './page/ActionGroupDetailPage.jsx';
 import BadRequestPage from './page/BadRequestPage.jsx';
 import SomethingWentWrongPage from './page/SomethingWentWrongPage.jsx';
+import SettingsPage from './page/SettingsPage.jsx';
 
 function App() {
   return (
@@ -34,8 +35,9 @@ function App() {
             <Route path="/events/new" element={<EventCreatePage />} />
             <Route path="/events/:eventName" element={<EventDetailPage />} />
             <Route path="/action-groups" element={<ActionGroupPage />} />
-            <Route path="/action-groups/new" element={<EventCreatePage />} />
+            <Route path="/action-groups/new" element={<ActionGroupDetailPage />} />
             <Route path="/action-groups/:actionGroupId" element={<ActionGroupDetailPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/notfound" element={<NotFoundPage />} />
             <Route path="/forbidden" element={<BadRequestPage />} />
             <Route path="/opps" element={<SomethingWentWrongPage />} />

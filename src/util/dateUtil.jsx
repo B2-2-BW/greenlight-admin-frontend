@@ -42,3 +42,14 @@ export const toDateHtml = (cellValue) => {
     </div>
   );
 };
+
+const timestampToDateTime = (timestamp) => {
+  if (!timestamp) {
+    return '-';
+  }
+  return new Date(timestamp).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+};
+
+export const DateUtil = {
+  timestampToDateTime,
+};
