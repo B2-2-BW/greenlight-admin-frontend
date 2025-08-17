@@ -18,7 +18,6 @@ export function TrafficParticles({
   updateTrigger,
   width,
   height,
-  wrapperHeight,
   yMin,
   yMax,
   count = 0, // 초당 방출량(외부에서 set)
@@ -32,8 +31,8 @@ export function TrafficParticles({
   trailAlpha = 0.12, // 잔상 투명도
   backgroundColor = '#ffffff',
   wrapperType = 'WAITING',
-  leftBottomComponent = undefined,
-  rightBottomComponent = undefined,
+  leftTopComponent = undefined,
+  rightTopComponent = undefined,
 }) {
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
@@ -189,18 +188,18 @@ export function TrafficParticles({
 
   return (
     <div
-      style={{ position: 'relative', width, height: `${wrapperHeight}px`, background: 'none', borderRadius: 8 }}
+      style={{ position: 'relative', width, height: height, background: 'none', borderRadius: 8 }}
       className={`flex flex-col items-center justify-center `}
     >
       <canvas className={wrapperType === 'WAITING' ? 'rounded-l-xl' : 'rounded-r-xl'} ref={canvasRef} />
-      {leftBottomComponent != null && (
-        <span className="absolute bottom-0 left-0 translate-x-[4px] text-black text-xs px-1.5 py-0.5 rounded">
-          {leftBottomComponent}
+      {leftTopComponent != null && (
+        <span className="absolute top-1 left-0 translate-x-[4px] text-black text-sm px-1.5 py-0.5 rounded">
+          {leftTopComponent}
         </span>
       )}
-      {rightBottomComponent != null && (
-        <span className="absolute bottom-0 right-0 translate-x-[-4px] text-black text-xs px-1.5 py-0.5 rounded">
-          {rightBottomComponent}
+      {rightTopComponent != null && (
+        <span className="absolute top-1 right-0 translate-x-[-4px] text-black text-sm px-1.5 py-0.5 rounded">
+          {rightTopComponent}
         </span>
       )}
     </div>

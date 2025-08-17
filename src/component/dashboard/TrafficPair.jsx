@@ -1,58 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TrafficParticles } from './TrafficParticles';
-import {
-  Button,
-  Card,
-  CardBody,
-  Input,
-  NumberInput,
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-} from '@heroui/react';
+import { Button, Card, CardBody, Chip, NumberInput } from '@heroui/react';
 import { NumberUtil } from '../../util/numberUtil.js';
 import { ExternalLinkIcon } from '../../icon/Icons.jsx';
 import { useNavigate } from 'react-router';
 import { ActionGroupClient } from '../../api/action-group/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
 import debounce from 'lodash/debounce';
-
-function getWaitingStatus(maxActiveCustomers, waitingCount) {
-  if (maxActiveCustomers == null || waitingCount == null) {
-    return '-';
-  } else if (maxActiveCustomers <= 0) {
-    return '진입불가';
-  } else if (waitingCount / maxActiveCustomers < 0.3) {
-    return '원활';
-  } else if (waitingCount / maxActiveCustomers <= 1) {
-    return '대기 ';
-  }
-  return '혼잡';
-}
-function getWaitingBackgroundColor(status) {
-  if (status === '혼잡') {
-    return '#FF3838';
-  } else if (status === '원활') {
-    return '#04B34F';
-  } else if (status === '대기') {
-    return '#FFB302';
-  }
-  return '#c2c2c2';
-}
-
-function getWaitingTextColor(status) {
-  if (status === '혼잡') {
-    return '#ffffff';
-  } else if (status === '원활') {
-    return '#ffffff';
-  } else if (status === '대기') {
-    return '#ffffff';
-  }
-  return '#000000';
-}
+import './TrafficPair.css';
 
 const MAX_ACTIVE_CUSTOMERS_CHANGE_GROUP = [-10, -5, 5, 10];
 
@@ -67,6 +22,73 @@ const toSigedString = (val) => {
   return 'undefined';
 };
 
+function formatSecondsToKorean(seconds) {
+  const s = Number(seconds);
+  if (isNaN(s) || s < 0) {
+    return '-';
+  }
+  if (s === 0) {
+    return `즉시`;
+  }
+  if (s < 60) {
+    return `${s}초`;
+  }
+  // 분 단위로만 표시 (반올림 대신 내림: 60~119초는 1분으로 표시)
+  const minutes = Math.floor(s / 60);
+  return `${minutes}분`;
+}
+
+const getQueueStatus = (waitTime) => {
+  if (waitTime < 0) {
+    return '진입불가';
+  }
+  if (waitTime >= 600) {
+    return '폭주';
+  } else if (waitTime >= 10) {
+    return '혼잡';
+  } else if (waitTime > 0) {
+    return '원활';
+  } else if (waitTime === 0) {
+    return '바로입장';
+  } else {
+    return '-';
+  }
+};
+
+const statusColorMap = {
+  진입불가: { heroUi: 'default', hex: '#D4D4D8' },
+  바로입장: { heroUi: 'success', hex: '#17C964' },
+  폭주: { heroUi: 'danger', hex: '#F31260' },
+  혼잡: { heroUi: 'warning', hex: '#F5A524' },
+  원활: { heroUi: 'primary', hex: '#20814C' },
+};
+
+const getHeroUiColorFromStatus = (stat) => {
+  return statusColorMap[stat] ? statusColorMap[stat].heroUi : 'default';
+};
+
+const getHexColorFromStatus = (stat) => {
+  return statusColorMap[stat] ? statusColorMap[stat].hex : '#D4D4D8';
+};
+
+const QUEUE_STATUS_CHIP_SIZE = 'lg';
+const QUEUE_STATUS_CHIP_CLASSES = {
+  base: 'text-lg min-w-16 min-h-8 text-center',
+};
+
+const getQueueStatusChip = (stat) => {
+  return (
+    <Chip
+      size={QUEUE_STATUS_CHIP_SIZE}
+      color={getHeroUiColorFromStatus(stat)}
+      variant={stat === '바로입장' ? 'flat' : 'solid'}
+      classNames={QUEUE_STATUS_CHIP_CLASSES}
+    >
+      {stat}
+    </Chip>
+  );
+};
+
 export function TrafficPair({
   width = 400,
   height = 80,
@@ -78,7 +100,7 @@ export function TrafficPair({
   trailAlpha = 0.12,
   onUpdateMaxActiveCustomers,
 }) {
-  const status = useRef(null);
+  const [status, setStatus] = useState('-');
   const [editMaxActiveCustomers, setEditMaxActiveCustomers] = useState(0);
 
   useEffect(() => {
@@ -86,7 +108,8 @@ export function TrafficPair({
   }, [actionGroup]);
 
   useEffect(() => {
-    status.current = getWaitingStatus(actionGroup?.maxActiveCustomers, trafficData?.waitingCount);
+    setStatus(getQueueStatus(trafficData?.estimatedWaitTime));
+    console.log('queuestatus set', getQueueStatus(trafficData?.estimatedWaitTime));
   }, [actionGroup, trafficData]);
 
   const debouncedUpdateMaxActiveCustomers = useCallback(
@@ -120,7 +143,7 @@ export function TrafficPair({
   };
 
   return (
-    <div className="flex gap-2 p-4 border-1 rounded-lg bg-white items-end">
+    <div className="flex gap-2 p-4 border-1 border-neutral-300 rounded-lg bg-white items-end">
       <div>
         <div className="flex flex-col gap-2 relative">
           <div className="">
@@ -142,38 +165,52 @@ export function TrafficPair({
                 actionGroupId={actionGroup.id}
                 updateTrigger={trafficData?.timestamp}
                 width={width}
-                height={80}
-                wrapperHeight={80}
+                height={height}
                 yMin={10}
-                yMax={50}
+                yMax={60}
                 count={trafficData?.requestCount}
                 particleColor={waitingColor}
                 backgroundColor={backgroundColor}
                 wrapperBackgroundColor={backgroundColor}
                 trailAlpha={trailAlpha}
-                leftBottomComponent={trafficData?.requestCount}
+                leftTopComponent={
+                  <div className="text-neutral-600">
+                    실시간 요청: {trafficData?.requestCount}
+                    <span className="text-xs">/초</span>
+                  </div>
+                }
               />
             </div>
-            <div className="w-32 text-large rounded-l-sm rounded-r-2xl bg-neutral-100">
+            <div className="w-[220px] text-large rounded-l-sm rounded-r-2xl z-[2]">
               <Card
                 style={{
-                  backgroundColor: getWaitingBackgroundColor(status.current),
+                  // backgroundColor: getWaitingBackgroundColor(status),
+                  borderColor: getHexColorFromStatus(status),
+                  borderStyle: 'solid',
+                  borderWidth: '1px',
                 }}
               >
                 <CardBody>
                   <div
                     className="flex flex-col items-center justify-center"
-                    style={{
-                      color: getWaitingTextColor(status.current),
-                    }}
+                    style={
+                      {
+                        // color: getWaitingTextColor(status),
+                      }
+                    }
                   >
-                    <span className="text-xl">{status.current}</span>
-                    <div>
-                      <span className="text-sm leading-none mr-1"> 대기인원:</span>
-                      <span className="text-lg leading-3">
+                    <div className={'mb-1 rounded-full ' + (status === '폭주' ? 'glow-pulse' : '')}>
+                      {getQueueStatusChip(status)}
+                    </div>
+                    <div className="text-lg">
+                      <span>예상: </span>
+                      <span className="font-bold text-xl">{formatSecondsToKorean(trafficData?.estimatedWaitTime)}</span>
+                      <span> · </span>
+                      <span>대기: </span>
+                      <span className="font-bold text-xl">
                         {trafficData?.waitingCount ? NumberUtil.formatNumber(trafficData?.waitingCount) : '0'}
                       </span>
-                      <span className="text-sm">명</span>
+                      <span>명</span>
                     </div>
                   </div>
                 </CardBody>
@@ -184,17 +221,21 @@ export function TrafficPair({
                 actionGroupId={actionGroup.id}
                 updateTrigger={trafficData?.timestamp}
                 width={width}
-                height={80}
-                wrapperHeight={80}
-                yMin={7}
-                yMax={23}
+                height={height}
+                yMin={20}
+                yMax={50}
                 count={trafficData?.enteredCount}
                 particleColor={enteredColor}
                 backgroundColor={backgroundColor}
                 wrapperBackgroundColor={backgroundColor}
                 trailAlpha={trailAlpha}
                 wrapperType="ENTERED"
-                rightBottomComponent={trafficData?.enteredCount}
+                rightTopComponent={
+                  <div className="text-neutral-600">
+                    실시간 입장: {trafficData?.enteredCount}
+                    <span className="text-xs">/초</span>
+                  </div>
+                }
               />
             </div>
           </div>

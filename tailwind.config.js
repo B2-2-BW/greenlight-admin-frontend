@@ -16,6 +16,7 @@ export default {
               DEFAULT: '#20814C',
               foreground: '#FFFFFF',
             },
+            tertiary: '#FB0000',
             focus: '#20814C',
           },
         },
