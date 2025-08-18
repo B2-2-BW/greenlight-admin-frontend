@@ -109,7 +109,6 @@ export function TrafficPair({
 
   useEffect(() => {
     setStatus(getQueueStatus(trafficData?.estimatedWaitTime));
-    console.log('queuestatus set', getQueueStatus(trafficData?.estimatedWaitTime));
   }, [actionGroup, trafficData]);
 
   const debouncedUpdateMaxActiveCustomers = useCallback(
@@ -143,7 +142,7 @@ export function TrafficPair({
   };
 
   return (
-    <div className="flex gap-2 p-4 border-1 border-neutral-300 rounded-lg bg-white items-end">
+    <div className="flex gap-2 p-4 border-1 border-neutral-300 rounded-lg bg-white items-end relative">
       <div>
         <div className="flex flex-col gap-2 relative">
           <div className="">
@@ -175,7 +174,7 @@ export function TrafficPair({
                 trailAlpha={trailAlpha}
                 leftTopComponent={
                   <div className="text-neutral-600">
-                    실시간 요청: {trafficData?.requestCount}
+                    실시간 요청: {NumberUtil.round(trafficData?.requestCount, 1)}
                     <span className="text-xs">/초</span>
                   </div>
                 }
@@ -232,7 +231,7 @@ export function TrafficPair({
                 wrapperType="ENTERED"
                 rightTopComponent={
                   <div className="text-neutral-600">
-                    실시간 입장: {trafficData?.enteredCount}
+                    실시간 입장: {NumberUtil.round(trafficData?.enteredCount, 1)}
                     <span className="text-xs">/초</span>
                   </div>
                 }
@@ -241,6 +240,14 @@ export function TrafficPair({
           </div>
         </div>
       </div>
+      {/*<div>*/}
+      {/*  <div className="mb-2">*/}
+      {/*    <div className="flex flex-col items-center">*/}
+      {/*      <span className="text-neutral-600">현재 활성사용자 수</span>*/}
+      {/*      <span>{trafficData?.averageActiveUserCount}</span>*/}
+      {/*    </div>*/}
+      {/*  </div>*/}
+      {/*</div>*/}
       <div>
         <div className="mb-2">
           <span className="text-neutral-600">최대 활성사용자 수</span>

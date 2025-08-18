@@ -35,7 +35,7 @@ export default function NavBar() {
   };
 
   return (
-    <Navbar isBordered className="min-w-[800px] flex justify-between" maxWidth="full">
+    <Navbar isBordered className="min-w-[800px] flex justify-between z-[1001]" maxWidth="full">
       <NavbarContent justify="start">
         <NavbarBrand className="mr-4">
           <p className="block font-bold text-inherit">

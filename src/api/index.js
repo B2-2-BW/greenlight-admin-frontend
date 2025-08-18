@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BASE_CORE_URL, BASE_EXTERNAL_URL } from '../client/config';
+import { BASE_CORE_URL, BASE_EXTERNAL_URL, BASE_SCHEDULER_URL } from '../client/config';
 import { LoginUtil } from '../util/loginUtil.js';
 
 const loginAxiosInstance = axios.create({
@@ -15,6 +15,14 @@ const commonAxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+const schedulerAxiosInstance = axios.create({
+  baseURL: BASE_SCHEDULER_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 commonAxiosInstance.interceptors.request.use(
   (config) => {
     const token = LoginUtil.getToken();
@@ -33,4 +41,4 @@ const coreAxiosInstance = axios.create({
   },
 });
 
-export { commonAxiosInstance, coreAxiosInstance, loginAxiosInstance };
+export { commonAxiosInstance, coreAxiosInstance, loginAxiosInstance, schedulerAxiosInstance };

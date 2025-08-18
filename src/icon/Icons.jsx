@@ -1,3 +1,5 @@
+// https://www.svgrepo.com/collection/solar-bold-duotone-icons/
+
 export const PlusIcon = ({ size = 24, width, height, strokeWidth = 1.5, ...props }) => {
   return (
     <svg
@@ -147,7 +149,7 @@ export const DockerIcon = ({ color = '#000000', size = 24 }) => {
 
 export const SettingsFilledIcon = ({ color = '#000000', size = 24 }) => {
   return (
-    <svg width={`${size}px`} height={`${size}px`} viewBox="2 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width={`${size}px`} height={`${size}px`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
         fillRule="evenodd"
         clipRule="evenodd"
@@ -239,6 +241,51 @@ export const EyeFilledIcon = (props) => {
         d="M11.9984 9.14062C10.4284 9.14062 9.14844 10.4206 9.14844 12.0006C9.14844 13.5706 10.4284 14.8506 11.9984 14.8506C13.5684 14.8506 14.8584 13.5706 14.8584 12.0006C14.8584 10.4306 13.5684 9.14062 11.9984 9.14062Z"
         fill="currentColor"
       />
+    </svg>
+  );
+};
+
+export const ClockFilledIcon = ({ color = '#000000', size = 24 }) => {
+  return (
+    <svg width={`${size}px`} height={`${size}px`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+        fill={color}
+      />
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12 7.25C12.4142 7.25 12.75 7.58579 12.75 8V11.6893L15.0303 13.9697C15.3232 14.2626 15.3232 14.7374 15.0303 15.0303C14.7374 15.3232 14.2626 15.3232 13.9697 15.0303L11.4697 12.5303C11.329 12.3897 11.25 12.1989 11.25 12V8C11.25 7.58579 11.5858 7.25 12 7.25Z"
+        fill="#FFFFFF"
+      />
+    </svg>
+  );
+};
+
+export const UserFilledIcon = ({ color = '#000000', size = 24 }) => {
+  return (
+    <svg width={`${size}px`} height={`${size}px`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="6" r="4" fill={color} />
+      <path
+        opacity="0.8"
+        d="M20 17.5C20 19.9853 20 22 12 22C4 22 4 19.9853 4 17.5C4 15.0147 7.58172 13 12 13C16.4183 13 20 15.0147 20 17.5Z"
+        fill={color}
+      />
+    </svg>
+  );
+};
+
+export const QuestionCircleOutlined = ({ color = '#000000', size = 24 }) => {
+  return (
+    <svg width={`${size}px`} height={`${size}px`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" />
+      <path
+        d="M10.125 8.875C10.125 7.83947 10.9645 7 12 7C13.0355 7 13.875 7.83947 13.875 8.875C13.875 9.56245 13.505 10.1635 12.9534 10.4899C12.478 10.7711 12 11.1977 12 11.75V13"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy="16" r="1.5" fill={color} />
     </svg>
   );
 };

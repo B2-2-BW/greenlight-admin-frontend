@@ -30,11 +30,11 @@ import { requiredInputProps } from '../../shared/props.js';
 const enabledMessage = {
   true: {
     title: '대기열 활성화',
-    subtitle: '대기열이 적용되어 활성사용자 수를 제어합니다.',
+    subtitle: '액션 그룹에 대기열이 적용되어 활성사용자 수를 제어합니다.',
   },
   false: {
     title: '대기열 비활성화',
-    subtitle: '대기열이 적용되지 않고, 즉시 진입이 가능한 상태가 됩니다',
+    subtitle: '액션 그룹에 대기열이 적용되지 않고, 즉시 진입이 가능한 상태가 됩니다',
   },
 };
 

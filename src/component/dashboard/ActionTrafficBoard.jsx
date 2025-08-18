@@ -1,7 +1,7 @@
 import { TrafficPair } from './TrafficPair';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActionGroupClient } from '../../api/action-group/index.js';
-import { Skeleton } from '@heroui/react';
+import { Button, Skeleton } from '@heroui/react';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import { LoginUtil } from '../../util/loginUtil.js';
 import { BASE_EXTERNAL_URL } from '../../client/config.js';
@@ -101,7 +101,6 @@ export function ActionTrafficBoard() {
           <span className="mt-2 text-xl font-bold">고객 트래픽 요약</span>
           {/*<span>기준시간: {DateUtil.timestampToDateTime(trafficDetail[0]?.timestamp)}</span>*/}
         </div>
-
         <TrafficSummary isLoading={isDataLoading} trafficSummary={trafficSummary} />
       </div>
       <div>
