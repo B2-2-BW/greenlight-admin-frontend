@@ -1,4 +1,4 @@
-import { Card, CardBody, CardHeader, cn, Image, Skeleton, Switch } from '@heroui/react';
+import { Card, CardBody, CardHeader, cn, Skeleton, Switch } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { SchedulerClient } from '../../api/scheduler/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';

@@ -19,8 +19,10 @@ export default function SystemSettingsForm() {
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
 
-  const [editSystemEnabled, setEditSystemEnabled] = useState(false);
-  const handleSubmit = () => {};
+  const [editSystemEnabled, setEditSystemEnabled] = useState(true);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+  };
   return (
     <>
       <Form
@@ -86,17 +88,17 @@ export default function SystemSettingsForm() {
             </Skeleton>
           </SectionTitle>
 
-          <SectionTitle title="활성사용자/세션 유지시간">
-            <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>
-              <div className="flex flex-col w-full gap-6">
-                <div>
-                  <div className="mb-2 text-base after:content-['*'] after:text-danger after:ms-0.5">
-                    대기열 시스템 활성/비활성화
-                  </div>
-                </div>
-              </div>
-            </Skeleton>
-          </SectionTitle>
+          {/*<SectionTitle title="활성사용자/세션 유지시간">*/}
+          {/*  <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>*/}
+          {/*    <div className="flex flex-col w-full gap-6">*/}
+          {/*      <div>*/}
+          {/*        <div className="mb-2 text-base after:content-['*'] after:text-danger after:ms-0.5">*/}
+          {/*          대기열 시스템 활성/비활성화*/}
+          {/*        </div>*/}
+          {/*      </div>*/}
+          {/*    </div>*/}
+          {/*  </Skeleton>*/}
+          {/*</SectionTitle>*/}
         </div>
         <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
           <Button size="lg" color="primary" variant="shadow" type="submit" isLoading={isSubmitLoading} fullWidth>

@@ -142,7 +142,7 @@ export function TrafficPair({
   };
 
   return (
-    <div className="flex gap-2 p-4 border-1 border-neutral-300 rounded-lg bg-white items-end relative">
+    <div className="flex gap-2 p-4 border-1 border-neutral-300 rounded-lg bg-white items-end">
       <div>
         <div className="flex flex-col gap-2 relative">
           <div className="">
@@ -174,7 +174,7 @@ export function TrafficPair({
                 trailAlpha={trailAlpha}
                 leftTopComponent={
                   <div className="text-neutral-600">
-                    실시간 요청: {NumberUtil.round(trafficData?.requestCount, 1)}
+                    실시간 요청: {NumberUtil.round(trafficData?.averageRequestCount, 1)}
                     <span className="text-xs">/초</span>
                   </div>
                 }
@@ -231,7 +231,7 @@ export function TrafficPair({
                 wrapperType="ENTERED"
                 rightTopComponent={
                   <div className="text-neutral-600">
-                    실시간 입장: {NumberUtil.round(trafficData?.enteredCount, 1)}
+                    실시간 입장: {NumberUtil.round(trafficData?.averageEnteredCount, 1)}
                     <span className="text-xs">/초</span>
                   </div>
                 }
@@ -250,7 +250,7 @@ export function TrafficPair({
       {/*</div>*/}
       <div>
         <div className="mb-2">
-          <span className="text-neutral-600">최대 활성사용자 수</span>
+          <span className="text-neutral-600">초당 유입량</span>
         </div>
         <div className="flex rounded-xl border-1 w-[160px]">
           <Button

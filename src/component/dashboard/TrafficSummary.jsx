@@ -57,12 +57,12 @@ export default function TrafficSummary({ isLoading = false, trafficSummary }) {
       <Card className="border-2">
         <CardHeader>
           <p className="text-base uppercase font-bold">대기 요청</p>
-          <SummaryTooltip title="대기 요청" content="유량제어 서버에서 측정된 실시간 요청 수" />
+          <SummaryTooltip title="대기 요청" content="유량제어 서버에서 측정된 실시간 요청 수 (10초 평균)" />
         </CardHeader>
         <CardBody>
           <div className="min-w-32 h-16 flex justify-end items-end">
             <span className="text-4xl leading-none font-semibold mr-[2px]">
-              {NumberUtil.formatNumber(trafficSummary?.requestCount)}
+              {NumberUtil.formatNumber(trafficSummary?.averageRequestCount)}
             </span>
             <span className="text-base text-neutral-600">/초</span>
           </div>
@@ -85,12 +85,12 @@ export default function TrafficSummary({ isLoading = false, trafficSummary }) {
       <Card className="border-2">
         <CardHeader>
           <p className="text-base uppercase font-bold">입장인원</p>
-          <SummaryTooltip title="입장인원" content="유량제어 서버에서 측정된 실시간 입장 인원 수" />
+          <SummaryTooltip title="입장인원" content="유량제어 서버에서 측정된 실시간 입장 인원 수 (10초 평균)" />
         </CardHeader>
         <CardBody>
           <div className="min-w-32 h-16 flex justify-end items-end">
             <span className="text-4xl leading-none font-semibold mr-[2px]">
-              {NumberUtil.formatNumber(trafficSummary?.enteredCount)}
+              {NumberUtil.formatNumber(trafficSummary?.averageEnteredCount)}
             </span>
             <span className="text-base text-neutral-600">/초</span>
           </div>

@@ -283,7 +283,7 @@ export default function ActionGroupDetailForm({ onPressBack }) {
                   minValue={0}
                   description={
                     <div className="flex flex-col text-sm">
-                      <span>액션 그룹 내 최대 활성 사용자 수를 제한합니다.</span>
+                      <span>액션 그룹 내 유입되는 사용자 수를 제한합니다.</span>
                       <span>0으로 설정하면 진입이 멈춥니다.</span>
                     </div>
                   }
