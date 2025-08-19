@@ -49,7 +49,7 @@ export default function ActionGroupDetailForm({ onPressBack }) {
   const [actionId, setActionId] = useState(null);
   const [editName, setEditName] = useState('');
   const [editDescription, setDescription] = useState('');
-  const [editMaxActiveCustomers, setEditMaxActiveCustomers] = useState(0);
+  const [editMaxTrafficPerSecond, setEditMaxTrafficPerSecond] = useState(0);
   const [editEnabled, setEditEnabled] = useState(true);
 
   const navigate = useNavigate();
@@ -71,12 +71,12 @@ export default function ActionGroupDetailForm({ onPressBack }) {
   const clearForm = () => {
     setEditName('');
     setDescription('');
-    setEditMaxActiveCustomers(0);
+    setEditMaxTrafficPerSecond(0);
     setEditEnabled(false);
   };
 
-  const handleMaxActiveCustomersChange = (val) => {
-    setEditMaxActiveCustomers(val);
+  const handleMaxTrafficPerSecondChange = (val) => {
+    setEditMaxTrafficPerSecond(val);
   };
 
   const fetchActionGroup = async () => {
@@ -88,7 +88,7 @@ export default function ActionGroupDetailForm({ onPressBack }) {
       setActionGroup(data);
       setEditName(data.name || '');
       setDescription(data.description || '');
-      setEditMaxActiveCustomers(data.maxActiveCustomers ?? 0);
+      setEditMaxTrafficPerSecond(data.maxTrafficPerSecond ?? 0);
       setEditEnabled(data?.enabled != null ? data.enabled : false);
     } catch (error) {
       console.error('Error fetching:', error);
@@ -113,7 +113,7 @@ export default function ActionGroupDetailForm({ onPressBack }) {
     const data = {
       name: editName,
       description: editDescription,
-      maxActiveCustomers: editMaxActiveCustomers,
+      maxTrafficPerSecond: editMaxTrafficPerSecond,
       enabled: editEnabled,
     };
 
@@ -277,8 +277,8 @@ export default function ActionGroupDetailForm({ onPressBack }) {
                 </div>
                 <NumberInput
                   className="w-full max-w-md"
-                  label="최대 활성사용자수"
-                  name="queueBackpressure"
+                  label="초당 유입량"
+                  name="maxTrafficPerSecond"
                   placeholder=" "
                   minValue={0}
                   description={
@@ -287,9 +287,9 @@ export default function ActionGroupDetailForm({ onPressBack }) {
                       <span>0으로 설정하면 진입이 멈춥니다.</span>
                     </div>
                   }
-                  value={editMaxActiveCustomers}
-                  // onChange={handleMaxActiveCustomersChange}
-                  onValueChange={handleMaxActiveCustomersChange}
+                  value={editMaxTrafficPerSecond}
+                  // onChange={handleMaxTrafficPerSecondChange}
+                  onValueChange={handleMaxTrafficPerSecondChange}
                   {...requiredInputProps}
                   classNames={{
                     inputWrapper: 'max-w-[10rem]',

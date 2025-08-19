@@ -90,7 +90,7 @@ export function ActionTrafficBoard() {
       setIsPageLoading(false);
     }
   };
-  const onUpdateMaxActiveCustomers = async () => {
+  const onUpdateMaxTrafficPerSecond = async () => {
     await fetchActionGroupList();
   };
 
@@ -115,7 +115,7 @@ export function ActionTrafficBoard() {
                   width={280}
                   height={70}
                   backgroundColor={'#f6f6f6'}
-                  onUpdateMaxActiveCustomers={onUpdateMaxActiveCustomers}
+                  onUpdateMaxTrafficPerSecond={onUpdateMaxTrafficPerSecond}
                 />
               </Skeleton>
             </div>

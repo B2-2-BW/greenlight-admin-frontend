@@ -9,7 +9,7 @@ import { ToastUtil } from '../../util/toastUtil.js';
 import debounce from 'lodash/debounce';
 import './TrafficPair.css';
 
-const MAX_ACTIVE_CUSTOMERS_CHANGE_GROUP = [-10, -5, 5, 10];
+const MAX_TRAFFIC_PER_SECOND_CHANGE_GROUP = [-10, -5, 5, 10];
 
 const toSigedString = (val) => {
   if (val === 0) {
@@ -98,21 +98,21 @@ export function TrafficPair({
   waitingColor = '#49B3FF',
   enteredColor = '#4ADE80',
   trailAlpha = 0.12,
-  onUpdateMaxActiveCustomers,
+  onUpdateMaxTrafficPerSecond,
 }) {
   const [status, setStatus] = useState('-');
-  const [editMaxActiveCustomers, setEditMaxActiveCustomers] = useState(0);
+  const [editMaxTrafficPerSecond, setEditMaxTrafficPerSecond] = useState(0);
 
   useEffect(() => {
-    setEditMaxActiveCustomers(actionGroup?.maxActiveCustomers);
+    setEditMaxTrafficPerSecond(actionGroup?.maxTrafficPerSecond);
   }, [actionGroup]);
 
   useEffect(() => {
     setStatus(getQueueStatus(trafficData?.estimatedWaitTime));
   }, [actionGroup, trafficData]);
 
-  const debouncedUpdateMaxActiveCustomers = useCallback(
-    debounce((value) => updateMaxActiveCustomers(value), 500),
+  const debouncedUpdateMaxTrafficPerSecond = useCallback(
+    debounce((value) => updateMaxTrafficPerSecond(value), 500),
     []
   );
 
@@ -122,23 +122,23 @@ export function TrafficPair({
     navigate(`/action-groups/${actionGroupId}`);
   };
 
-  const onMaxActiveCustomersChange = async (value) => {
-    setEditMaxActiveCustomers((prev) => Math.max(value, 0));
-    debouncedUpdateMaxActiveCustomers(value);
+  const onMaxTrafficPerSecondChange = async (value) => {
+    setEditMaxTrafficPerSecond((prev) => Math.max(value, 0));
+    debouncedUpdateMaxTrafficPerSecond(value);
   };
 
-  const updateMaxActiveCustomers = async (value) => {
+  const updateMaxTrafficPerSecond = async (value) => {
     if (actionGroup?.id == null) {
-      ToastUtil.error('활성사용자수 변경 실패', '액션그룹이 없습니다.');
+      ToastUtil.error('초당 유입량 변경 실패', '액션그룹이 없습니다.');
       return;
     }
     const newValue = Math.max(value, 0);
     await ActionGroupClient.updateActionGroupById(actionGroup.id, {
-      maxActiveCustomers: newValue,
+      maxTrafficPerSecond: newValue,
     });
     await ActionGroupClient.invalidateCoreActionGroupCache(actionGroup.id);
-    ToastUtil.success('활성사용자수 변경 성공', `최대 활성사용자수 설정값이 저장되었습니다. 설정값: ${newValue}`);
-    onUpdateMaxActiveCustomers();
+    ToastUtil.success('초당 유입량 변경 성공', `초당 유입량 설정값이 저장되었습니다. 설정값: ${newValue}`);
+    onUpdateMaxTrafficPerSecond();
   };
 
   return (
@@ -254,35 +254,35 @@ export function TrafficPair({
         </div>
         <div className="flex rounded-xl border-1 w-[160px]">
           <Button
-            isDisabled={editMaxActiveCustomers <= 0}
+            isDisabled={editMaxTrafficPerSecond <= 0}
             isIconOnly
-            onPress={() => onMaxActiveCustomersChange(editMaxActiveCustomers - 1)}
+            onPress={() => onMaxTrafficPerSecondChange(editMaxTrafficPerSecond - 1)}
           >
             -
           </Button>
           <div className="grow">
             <NumberInput
-              aria-label="최대 활성사용자수"
+              aria-label="초당 유입량"
               hideStepper
               labelPlacement="outside"
               style={{ border: 'none' }}
               variant="bordered"
-              value={editMaxActiveCustomers}
-              onValueChange={onMaxActiveCustomersChange}
+              value={editMaxTrafficPerSecond}
+              onValueChange={onMaxTrafficPerSecondChange}
               classNames={{ inputWrapper: 'border-0 shadow-none', input: 'text-center text-lg' }}
             />
           </div>
-          <Button isIconOnly onPress={() => onMaxActiveCustomersChange(editMaxActiveCustomers + 1)}>
+          <Button isIconOnly onPress={() => onMaxTrafficPerSecondChange(editMaxTrafficPerSecond + 1)}>
             +
           </Button>
         </div>
         <div className="flex gap-1 justify-between mt-1">
-          {MAX_ACTIVE_CUSTOMERS_CHANGE_GROUP.map((value) => (
+          {MAX_TRAFFIC_PER_SECOND_CHANGE_GROUP.map((value) => (
             <Button
               size="sm"
               key={value}
-              isDisabled={editMaxActiveCustomers <= 0 && value < 0}
-              onPress={() => onMaxActiveCustomersChange(editMaxActiveCustomers + value)}
+              isDisabled={editMaxTrafficPerSecond <= 0 && value < 0}
+              onPress={() => onMaxTrafficPerSecondChange(editMaxTrafficPerSecond + value)}
               isIconOnly
               variant="light"
             >

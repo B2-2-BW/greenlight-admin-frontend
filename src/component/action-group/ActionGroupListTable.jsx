@@ -8,7 +8,7 @@ const columns = [
   { name: 'ID', uid: 'id' },
   { name: '이름', uid: 'description' },
   { name: '활성/비활성', uid: 'enabled' },
-  { name: '최대 활성사용자 수', uid: 'maxActiveCustomers' },
+  { name: '초당 유입량', uid: 'maxTrafficPerSecond' },
   { name: '수정일자', uid: 'updatedAt' },
 ];
 
@@ -41,7 +41,7 @@ export default function ActionGroupListTable({ onPress }) {
         return <ActionGroupStatusChip enabled={cellValue} />;
       case 'updatedAt':
         return toDateHtml(cellValue);
-      case 'maxActiveCustomers':
+      case 'maxTrafficPerSecond':
         return (
           <div>
             <span>{cellValue}</span>
