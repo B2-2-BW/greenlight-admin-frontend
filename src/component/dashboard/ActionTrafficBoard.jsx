@@ -112,7 +112,7 @@ export function ActionTrafficBoard() {
                 <TrafficPair
                   actionGroup={actionGroup}
                   trafficData={trafficDetail[actionGroup.id]}
-                  width={280}
+                  width={260}
                   height={70}
                   backgroundColor={'#f6f6f6'}
                   onUpdateMaxTrafficPerSecond={onUpdateMaxTrafficPerSecond}

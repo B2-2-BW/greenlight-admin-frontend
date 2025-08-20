@@ -142,7 +142,7 @@ export function TrafficPair({
   };
 
   return (
-    <div className="flex gap-2 p-4 border-1 border-neutral-300 rounded-lg bg-white items-end">
+    <div className="flex gap-4 p-4 border-1 border-neutral-300 rounded-lg bg-white items-end">
       <div>
         <div className="flex flex-col gap-2 relative">
           <div className="">
@@ -180,7 +180,7 @@ export function TrafficPair({
                 }
               />
             </div>
-            <div className="w-[220px] text-large rounded-l-sm rounded-r-2xl z-[2]">
+            <div className="w-[240px] text-large rounded-l-sm rounded-r-2xl z-[2]">
               <Card
                 style={{
                   // backgroundColor: getWaitingBackgroundColor(status),
@@ -201,12 +201,12 @@ export function TrafficPair({
                     <div className={'mb-1 rounded-full ' + (status === '폭주' ? 'glow-pulse' : '')}>
                       {getQueueStatusChip(status)}
                     </div>
-                    <div className="text-lg">
+                    <div className="text-base">
                       <span>예상: </span>
                       <span className="font-bold text-xl">{formatSecondsToKorean(trafficData?.estimatedWaitTime)}</span>
                       <span> · </span>
                       <span>대기: </span>
-                      <span className="font-bold text-xl">
+                      <span className="font-bold text-lg">
                         {trafficData?.waitingCount ? NumberUtil.formatNumber(trafficData?.waitingCount) : '0'}
                       </span>
                       <span>명</span>
@@ -250,7 +250,7 @@ export function TrafficPair({
       {/*</div>*/}
       <div>
         <div className="mb-2">
-          <span className="text-neutral-600">초당 유입량</span>
+          <span className="text-neutral-600">초당 유입량 설정</span>
         </div>
         <div className="flex rounded-xl border-1 w-[160px]">
           <Button
