@@ -1,44 +1,55 @@
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import { addToast, Button, Card, CardBody, CardFooter, CardHeader, Form, Input, Switch } from '@heroui/react';
 import logo from '/logo.png';
-import { useUserStore } from '../store/user.jsx';
+import { login } from '../api/user/index.js';
+import { LoginUtil } from '../util/loginUtil.js';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
+  const { search } = useLocation();
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [rememberUser, setRememberUser] = useState(false);
   const [errors, setErrors] = useState({});
-  const { user, setUser } = useUserStore();
-  const handleLogin = (e) => {
+
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!username) {
+    if (!userId) {
       setErrors({ username: '사용자 ID는 필수값입니다.' });
       return;
     }
 
-    if (username === 'admin' && password === 'admin') {
-      const userData = { username };
-      setUser(userData);
-      if (rememberUser) {
-        window.localStorage.setItem('user', JSON.stringify(userData));
-      }
-      navigate(0);
-    } else {
+    const response = await login({ userId, password });
+
+    if (response.status === 401 || response.status === 404) {
       addToast({
         title: '로그인 실패',
-        description: '아이디 또는 비밀번호가 잘못되었습니다',
+        description: '아이디 또는 비밀번호가 잘못되었습니다.',
         color: 'danger',
       });
+      return;
+    } else if (!response?.data?.accessToken) {
+      console.error('login failed', response);
+      addToast({
+        title: '로그인 실패',
+        description: '잘못된 요청입니다. 관리자에게 문의해주세요. ' + response?.data?.message,
+        color: 'danger',
+      });
+      return;
     }
+
+    LoginUtil.saveToken(response.data.accessToken, rememberUser);
+
+    const params = new URLSearchParams(search);
+    const to = params.get('redirect') || '/'; // redirect가 있다면 해당 url로 없다면 /로 이동
+
+    navigate(to);
   };
+
   useEffect(() => {
     document.title = '로그인 | Greenlight Admin';
-    if (user?.username) {
-      navigate('/');
-    }
   }, []);
 
   return (
@@ -64,8 +75,8 @@ export default function LoginPage() {
               radius="sm"
               name="username"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
             />
             <Input
               size="sm"

@@ -1,21 +1,14 @@
-import { useUserStore } from '../store/user.jsx';
-import { useEffect } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
+import { LoginUtil } from '../util/loginUtil.js';
 
 function PrivateRoute({ children }) {
-  const { user, setUser } = useUserStore();
+  const { pathname } = useLocation();
 
-  useEffect(() => {
-    if (!user) {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    }
-  }, [user, setUser]);
+  if (!LoginUtil.isTokenValid()) {
+    alert('세션이 만료되었습니다!');
 
-  if (!user?.username) {
-    return <Navigate to="/login" replace />;
+    const to = { pathname: '/login', search: `?redirect=${pathname}` };
+    return <Navigate to={to} replace />;
   }
 
   return children;

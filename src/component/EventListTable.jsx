@@ -121,7 +121,7 @@ export default function EventListTable({ onPress }) {
         selectionBehavior="toggle"
         selectionMode="single"
         // onRowAction={(key) => alert(`Opening item ${key}...`)}
-
+        aria-label="테이블"
         onRowAction={(key) => onPress(key)}
         style={{ padding: 0, margin: 0 }}
       >

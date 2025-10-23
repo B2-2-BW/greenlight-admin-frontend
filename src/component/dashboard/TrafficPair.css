@@ -1,0 +1,16 @@
+@keyframes subtleGlow {
+    0%      { box-shadow: 0 0 4px rgba(229, 0, 0, 0.3); }
+    10%      { box-shadow: 0 0 8px rgba(229, 0, 0, 0.75); }
+    100%       { box-shadow: 0 0 30px rgba(229, 0, 0, 0.0); }
+}
+
+@keyframes subtlePulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.02); opacity: 0.95; }
+}
+
+.glow-pulse {
+    animation:
+            subtleGlow 1s ease-out infinite;
+    will-change: transform, box-shadow;
+}

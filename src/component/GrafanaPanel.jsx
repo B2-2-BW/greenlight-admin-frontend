@@ -2,7 +2,7 @@ import { GRAFANA_EXTERNAL_URL } from '../client/config.js';
 
 export default function GrafanaPanel({ path }) {
   const range = () => {
-    return `to=now&from=now-10m&refresh=5s&theme=light&timezone=browser&__feature.dashboardSceneSolo`;
+    return `to=now&from=now-5m&refresh=5s&theme=light&timezone=browser&__feature.dashboardSceneSolo`;
   };
   return (
     <div className="w-full h-full">
