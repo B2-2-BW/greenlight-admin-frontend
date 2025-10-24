@@ -28,17 +28,10 @@ const deleteActionGroupById = async (actionGroupId) => {
   return commonAxiosInstance.delete(`/action-groups/${actionGroupId}`);
 };
 
-// 캐시 초기화
-export const invalidateCoreActionGroupCache = async (actionGroupId) => {
-  const { data } = await coreAxiosInstance.delete(`/action-groups/${actionGroupId}/cache`);
-  return data;
-};
-
 const ActionGroupClient = {
   getActionGroupById,
   getActionGroupList,
   createAction,
-  invalidateCoreActionGroupCache,
   createActionGroup,
   updateActionGroupById,
   deleteActionGroupById,

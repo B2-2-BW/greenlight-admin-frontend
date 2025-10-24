@@ -5,12 +5,7 @@ import { parseDateTime } from '@internationalized/date';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import EventStatusChip from './EventStatusChip.jsx';
 import ArrowBackSvg from '../icon/ArrowBackSvg.jsx';
-import {
-  invalidateCoreEventCache,
-  deleteEventByEventName,
-  getEventByEventName,
-  updateEventByEventName,
-} from '../api/event/index.js';
+import { deleteEventByEventName, getEventByEventName, updateEventByEventName } from '../api/event/index.js';
 import DeleteSvg from '../icon/Delete.jsx';
 import ConfirmModal from './ConfirmModal.jsx';
 
@@ -103,7 +98,6 @@ export default function EventDetailForm({ onPressBack }) {
 
     try {
       await updateEventByEventName(eventName, updatedData);
-      await invalidateCoreEventCache(eventName);
       await fetchEvent(eventName);
       addToast({
         title: '이벤트 상세',
@@ -126,7 +120,6 @@ export default function EventDetailForm({ onPressBack }) {
     setIsSubmitLoading(true);
     try {
       await deleteEventByEventName(eventName);
-      await invalidateCoreEventCache(eventName);
       addToast({
         title: '이벤트 삭제',
         description: '이벤트가 성공적으로 삭제되었습니다.',

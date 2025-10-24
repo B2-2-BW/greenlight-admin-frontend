@@ -9,10 +9,6 @@ const updateActionById = async (actionId, data) => {
   return commonAxiosInstance.put(`/actions/${actionId}`, data);
 };
 
-const invalidateCoreActionCache = async (actionId) => {
-  return coreAxiosInstance.delete(`/actions/${actionId}/cache`);
-};
-
 const deleteActionById = async (actionId) => {
   return commonAxiosInstance.delete(`/actions/${actionId}`);
 };
@@ -20,7 +16,6 @@ const deleteActionById = async (actionId) => {
 const ActionClient = {
   getActionById,
   updateActionById,
-  invalidateCoreActionCache,
   deleteActionById,
 };
 export { ActionClient };

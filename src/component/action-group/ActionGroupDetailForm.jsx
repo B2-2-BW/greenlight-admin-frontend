@@ -22,7 +22,7 @@ import SomethingWentWrongPage from '../../page/SomethingWentWrongPage.jsx';
 import ActionListTable from '../action/ActionListTable.jsx';
 import ActionEditModal from '../action/ActionEditModal.jsx';
 import { PlusIcon } from '../../icon/Icons.jsx';
-import { ActionGroupClient, invalidateCoreActionGroupCache } from '../../api/action-group/index.js';
+import { ActionGroupClient } from '../../api/action-group/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { ActionUtil } from '../../util/actionUtil.js';
 import { requiredInputProps } from '../../shared/props.js';
@@ -121,7 +121,6 @@ export default function ActionGroupDetailForm({ onPressBack }) {
       if (actionGroupId) {
         // actionGroupId가 있는 경우 업데이트 화면
         await ActionGroupClient.updateActionGroupById(actionGroupId, data);
-        await ActionGroupClient.invalidateCoreActionGroupCache(actionGroupId);
         await fetchActionGroup();
       } else {
         // 없는 경우 생성 화면
@@ -145,7 +144,6 @@ export default function ActionGroupDetailForm({ onPressBack }) {
     setIsSubmitLoading(true);
     try {
       await ActionGroupClient.deleteActionGroupById(actionGroupId);
-      await ActionGroupClient.invalidateCoreActionGroupCache(actionGroupId);
       ToastUtil.success('액션 그룹 삭제', '액션 그룹이 성공적으로 삭제되었습니다.');
       navigate('/action-groups');
     } catch (error) {

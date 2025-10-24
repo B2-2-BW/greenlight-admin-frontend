@@ -1,5 +1,4 @@
 import { schedulerAxiosInstance } from '../index.js';
-import { invalidateCoreActionGroupCache } from '../action-group/index.js';
 
 const getSchedulerStatusList = async () => {
   const { data } = await schedulerAxiosInstance.get(`/schedulers/status`);

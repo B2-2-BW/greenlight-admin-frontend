@@ -30,15 +30,3 @@ export const createEvent = async (body) => {
   const { data } = await commonAxiosInstance.post(`/events`, body, {});
   return data;
 };
-
-// 캐시 초기화
-export const requestEventsCacheReload = async () => {
-  const { data } = await commonAxiosInstance.put(`/events/cache/reload`);
-  return data;
-};
-
-// 캐시 초기화
-export const invalidateCoreEventCache = async (eventName) => {
-  const { data } = await coreAxiosInstance.delete(`/events/${eventName}/cache`);
-  return data;
-};

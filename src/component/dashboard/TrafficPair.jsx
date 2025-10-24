@@ -136,7 +136,6 @@ export function TrafficPair({
     await ActionGroupClient.updateActionGroupById(actionGroup.id, {
       maxTrafficPerSecond: newValue,
     });
-    await ActionGroupClient.invalidateCoreActionGroupCache(actionGroup.id);
     ToastUtil.success('초당 유입량 변경 성공', `초당 유입량 설정값이 저장되었습니다. 설정값: ${newValue}`);
     onUpdateMaxTrafficPerSecond();
   };

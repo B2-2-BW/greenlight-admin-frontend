@@ -198,7 +198,6 @@ export default function ActionEditModal({ actionId, actionGroupId, isOpen, onOpe
     try {
       if (actionId) {
         await ActionClient.updateActionById(actionId, data);
-        await ActionClient.invalidateCoreActionCache(actionId);
       } else {
         await ActionGroupClient.createAction(actionGroupId, data);
       }
@@ -238,7 +237,6 @@ export default function ActionEditModal({ actionId, actionGroupId, isOpen, onOpe
   const handleDeleteAction = async () => {
     try {
       await ActionClient.deleteActionById(actionId);
-      await ActionClient.invalidateCoreActionCache(actionId);
       ToastUtil.success('액션 삭제', '액션을 삭제했습니다.');
       await onCloseDeleteActionModal();
       await onConfirm();
