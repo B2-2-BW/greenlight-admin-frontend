@@ -9,8 +9,9 @@ import {
   useDisclosure,
   cn,
   Tooltip,
+  Image,
 } from '@heroui/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import DeleteSvg from '../../icon/Delete.jsx';
 import ArrowBackSvg from '../../icon/ArrowBackSvg.jsx';
@@ -52,6 +53,10 @@ export default function ActionGroupDetailForm({ onPressBack }) {
   const [editMaxTrafficPerSecond, setEditMaxTrafficPerSecond] = useState(0);
   const [editEnabled, setEditEnabled] = useState(true);
 
+  // [추가] 이미지 관련 State
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
   const {
@@ -73,6 +78,9 @@ export default function ActionGroupDetailForm({ onPressBack }) {
     setDescription('');
     setEditMaxTrafficPerSecond(0);
     setEditEnabled(false);
+    // [추가] 초기화
+    setSelectedFile(null);
+    setPreviewUrl('');
   };
 
   const handleMaxTrafficPerSecondChange = (val) => {
@@ -90,12 +98,33 @@ export default function ActionGroupDetailForm({ onPressBack }) {
       setDescription(data.description || '');
       setEditMaxTrafficPerSecond(data.maxTrafficPerSecond ?? 0);
       setEditEnabled(data?.enabled != null ? data.enabled : false);
+
+      // [추가] 기존 이미지가 있다면 미리보기에 설정
+      if (data.imageUrl) {
+        setPreviewUrl(data.imageUrl);
+      }
     } catch (error) {
       console.error('Error fetching:', error);
       setErrorStatus(error.status);
     } finally {
       setIsPageLoading(false);
     }
+  };
+
+  // [추가] 파일 선택 핸들러
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      // 미리보기 URL 생성
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+    }
+  };
+
+  // [추가] 이미지 영역 클릭 시 파일 인풋 트리거
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
   };
 
   // Location 이동 시 실행
@@ -106,18 +135,34 @@ export default function ActionGroupDetailForm({ onPressBack }) {
     fetchActionGroup();
   }, [actionGroupId]);
 
+  // [수정] 이미지 업로드 로직이 포함된 handleSubmit (중복 제거됨)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitLoading(true);
 
-    const data = {
-      name: editName,
-      description: editDescription,
-      maxTrafficPerSecond: editMaxTrafficPerSecond,
-      enabled: editEnabled,
-    };
-
     try {
+      let finalImageUrl = actionGroup?.imageUrl || ''; // 기존 이미지 URL 유지
+
+      // 1. 새 파일이 선택되었다면 S3 업로드 진행
+      if (selectedFile) {
+        // 1-1. Presigned URL 요청
+        const uploadInfo = await ActionGroupClient.getPresignedUploadUrl(selectedFile.name);
+
+        // 1-2. S3 업로드
+        await ActionGroupClient.uploadFileToS3(uploadInfo.presignedUrl, selectedFile);
+
+        // 1-3. 업로드된 파일의 접근 URL 획득
+        finalImageUrl = uploadInfo.imageUrl;
+      }
+
+      const data = {
+        name: editName,
+        description: editDescription,
+        maxTrafficPerSecond: editMaxTrafficPerSecond,
+        enabled: editEnabled,
+        imageUrl: finalImageUrl, // [추가] 이미지 URL 포함
+      };
+
       if (actionGroupId) {
         // actionGroupId가 있는 경우 업데이트 화면
         await ActionGroupClient.updateActionGroupById(actionGroupId, data);
@@ -133,7 +178,7 @@ export default function ActionGroupDetailForm({ onPressBack }) {
       }
       ToastUtil.success('액션 그룹 상세', '성공적으로 저장했습니다.');
     } catch (error) {
-      console.error(error.response);
+      console.error(error);
       ToastUtil.error('액션 그룹 상세', '저장에 실패했습니다.');
     } finally {
       setIsSubmitLoading(false);
@@ -179,7 +224,6 @@ export default function ActionGroupDetailForm({ onPressBack }) {
     <>
       <Form
         className="w-full flex flex-col"
-        // onReset={() => setAction('reset')}
         onSubmit={handleSubmit}
       >
         <div className="relative w-full flex flex-col gap-4">
@@ -208,36 +252,70 @@ export default function ActionGroupDetailForm({ onPressBack }) {
               </div>
             </Skeleton>
           </div>
+
           <SectionTitle title="기본 설정">
             <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>
-              <div className="flex flex-col w-full gap-6">
-                <Input
-                  className="w-full max-w-md"
-                  label="액션 그룹명"
-                  placeholder="액션 그룹명을 입력하세요."
-                  name="name"
-                  description="액션그룹의 이름 입니다."
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  {...requiredInputProps}
-                />
-                <Input
-                  className="w-full max-w-md"
-                  errorMessage="액션 그룹 설명은 필수값입니다."
-                  label="액션 그룹 설명"
-                  name="eventDescription"
-                  placeholder="액션 그룹에 대해 알려주세요."
-                  type="text"
-                  description="액션 그룹에 대한 상세 설명입니다."
-                  value={editDescription}
-                  onChange={(e) => setDescription(e.target.value)}
-                  {...requiredInputProps}
-                />
+              <div className="flex flex-row gap-6 w-full">
+                {/* 이미지 업로드 UI */}
+                <div className="flex flex-col gap-2">
+                  <div className="mb-2 text-sm after:text-danger after:ms-0.5">대기열 이미지</div>
+                  <div
+                    className="relative w-32 h-32 rounded-xl border-2 border-dashed border-default-300 flex items-center justify-center cursor-pointer hover:bg-default-100 transition-colors overflow-hidden"
+                    onClick={handleImageClick}
+                  >
+                    {previewUrl ? (
+                      <Image
+                        src={previewUrl}
+                        alt="Action Group Image"
+                        classNames={{ wrapper: "w-full h-full", img: "w-full h-full object-cover" }}
+                      />
+                    ) : (
+                      <div className="text-default-400 text-xs text-center px-2">
+                        <span>이미지 업로드</span>
+                        <br/>
+                        <span className="text-[10px]">(Click)</span>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                    />
+                  </div>
+                </div>
+
+                {/* 기존 Input들 */}
+                <div className="flex flex-col w-full gap-6 grow">
+                  <Input
+                    className="w-full max-w-md"
+                    label="액션 그룹명"
+                    placeholder="액션 그룹명을 입력하세요."
+                    name="name"
+                    description="액션그룹의 이름 입니다."
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    {...requiredInputProps}
+                  />
+                  <Input
+                    className="w-full max-w-md"
+                    errorMessage="액션 그룹 설명은 필수값입니다."
+                    label="액션 그룹 설명"
+                    name="eventDescription"
+                    placeholder="액션 그룹에 대해 알려주세요."
+                    type="text"
+                    description="액션 그룹에 대한 상세 설명입니다."
+                    value={editDescription}
+                    onChange={(e) => setDescription(e.target.value)}
+                    {...requiredInputProps}
+                  />
+                </div>
               </div>
             </Skeleton>
           </SectionTitle>
-          {/*<Skeleton className="rounded-lg w-full" isLoaded={!isEventLoading}></Skeleton>*/}
+
           <SectionTitle title="유량 제어">
             <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>
               <div className="flex flex-col w-full gap-6">
@@ -286,7 +364,6 @@ export default function ActionGroupDetailForm({ onPressBack }) {
                     </div>
                   }
                   value={editMaxTrafficPerSecond}
-                  // onChange={handleMaxTrafficPerSecondChange}
                   onValueChange={handleMaxTrafficPerSecondChange}
                   {...requiredInputProps}
                   classNames={{
@@ -296,6 +373,7 @@ export default function ActionGroupDetailForm({ onPressBack }) {
               </div>
             </Skeleton>
           </SectionTitle>
+
           {actionGroupId && (
             <SectionTitle
               title="액션 목록"
@@ -314,6 +392,7 @@ export default function ActionGroupDetailForm({ onPressBack }) {
             </SectionTitle>
           )}
         </div>
+
         <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
           <Button size="lg" color="primary" variant="shadow" type="submit" isLoading={isSubmitLoading} fullWidth>
             저장하기
