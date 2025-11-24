@@ -24,6 +24,7 @@ import ActionListTable from '../action/ActionListTable.jsx';
 import ActionEditModal from '../action/ActionEditModal.jsx';
 import { PlusIcon } from '../../icon/Icons.jsx';
 import { ActionGroupClient } from '../../api/action-group/index.js';
+import { S3_BASE_URL } from '../../client/config.js';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { ActionUtil } from '../../util/actionUtil.js';
 import { requiredInputProps } from '../../shared/props.js';
@@ -99,9 +100,14 @@ export default function ActionGroupDetailForm({ onPressBack }) {
       setEditMaxTrafficPerSecond(data.maxTrafficPerSecond ?? 0);
       setEditEnabled(data?.enabled != null ? data.enabled : false);
 
-      // [추가] 기존 이미지가 있다면 미리보기에 설정
+      // 상대 경로일 경우 도메인을 붙여서 보여줌
       if (data.imageUrl) {
-        setPreviewUrl(data.imageUrl);
+        // 만약 http로 시작하면 그대로 쓰고, 아니면 도메인을 붙임
+        const fullUrl = data.imageUrl.startsWith('http')
+          ? data.imageUrl
+          : `${S3_BASE_URL}${data.imageUrl.startsWith('/') ? '' : '/'}${data.imageUrl}`;
+
+        setPreviewUrl(fullUrl);
       }
     } catch (error) {
       console.error('Error fetching:', error);
@@ -152,7 +158,7 @@ export default function ActionGroupDetailForm({ onPressBack }) {
         await ActionGroupClient.uploadFileToS3(uploadInfo.presignedUrl, selectedFile);
 
         // 1-3. 업로드된 파일의 접근 URL 획득
-        finalImageUrl = uploadInfo.imageUrl;
+        finalImageUrl = uploadInfo.imageUrl.replace(S3_BASE_URL, '');
       }
 
       const data = {
