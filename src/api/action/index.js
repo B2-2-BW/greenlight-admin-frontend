@@ -1,4 +1,4 @@
-import { commonAxiosInstance, coreAxiosInstance } from '../index.js';
+import { commonAxiosInstance } from '../index.js';
 
 // 단일 액션그룹 정보 조회
 const getActionById = async (actionId) => {

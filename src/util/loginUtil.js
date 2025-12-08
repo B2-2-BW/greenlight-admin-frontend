@@ -5,7 +5,7 @@ import { jwtDecode } from 'jwt-decode';
  * @param {string} token - 검사할 JWT 토큰
  * @returns {{ valid: boolean, expired: boolean, message: string }} 결과 객체
  */
-function validateJwtToken(token) {
+function validateJwt(token) {
   if (!token || typeof token !== 'string') {
     return { valid: false, expired: false, message: '토큰이 제공되지 않았거나 형식이 올바르지 않습니다.' };
   }
@@ -21,7 +21,7 @@ function validateJwtToken(token) {
     }
     return { valid: true, expired: false, message: '토큰이 유효합니다.' };
   } catch (error) {
-    return { valid: false, expired: false, message: '토큰 파싱에 실패했습니다. 토큰이 비정상적입니다.' };
+    return { valid: false, expired: false, message: '비정상적인 토큰입니다. ', error: error };
   }
 }
 
@@ -40,18 +40,10 @@ function saveToken(accessToken, rememberUser = false) {
   const storage = rememberUser ? localStorage : sessionStorage;
   storage.setItem('accessToken', accessToken);
 }
-function isTokenValid() {
-  const token = LoginUtil.getToken();
-  const result = validateJwtToken(token);
-  if (!result.valid) {
-    clearToken();
-  }
-  return result.valid;
-}
 
 export const LoginUtil = {
   getToken,
   clearToken,
   saveToken,
-  isTokenValid,
+  validateJwt,
 };

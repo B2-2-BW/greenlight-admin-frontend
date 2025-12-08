@@ -113,10 +113,16 @@ export default function ActionEditModal({ actionId, actionGroupId, isOpen, onOpe
       setAction(null);
       clearForm();
       setIsPageLoading(false);
-      return;
+    } else {
+      fetchAction();
     }
-    fetchAction();
   }, [actionId]);
+
+  useEffect(() => {
+    if (actionId == null && !isOpen) {
+      clearForm();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (action == null || action.name == null) {

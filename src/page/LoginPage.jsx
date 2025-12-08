@@ -64,7 +64,6 @@ export default function LoginPage() {
               <Link to="#">계정 신청하기</Link>
             </span>
           </div>
-          <span className="text-default-500 text-sm">테스트계정은 admin/admin 입니다.</span>
         </CardHeader>
         <CardBody className="w-[400px]">
           <Form onSubmit={handleLogin} validationErrors={errors}>
