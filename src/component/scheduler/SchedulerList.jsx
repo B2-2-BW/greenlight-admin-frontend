@@ -7,6 +7,12 @@ const schedulerDescription = {
   relocation: { title: 'relocation', name: '입장 스케쥴러', description: '실시간 고객 입장처리' },
   capacity: { title: 'capacity', name: '활성사용자 스케쥴러', description: '실시간 활성사용자 수 계산' },
   cleanup_session: { title: 'cleanup session', name: '세션 스케쥴러', description: '실시간 세션 계산 및 정리' },
+  redis_cleanup: {
+    title: 'redis cleanup',
+    name: '액션이벤트 정리 스케쥴러',
+    description: '엑션 이벤트 발생 로그 정리',
+  },
+  metric: { title: 'metric', name: '액션그룹 현황 기록 스케쥴러', description: '액션그룹별 대기/입장인원 기록' },
 };
 
 function isRunning(status) {
@@ -110,7 +116,7 @@ export default function SchedulerList() {
   return (
     <div>
       <Skeleton isLoaded={!isPageLoading} className="rounded-lg">
-        <div className="flex gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {schedulers.map((scheduler, index) => (
             <SchedulerCard
               scheduler={scheduler}
