@@ -1,5 +1,5 @@
-// export const BASE_EXTERNAL_URL = 'http://localhost:28080';
-export const BASE_EXTERNAL_URL = 'https://admin-api.greenlight-hdds.winten.im';
+export const BASE_EXTERNAL_URL = 'http://localhost:28080';
+// export const BASE_EXTERNAL_URL = 'https://admin-api.greenlight-hdds.winten.im';
 export const BASE_SCHEDULER_URL = 'https://scheduler.greenlight-hdds.winten.im';
 export const GRAFANA_EXTERNAL_URL = 'https://grafana.greenlight-hdds.winten.im';
 export const JENKINS_EXTERNAL_URL = 'https://jenkins.greenlight-hdds.winten.im';

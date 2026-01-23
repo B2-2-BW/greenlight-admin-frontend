@@ -34,7 +34,7 @@ export default function NavBar() {
   };
 
   return (
-    <Navbar isBordered className="min-w-[800px] flex justify-between z-[1001]" maxWidth="full">
+    <Navbar isBordered className="min-w-[800px] flex justify-between z-1001" maxWidth="full">
       <NavbarContent justify="start">
         <NavbarBrand className="mr-4">
           <p className="block font-bold text-inherit">
@@ -68,7 +68,7 @@ export default function NavBar() {
       <NavbarContent as="div" className="items-center" justify="end">
         {/*<Input*/}
         {/*  classNames={{*/}
-        {/*    base: 'max-w-full sm:max-w-[10rem] h-10',*/}
+        {/*    base: 'max-w-full sm:max-w-40 h-10',*/}
         {/*    mainWrapper: 'h-full',*/}
         {/*    input: 'text-small',*/}
         {/*    inputWrapper: 'h-full font-normal text-default-500 bg-default-400/20 dark:bg-default-500/20',*/}
@@ -87,7 +87,14 @@ export default function NavBar() {
           radius="sm"
         >
           <DropdownTrigger>
-            <Avatar isBordered as="button" className="transition-transform" color="primary" name="Admin" size="sm" />
+            <Avatar
+              isBordered
+              as="button"
+              className="transition-transform"
+              color="primary"
+              name={user?.username[0]}
+              size="sm"
+            />
           </DropdownTrigger>
           <DropdownMenu aria-label="Custom item styles" className="p-3" disabledKeys={['profile']} variant="flat">
             <DropdownSection showDivider aria-label="Profile & Actions">

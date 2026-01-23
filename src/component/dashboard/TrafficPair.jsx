@@ -179,7 +179,7 @@ export function TrafficPair({
                 }
               />
             </div>
-            <div className="w-[240px] text-large rounded-l-sm rounded-r-2xl z-[2]">
+            <div className="w-[240px] text-large rounded-l-sm rounded-r-2xl z-2">
               <Card
                 style={{
                   // backgroundColor: getWaitingBackgroundColor(status),

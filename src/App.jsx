@@ -1,6 +1,7 @@
 import './App.css';
 import { Navigate, Route, Routes } from 'react-router';
-import { HeroUIProvider, ToastProvider } from '@heroui/react';
+import { HeroUIProvider } from '@heroui/react';
+import { ToastProvider } from '@heroui/toast';
 import MainLayout from './layout/MainLayout.jsx';
 import NotFoundPage from './page/NotFoundPage.jsx';
 import LoginPage from './page/LoginPage.jsx';
@@ -18,33 +19,30 @@ import SigninPage from './page/SigninPage.jsx';
 function App() {
   return (
     <>
-      <HeroUIProvider locale="ko-KR">
-        <ToastProvider placement="top-right" toastOffset={60} />
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signin" element={<SigninPage />} />
-          <Route
-            element={
-              <PrivateRoute>
-                <MainLayout />
-              </PrivateRoute>
-            }
-          >
-            <Route path="/" element={<Navigate to="/dashboard" />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/action-groups" element={<ActionGroupPage />} />
-            <Route path="/action-groups/new" element={<ActionGroupDetailPage />} />
-            <Route path="/action-groups/:actionGroupId" element={<ActionGroupDetailPage />} />
-            <Route path="/schedulers" element={<SchedulerPage />} />
-            <Route path="/settings" element={<SystemSettingsPage />} />
-            <Route path="/users" element={<UserManagementPage />} />
-            <Route path="/notfound" element={<NotFoundPage />} />
-            <Route path="/forbidden" element={<BadRequestPage />} />
-            <Route path="/opps" element={<SomethingWentWrongPage />} />
-            <Route path="*" element={<BadRequestPage />} />
-          </Route>
-        </Routes>
-      </HeroUIProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signin" element={<SigninPage />} />
+        <Route
+          element={
+            <PrivateRoute>
+              <MainLayout />
+            </PrivateRoute>
+          }
+        >
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/action-groups" element={<ActionGroupPage />} />
+          <Route path="/action-groups/new" element={<ActionGroupDetailPage />} />
+          <Route path="/action-groups/:actionGroupId" element={<ActionGroupDetailPage />} />
+          <Route path="/schedulers" element={<SchedulerPage />} />
+          <Route path="/settings" element={<SystemSettingsPage />} />
+          <Route path="/users" element={<UserManagementPage />} />
+          <Route path="/notfound" element={<NotFoundPage />} />
+          <Route path="/forbidden" element={<BadRequestPage />} />
+          <Route path="/opps" element={<SomethingWentWrongPage />} />
+          <Route path="*" element={<BadRequestPage />} />
+        </Route>
+      </Routes>
     </>
   );
 }

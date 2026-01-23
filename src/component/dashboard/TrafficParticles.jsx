@@ -193,12 +193,12 @@ export function TrafficParticles({
     >
       <canvas className={wrapperType === 'WAITING' ? 'rounded-l-xl' : 'rounded-r-xl'} ref={canvasRef} />
       {leftTopComponent != null && (
-        <span className="absolute top-1 left-0 translate-x-[4px] text-black text-sm px-1.5 py-0.5 rounded">
+        <span className="absolute top-1 left-0 translate-x-[4px] text-black text-sm px-1.5 py-0.5 rounded-sm">
           {leftTopComponent}
         </span>
       )}
       {rightTopComponent != null && (
-        <span className="absolute top-1 right-0 translate-x-[-4px] text-black text-sm px-1.5 py-0.5 rounded">
+        <span className="absolute top-1 right-0 translate-x-[-4px] text-black text-sm px-1.5 py-0.5 rounded-sm">
           {rightTopComponent}
         </span>
       )}

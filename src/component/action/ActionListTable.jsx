@@ -38,7 +38,7 @@ export default function ActionListTable({ actions, onPress }) {
       case 'actionType':
         return <ActionTypeChip type={cellValue} />;
       case 'actionUrl':
-        return <ActionUrl action={action} className="max-w-[240px] overflow-ellipsis overflow-hidden" />;
+        return <ActionUrl action={action} className="max-w-[240px] text-ellipsis overflow-hidden" />;
       case 'defaultRuleType':
         return <ActionDefaultRuleTypeChip type={cellValue} />;
       case 'updatedAt':
