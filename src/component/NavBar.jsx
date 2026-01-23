@@ -78,19 +78,20 @@ export default function NavBar() {
         {/*  startContent={<SearchIcon size={18} />}*/}
         {/*  type="search"*/}
         {/*/>*/}
+        {/*TODO DROPDOWN 마우스 pointer 안되고, 포커스랑 위치 좀 이상함 */}
         <Dropdown
-          showArrow
           classNames={{
             base: 'before:bg-default-200', // change arrow background
             content: 'p-0 border-small border-divider bg-background',
           }}
           radius="sm"
+          placement="bottom-end"
         >
           <DropdownTrigger>
             <Avatar
               isBordered
               as="button"
-              className="transition-transform"
+              className="transition-transform cursor-pointer"
               color="primary"
               name={user?.username[0]}
               size="sm"

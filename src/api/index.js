@@ -2,7 +2,7 @@ import axios from 'axios';
 import { BASE_EXTERNAL_URL, BASE_SCHEDULER_URL } from '../client/config';
 import { TokenUtil } from '../util/tokenUtil.js';
 
-const loginAxiosInstance = axios.create({
+const publicAxiosInstance = axios.create({
   baseURL: BASE_EXTERNAL_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -34,4 +34,4 @@ commonAxiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-export { commonAxiosInstance, loginAxiosInstance, schedulerAxiosInstance };
+export { commonAxiosInstance, publicAxiosInstance, schedulerAxiosInstance };

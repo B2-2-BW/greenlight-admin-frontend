@@ -1,4 +1,4 @@
-import { Chip, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/react';
+import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table';
 import { useCallback } from 'react';
 import ActionDefaultRuleTypeChip from './ActionDefaultRuleTypeChip.jsx';
 import ActionUrl from './ActionUrl.jsx';
