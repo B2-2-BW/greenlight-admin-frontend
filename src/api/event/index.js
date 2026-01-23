@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { commonAxiosInstance, coreAxiosInstance } from '../index.js';
+import { commonAxiosInstance } from '../index.js';
 
 // 단일 이벤트 정보 조회
 export const getEventByEventName = async (eventName) => {

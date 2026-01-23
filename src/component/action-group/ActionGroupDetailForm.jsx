@@ -9,6 +9,7 @@ import {
   useDisclosure,
   cn,
   Tooltip,
+  RadioGroup,
 } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
@@ -26,6 +27,7 @@ import { ActionGroupClient } from '../../api/action-group/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { ActionUtil } from '../../util/actionUtil.js';
 import { requiredInputProps } from '../../shared/props.js';
+import ActionTypeRadio from '../action/ActionTypeRadio.jsx';
 
 const enabledMessage = {
   true: {
@@ -51,6 +53,8 @@ export default function ActionGroupDetailForm({ onPressBack }) {
   const [editDescription, setDescription] = useState('');
   const [editMaxTrafficPerSecond, setEditMaxTrafficPerSecond] = useState(0);
   const [editEnabled, setEditEnabled] = useState(true);
+
+  const [editAdType, setEditAdType] = useState('IMAGE');
 
   const navigate = useNavigate();
 
@@ -296,6 +300,39 @@ export default function ActionGroupDetailForm({ onPressBack }) {
               </div>
             </Skeleton>
           </SectionTitle>
+
+          <SectionTitle title="대기화면 구성">
+            <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>
+              <div id="action-type-radio-group">
+                <div className="mb-2 text-base after:content-['*'] after:text-danger after:ms-0.5">광고 유형</div>
+                <RadioGroup
+                  value={editAdType}
+                  isRequired
+                  errorMessage="다음 옵션 중 하나를 선택하세요."
+                  onValueChange={setEditAdType}
+                  orientation="horizontal"
+                  classNames={{
+                    wrapper: 'flex',
+                  }}
+                >
+                  <ActionTypeRadio description="배너 이미지를 업로드하여 노출합니다" value="IMAGE">
+                    이미지 업로드
+                  </ActionTypeRadio>
+                  <ActionTypeRadio description="제목/본문 텍스트와 배경, 폰트 색상을 직접 편집합니다." value="TEXT">
+                    직접 입력
+                  </ActionTypeRadio>
+                </RadioGroup>
+
+                {editAdType === 'IMAGE' && (
+                  <div className="mt-4 flex">
+                    <img width="500" src="/sample_upload2.png" />
+                    <Input type="file">ff</Input>
+                  </div>
+                )}
+              </div>
+            </Skeleton>
+          </SectionTitle>
+
           {actionGroupId && (
             <SectionTitle
               title="액션 목록"

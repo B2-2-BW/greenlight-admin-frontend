@@ -113,10 +113,16 @@ export default function ActionEditModal({ actionId, actionGroupId, isOpen, onOpe
       setAction(null);
       clearForm();
       setIsPageLoading(false);
-      return;
+    } else {
+      fetchAction();
     }
-    fetchAction();
   }, [actionId]);
+
+  useEffect(() => {
+    if (actionId == null && !isOpen) {
+      clearForm();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (action == null || action.name == null) {
@@ -181,8 +187,8 @@ export default function ActionEditModal({ actionId, actionGroupId, isOpen, onOpe
     e.preventDefault();
     setIsSubmitLoading(true);
 
-    const startDate = editLandingDateRange.start.toDate(); // toISOString은 9시간 시차가 발생하여 수동으로 맞춰줌.
-    const endDate = editLandingDateRange.end.toDate();
+    const startDate = toLocalDateTimeStringKstManual(editLandingDateRange.start.toDate()); // toISOString은 9시간 시차가 발생하여 수동으로 맞춰줌.
+    const endDate = toLocalDateTimeStringKstManual(editLandingDateRange.end.toDate());
 
     const data = {
       name: editName,
@@ -217,6 +223,22 @@ export default function ActionEditModal({ actionId, actionGroupId, isOpen, onOpe
     } finally {
       setIsSubmitLoading(false);
     }
+  };
+
+  const toLocalDateTimeStringKstManual = (date) => {
+    // 1. 현재 Date의 “UTC 기준 시각”에서 +9시간
+    const kstTime = date.getTime() + 9 * 60 * 60 * 1000; // 9시간
+    const kst = new Date(kstTime);
+
+    const pad = (n) => n.toString().padStart(2, '0');
+
+    const year = kst.getUTCFullYear();
+    const month = pad(kst.getUTCMonth() + 1);
+    const day = pad(kst.getUTCDate());
+    const hour = pad(kst.getUTCHours());
+    const minute = pad(kst.getUTCMinutes());
+
+    return `${year}-${month}-${day}T${hour}:${minute}:00.000`;
   };
 
   const initializeEdits = () => {
