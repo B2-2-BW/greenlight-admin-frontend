@@ -4,7 +4,7 @@ import { optionalInputProps } from '../../shared/props.js';
 import { EyeFilledIcon, EyeSlashFilledIcon } from '../../icon/Icons.jsx';
 import { useState } from 'react';
 
-export default function UserManagementForm() {
+export default function MyPageForm() {
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
   const [editUsername, setEditUsername] = useState();

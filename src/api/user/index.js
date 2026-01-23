@@ -1,12 +1,17 @@
 // 유저 생성
 import { commonAxiosInstance, loginAxiosInstance } from '../index.js';
 
-export const createUser = async (body) => {
+const createUser = async (body) => {
   const { data } = await commonAxiosInstance().put(`/users`, body, {});
   return data;
 };
 
-export const login = async (body) => {
+const me = async () => {
+  const { data } = await commonAxiosInstance.get('/users/me');
+  return data;
+};
+
+const login = async (body) => {
   return await loginAxiosInstance.post(`/users/login`, body, {}).then(
     (response) => response,
     (error) => {
@@ -15,3 +20,9 @@ export const login = async (body) => {
     }
   );
 };
+
+const UserClient = {
+  me,
+  login,
+};
+export { UserClient };

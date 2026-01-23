@@ -18,6 +18,16 @@ export default function ActionListTable({ actions, onPress }) {
   const renderCell = useCallback((action, columnKey) => {
     const cellValue = action[columnKey];
     switch (columnKey) {
+      case 'name':
+        return (
+          <div className="flex flex-col">
+            <span className="text-base font-medium">{cellValue} </span>
+            {action.actionType === 'DIRECT' && <span className="text-sm text-default-500">{action.actionUrl}</span>}
+            {action.actionType === 'LANDING' && (
+              <span className="text-sm text-default-500">{action.landingDestinationUrl}</span>
+            )}
+          </div>
+        );
       case 'description':
         return (
           <div className="flex flex-col">

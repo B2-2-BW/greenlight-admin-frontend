@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActionGroupClient } from '../../api/action-group/index.js';
 import { Button, Skeleton } from '@heroui/react';
 import { EventSourcePolyfill } from 'event-source-polyfill';
-import { LoginUtil } from '../../util/loginUtil.js';
+import { TokenUtil } from '../../util/tokenUtil.js';
 import { BASE_EXTERNAL_URL } from '../../client/config.js';
 import TrafficSummary from './TrafficSummary.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
@@ -40,7 +40,7 @@ export function ActionTrafficBoard() {
   useEffect(() => {
     const es = new EventSourcePolyfill(`${BASE_EXTERNAL_URL}/action-events/traffic/sse/stream?clientId=admin`, {
       headers: {
-        Authorization: `Bearer ${LoginUtil.getToken()}`,
+        Authorization: `Bearer ${TokenUtil.getToken()}`,
       },
     });
     esRef.current = es;

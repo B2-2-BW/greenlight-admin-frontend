@@ -1,28 +1,26 @@
 import {
+  Avatar,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownSection,
+  DropdownTrigger,
   Navbar,
   NavbarBrand,
   NavbarContent,
-  NavbarItem,
-  Link,
-  Input,
-  DropdownItem,
-  DropdownTrigger,
-  Dropdown,
-  DropdownMenu,
-  Avatar,
-  Divider,
-  DropdownSection,
   User,
 } from '@heroui/react';
 import logo from '/logo.png';
 import { useNavigate } from 'react-router';
 import { useUserStore } from '../store/user.jsx';
-import { LoginUtil } from '../util/loginUtil.js';
+import { TokenUtil } from '../util/tokenUtil.js';
 
 export default function NavBar() {
   const navigate = useNavigate();
 
-  const { setUser } = useUserStore();
+  const { clearUser } = useUserStore();
+
+  const user = useUserStore((s) => s.user);
 
   const goToHome = () => {
     navigate('/action-groups');
@@ -30,8 +28,9 @@ export default function NavBar() {
 
   const handleLogout = () => {
     useUserStore.persist.clearStorage();
-    setUser(null);
-    LoginUtil.clearToken();
+    clearUser();
+    TokenUtil.clearToken();
+    navigate('/');
   };
 
   return (
@@ -95,7 +94,7 @@ export default function NavBar() {
               <DropdownItem key="profile" isReadOnly className="h-14 gap-2 opacity-100">
                 <User
                   avatarProps={{
-                    name: 'Admin',
+                    name: user?.username[0],
                     size: 'sm',
                     className: 'transition-transform',
                     color: 'primary',
@@ -104,8 +103,8 @@ export default function NavBar() {
                     name: 'text-default-600',
                     description: 'text-default-500',
                   }}
-                  description="@더현대닷컴"
-                  name="admin"
+                  description={user?.siteName}
+                  name={user?.username}
                 />
               </DropdownItem>
               <DropdownItem key="dashboard">계정관리</DropdownItem>
