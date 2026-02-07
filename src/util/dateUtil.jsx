@@ -35,6 +35,9 @@ export const formatRelativeDate = (isoString) => {
 };
 
 export const toDateHtml = (cellValue) => {
+  if (cellValue == null) {
+    return '';
+  }
   return (
     <div className="flex flex-col">
       <p className="text-sm">{formatRelativeDate(cellValue)}</p>

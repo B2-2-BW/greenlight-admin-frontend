@@ -5,22 +5,27 @@ import { useState } from 'react';
 import {
   CalendarIcon,
   ClockFilledIcon,
-  DockerIcon,
   ExternalLinkIcon,
   HomeIcon,
   SettingsFilledIcon,
   UserFilledIcon,
 } from '../icon/Icons.jsx';
-import { GRAFANA_EXTERNAL_URL, JENKINS_EXTERNAL_URL, ZIPKIN_EXTERNAL_URL } from '../client/config.js';
+import { GRAFANA_EXTERNAL_URL, JENKINS_EXTERNAL_URL } from '../client/config.js';
 
 const menuLists = [
   [
-    { title: '대시보드', prependIcon: <HomeIcon color="#6b7280" />, path: '/dashboard', menuId: 2 },
+    { title: '대시보드', prependIcon: <HomeIcon color="#6b7280" />, path: '/dashboard', menuId: 1 },
+    // {
+    //   title: '액션 그룹',
+    //   prependIcon: <CalendarIcon color="#6b7280" />,
+    //   path: '/action-groups',
+    //   menuId: 1,
+    // },
     {
-      title: '액션 그룹',
+      title: '대기열',
       prependIcon: <CalendarIcon color="#6b7280" />,
-      path: '/action-groups',
-      menuId: 1,
+      path: '/rooms',
+      menuId: 2,
     },
   ],
   [
@@ -56,12 +61,6 @@ const externalMenuList = [
     path: JENKINS_EXTERNAL_URL,
     prependIcon: <ExternalLinkIcon size={20} color="#111827" />,
     menuId: 8,
-  },
-  {
-    title: 'Zipkin',
-    path: ZIPKIN_EXTERNAL_URL,
-    prependIcon: <ExternalLinkIcon size={20} color="#111827" />,
-    menuId: 9,
   },
 ];
 export default function MainLayout() {

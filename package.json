@@ -5,9 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:dev": "vite --mode dev",
+    "dev:live": "vite --mode live",
+
     "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "build:dev": "vite build --mode dev",
+    "build:live": "vite build --mode live",
+
+    "preview": "vite preview",
+    "preview:dev": "vite preview --mode dev",
+    "preview:local": "vite preview --mode live",
+
+    "lint": "eslint ."
   },
   "dependencies": {
     "@heroui/react": "2.8.8",

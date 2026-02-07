@@ -1,23 +1,23 @@
 import axios from 'axios';
-import { BASE_EXTERNAL_URL, BASE_SCHEDULER_URL } from '../client/config';
+import { BASE_API_URL } from '../client/config';
 import { TokenUtil } from '../util/tokenUtil.js';
 
 const publicAxiosInstance = axios.create({
-  baseURL: BASE_EXTERNAL_URL,
+  baseURL: BASE_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
 const commonAxiosInstance = axios.create({
-  baseURL: BASE_EXTERNAL_URL,
+  baseURL: BASE_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
 const schedulerAxiosInstance = axios.create({
-  baseURL: BASE_SCHEDULER_URL,
+  // baseURL: BASE_SCHEDULER_URL,
   headers: {
     'Content-Type': 'application/json',
   },
