@@ -342,7 +342,7 @@ export default function ActionEditModal({ actionId, actionGroupId, isOpen, onOpe
                       {actionId != null && (
                         <div className="flex gap-2 items-center">
                           <Input
-                            className="w-full max-w-[15rem]"
+                            className="w-full max-w-60"
                             classNames={{
                               inputWrapper: 'hover:bg-red-200 focus:none',
                             }}
@@ -405,7 +405,7 @@ export default function ActionEditModal({ actionId, actionGroupId, isOpen, onOpe
                       {editActionType === 'LANDING' && actionId != null && (
                         <div className="flex gap-4 w-full max-w-2xl">
                           <Input
-                            className="max-w-[12rem]"
+                            className="max-w-48"
                             label="랜딩 ID"
                             placeholder="랜딩 ID"
                             name="landingId"
@@ -473,7 +473,7 @@ export default function ActionEditModal({ actionId, actionGroupId, isOpen, onOpe
                       {/*    onValueChange={setSelectDefaultRuleType}*/}
                       {/*    orientation="horizontal"*/}
                       {/*    classNames={{*/}
-                      {/*      wrapper: 'w-[50rem] flex',*/}
+                      {/*      wrapper: 'w-200 flex',*/}
                       {/*    }}*/}
                       {/*  >*/}
                       {/*    {defaultActionRuleTypes.map((ruleType) => (*/}

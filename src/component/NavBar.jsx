@@ -1,28 +1,26 @@
 import {
+  Avatar,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownSection,
+  DropdownTrigger,
   Navbar,
   NavbarBrand,
   NavbarContent,
-  NavbarItem,
-  Link,
-  Input,
-  DropdownItem,
-  DropdownTrigger,
-  Dropdown,
-  DropdownMenu,
-  Avatar,
-  Divider,
-  DropdownSection,
   User,
 } from '@heroui/react';
 import logo from '/logo.png';
 import { useNavigate } from 'react-router';
 import { useUserStore } from '../store/user.jsx';
-import { LoginUtil } from '../util/loginUtil.js';
+import { TokenUtil } from '../util/tokenUtil.js';
 
 export default function NavBar() {
   const navigate = useNavigate();
 
-  const { setUser } = useUserStore();
+  const { clearUser } = useUserStore();
+
+  const user = useUserStore((s) => s.user);
 
   const goToHome = () => {
     navigate('/action-groups');
@@ -30,12 +28,13 @@ export default function NavBar() {
 
   const handleLogout = () => {
     useUserStore.persist.clearStorage();
-    setUser(null);
-    LoginUtil.clearToken();
+    clearUser();
+    TokenUtil.clearToken();
+    navigate('/');
   };
 
   return (
-    <Navbar isBordered className="min-w-[800px] flex justify-between z-[1001]" maxWidth="full">
+    <Navbar isBordered className="min-w-[800px] flex justify-between z-1001" maxWidth="full">
       <NavbarContent justify="start">
         <NavbarBrand className="mr-4">
           <p className="block font-bold text-inherit">
@@ -69,7 +68,7 @@ export default function NavBar() {
       <NavbarContent as="div" className="items-center" justify="end">
         {/*<Input*/}
         {/*  classNames={{*/}
-        {/*    base: 'max-w-full sm:max-w-[10rem] h-10',*/}
+        {/*    base: 'max-w-full sm:max-w-40 h-10',*/}
         {/*    mainWrapper: 'h-full',*/}
         {/*    input: 'text-small',*/}
         {/*    inputWrapper: 'h-full font-normal text-default-500 bg-default-400/20 dark:bg-default-500/20',*/}
@@ -79,23 +78,31 @@ export default function NavBar() {
         {/*  startContent={<SearchIcon size={18} />}*/}
         {/*  type="search"*/}
         {/*/>*/}
+        {/*TODO DROPDOWN 마우스 pointer 안되고, 포커스랑 위치 좀 이상함 */}
         <Dropdown
-          showArrow
           classNames={{
             base: 'before:bg-default-200', // change arrow background
             content: 'p-0 border-small border-divider bg-background',
           }}
           radius="sm"
+          placement="bottom-end"
         >
           <DropdownTrigger>
-            <Avatar isBordered as="button" className="transition-transform" color="primary" name="Admin" size="sm" />
+            <Avatar
+              isBordered
+              as="button"
+              className="transition-transform cursor-pointer"
+              color="primary"
+              name={user?.username[0]}
+              size="sm"
+            />
           </DropdownTrigger>
           <DropdownMenu aria-label="Custom item styles" className="p-3" disabledKeys={['profile']} variant="flat">
             <DropdownSection showDivider aria-label="Profile & Actions">
               <DropdownItem key="profile" isReadOnly className="h-14 gap-2 opacity-100">
                 <User
                   avatarProps={{
-                    name: 'Admin',
+                    name: user?.username[0],
                     size: 'sm',
                     className: 'transition-transform',
                     color: 'primary',
@@ -104,8 +111,8 @@ export default function NavBar() {
                     name: 'text-default-600',
                     description: 'text-default-500',
                   }}
-                  description="@더현대닷컴"
-                  name="admin"
+                  description={user?.siteName}
+                  name={user?.username}
                 />
               </DropdownItem>
               <DropdownItem key="dashboard">계정관리</DropdownItem>

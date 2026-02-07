@@ -13,7 +13,7 @@ const MATCH_OPERATORS = [
   { value: 'STARTSWITH', name: 'Starts with', description: '파라미터 값이 규칙의 값으로 시작하는지 확인합니다.' },
   { value: 'ENDSWITH', name: 'Ends with', description: '파라미터 값이 규칙의 값으로 끝나는지 확인합니다.' },
 ];
-const className = 'w-[11rem]';
+const className = 'w-44';
 export default function ActionRuleItemList({ rules, onAdd, onChange, onDelete }) {
   return (
     <>

@@ -41,7 +41,7 @@ function saveToken(accessToken, rememberUser = false) {
   storage.setItem('accessToken', accessToken);
 }
 
-export const LoginUtil = {
+export const TokenUtil = {
   getToken,
   clearToken,
   saveToken,

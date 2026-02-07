@@ -87,7 +87,7 @@ export default function ActionGroupAutoComplete({ action }) {
   return (
     <>
       <Autocomplete
-        className="max-w-[14rem]"
+        className="max-w-56"
         inputValue={fieldState.inputValue}
         items={fieldState.items}
         label="액션 그룹"

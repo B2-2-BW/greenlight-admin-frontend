@@ -1,17 +1,30 @@
 import { Navigate, useLocation } from 'react-router';
-import { LoginUtil } from '../util/loginUtil.js';
+import { TokenUtil } from '../util/tokenUtil.js';
+import { useUserStore } from '../store/user.jsx';
+import { UserClient } from '../api/user/index.js';
 
+// 인증처리 담당 Route
 function PrivateRoute({ children }) {
   const { pathname } = useLocation();
+  const { setUser } = useUserStore();
 
-  const token = LoginUtil.getToken();
-  const result = LoginUtil.validateJwt(token);
+  const token = TokenUtil.getToken();
+  const result = TokenUtil.validateJwt(token);
   if (!result?.valid) {
     if (result?.error != null) {
       console.error(result.error);
     }
     const to = { pathname: '/login', search: `?redirect=${pathname}` };
     return <Navigate to={to} replace />;
+  }
+
+  const me = useUserStore.getState().user;
+  console.log(me);
+  if (me == null) {
+    UserClient.me().then((user) => {
+      console.log(user);
+      setUser(user);
+    });
   }
 
   return children;

@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { BASE_EXTERNAL_URL, BASE_SCHEDULER_URL } from '../client/config';
-import { LoginUtil } from '../util/loginUtil.js';
+import { TokenUtil } from '../util/tokenUtil.js';
 
-const loginAxiosInstance = axios.create({
+const publicAxiosInstance = axios.create({
   baseURL: BASE_EXTERNAL_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -25,7 +25,7 @@ const schedulerAxiosInstance = axios.create({
 
 commonAxiosInstance.interceptors.request.use(
   (config) => {
-    const token = LoginUtil.getToken();
+    const token = TokenUtil.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,4 +34,4 @@ commonAxiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-export { commonAxiosInstance, loginAxiosInstance, schedulerAxiosInstance };
+export { commonAxiosInstance, publicAxiosInstance, schedulerAxiosInstance };

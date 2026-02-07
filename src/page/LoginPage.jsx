@@ -2,8 +2,8 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import { addToast, Button, Card, CardBody, CardFooter, CardHeader, Form, Input, Switch } from '@heroui/react';
 import logo from '/logo.png';
-import { login } from '../api/user/index.js';
-import { LoginUtil } from '../util/loginUtil.js';
+import { TokenUtil } from '../util/tokenUtil.js';
+import { UserClient } from '../api/user/index.js';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ export default function LoginPage() {
       return;
     }
 
-    const response = await login({ userId, password });
+    const response = await UserClient.login({ userId, password });
 
     if (response.status === 401 || response.status === 404) {
       addToast({
@@ -40,7 +40,7 @@ export default function LoginPage() {
       return;
     }
 
-    LoginUtil.saveToken(response.data.accessToken, rememberUser);
+    TokenUtil.saveToken(response.data.accessToken, rememberUser);
 
     const params = new URLSearchParams(search);
     const to = params.get('redirect') || '/'; // redirect가 있다면 해당 url로 없다면 /로 이동
@@ -61,7 +61,7 @@ export default function LoginPage() {
           <div className="flex text-small gap-4">
             <span className="text-default-500">신규 사용자이신가요?</span>
             <span className="text-green-700">
-              <Link to="#">계정 신청하기</Link>
+              <Link to="/signin">계정 신청하기</Link>
             </span>
           </div>
         </CardHeader>

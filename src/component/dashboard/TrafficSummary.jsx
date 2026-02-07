@@ -27,7 +27,7 @@ export default function TrafficSummary({ isLoading = false, trafficSummary }) {
     <div className="flex gap-5 items-end relative">
       {isLoading && (
         <>
-          <div className="absolute inset-0 w-[1000px] flex z-[1000] items-center justify-center">
+          <div className="absolute inset-0 w-[1000px] flex z-1000 items-center justify-center">
             <CircularProgress
               aria-label="Loading..."
               size="lg"
@@ -35,7 +35,7 @@ export default function TrafficSummary({ isLoading = false, trafficSummary }) {
               classNames={{ track: 'stroke-white' }}
             />
           </div>
-          <div className="absolute inset-0 w-[1000px] z-[999] rounded-xl bg-neutral-400 opacity-30"></div>
+          <div className="absolute inset-0 w-[1000px] z-999 rounded-xl bg-neutral-400 opacity-30"></div>
         </>
       )}
       <Card className="border-[#20814C] border-2">

@@ -267,7 +267,7 @@ export default function ActionGroupDetailForm({ onPressBack }) {
                         'group-data-[selected=true]:ms-6',
                         // pressed
                         'group-data-[pressed=true]:w-7',
-                        'group-data-pressed:group-data-selected:ms-4'
+                        'group-data-selected:group-data-pressed:ms-4'
                       ),
                     }}
                   >
@@ -294,7 +294,7 @@ export default function ActionGroupDetailForm({ onPressBack }) {
                   onValueChange={handleMaxTrafficPerSecondChange}
                   {...requiredInputProps}
                   classNames={{
-                    inputWrapper: 'max-w-[10rem]',
+                    inputWrapper: 'max-w-40',
                   }}
                 />
               </div>

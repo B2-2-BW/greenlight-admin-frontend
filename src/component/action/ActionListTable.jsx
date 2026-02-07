@@ -1,4 +1,4 @@
-import { Chip, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/react';
+import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/table';
 import { useCallback } from 'react';
 import ActionDefaultRuleTypeChip from './ActionDefaultRuleTypeChip.jsx';
 import ActionUrl from './ActionUrl.jsx';
@@ -18,6 +18,16 @@ export default function ActionListTable({ actions, onPress }) {
   const renderCell = useCallback((action, columnKey) => {
     const cellValue = action[columnKey];
     switch (columnKey) {
+      case 'name':
+        return (
+          <div className="flex flex-col">
+            <span className="text-base font-medium">{cellValue} </span>
+            {action.actionType === 'DIRECT' && <span className="text-sm text-default-500">{action.actionUrl}</span>}
+            {action.actionType === 'LANDING' && (
+              <span className="text-sm text-default-500">{action.landingDestinationUrl}</span>
+            )}
+          </div>
+        );
       case 'description':
         return (
           <div className="flex flex-col">
@@ -28,7 +38,7 @@ export default function ActionListTable({ actions, onPress }) {
       case 'actionType':
         return <ActionTypeChip type={cellValue} />;
       case 'actionUrl':
-        return <ActionUrl action={action} className="max-w-[240px] overflow-ellipsis overflow-hidden" />;
+        return <ActionUrl action={action} className="max-w-[240px] text-ellipsis overflow-hidden" />;
       case 'defaultRuleType':
         return <ActionDefaultRuleTypeChip type={cellValue} />;
       case 'updatedAt':
