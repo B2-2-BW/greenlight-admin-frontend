@@ -8,7 +8,7 @@ import { UserClient } from '../api/user/index.js';
 export default function LoginPage() {
   const navigate = useNavigate();
   const { search } = useLocation();
-  const [userId, setUserId] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [rememberUser, setRememberUser] = useState(false);
   const [errors, setErrors] = useState({});
@@ -16,13 +16,14 @@ export default function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!userId) {
+    if (!loginId) {
       setErrors({ username: '사용자 ID는 필수값입니다.' });
       return;
     }
 
-    const response = await UserClient.login({ userId, password });
+    const response = await UserClient.login({ loginId, password });
 
+    console.log(import.meta.env)
     if (response.status === 401 || response.status === 404) {
       addToast({
         title: '로그인 실패',
@@ -74,8 +75,8 @@ export default function LoginPage() {
               radius="sm"
               name="username"
               type="text"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
             />
             <Input
               size="sm"

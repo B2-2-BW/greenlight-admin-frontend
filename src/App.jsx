@@ -15,6 +15,8 @@ import SystemSettingsPage from './page/SystemSettingsPage.jsx';
 import SchedulerPage from './page/SchedulerPage.jsx';
 import UserManagementPage from './page/UserManagementPage.jsx';
 import SigninPage from './page/SigninPage.jsx';
+import RoomListPage from './page/RoomListPage.jsx';
+import RoomDetailPage from './page/RoomDetailPage.jsx';
 
 function App() {
   return (
@@ -32,6 +34,9 @@ function App() {
           <Route path="/" element={<Navigate to="/dashboard" />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/action-groups" element={<ActionGroupPage />} />
+          <Route path="/rooms" element={<RoomListPage />} />
+          <Route path="/rooms/new" element={<RoomDetailPage />} />
+          <Route path="/rooms/:roomId" element={<RoomDetailPage />} />
           <Route path="/action-groups/new" element={<ActionGroupDetailPage />} />
           <Route path="/action-groups/:actionGroupId" element={<ActionGroupDetailPage />} />
           <Route path="/schedulers" element={<SchedulerPage />} />

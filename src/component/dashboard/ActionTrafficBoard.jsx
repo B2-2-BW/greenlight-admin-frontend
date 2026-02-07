@@ -4,7 +4,7 @@ import { ActionGroupClient } from '../../api/action-group/index.js';
 import { Button, Skeleton } from '@heroui/react';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import { TokenUtil } from '../../util/tokenUtil.js';
-import { BASE_EXTERNAL_URL } from '../../client/config.js';
+import { BASE_API_URL } from '../../client/config.js';
 import TrafficSummary from './TrafficSummary.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
 
@@ -38,7 +38,7 @@ export function ActionTrafficBoard() {
   }, []); // setTrafficData가 외부 state면 필요 시 useCallback 내부 deps 조정
 
   useEffect(() => {
-    const es = new EventSourcePolyfill(`${BASE_EXTERNAL_URL}/action-events/traffic/sse/stream?clientId=admin`, {
+    const es = new EventSourcePolyfill(`${BASE_API_URL}/action-events/traffic/sse/stream?clientId=admin`, {
       headers: {
         Authorization: `Bearer ${TokenUtil.getToken()}`,
       },

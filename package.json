@@ -5,37 +5,46 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:dev": "vite --mode dev",
+    "dev:live": "vite --mode live",
+
     "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "build:dev": "vite build --mode dev",
+    "build:live": "vite build --mode live",
+
+    "preview": "vite preview",
+    "preview:dev": "vite preview --mode dev",
+    "preview:local": "vite preview --mode live",
+
+    "lint": "eslint ."
   },
   "dependencies": {
-    "@heroui/react": "2.8.7",
-    "@internationalized/date": "^3.10.1",
-    "@react-aria/i18n": "^3.12.14",
-    "axios": "^1.13.2",
+    "@heroui/react": "2.8.8",
+    "@internationalized/date": "^3.11.0",
+    "@react-aria/i18n": "^3.12.15",
+    "axios": "^1.13.4",
     "countup.js": "^2.9.0",
     "event-source-polyfill": "^1.0.31",
-    "framer-motion": "^12.29.0",
+    "framer-motion": "^12.33.0",
     "jwt-decode": "^4.0.0",
     "lodash": "^4.17.23",
-    "prettier": "^3.7.4",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "react-router": "^7.12.0",
-    "zustand": "^5.0.10"
+    "prettier": "^3.8.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router": "^7.13.0",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@tailwindcss/vite": "^4.1.18",
-    "@types/react": "^19.2.9",
+    "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
-    "baseline-browser-mapping": "^2.9.16",
+    "baseline-browser-mapping": "^2.9.19",
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.26",
-    "globals": "^16.5.0",
+    "eslint-plugin-react-refresh": "^0.5.0",
+    "globals": "^17.3.0",
     "tailwindcss": "^4.1.18",
     "vite": "^7.3.1"
   }

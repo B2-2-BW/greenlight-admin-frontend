@@ -35,7 +35,7 @@ export default function MyPageForm() {
             {/*<Skeleton className="rounded-lg w-full h-10" isLoaded={!isPageLoading}>*/}
             {/*  <div className="flex items-baseline gap-2">*/}
             {/*    <div className="font-bold text-3xl">액션 그룹 {actionGroupId == null ? '생성' : '상세'}</div>*/}
-            {/*    {<ActionGroupStatusChip enabled={actionGroup?.enabled} />}*/}
+            {/*    {<RoomStatusChip enabled={actionGroup?.enabled} />}*/}
             {/*  </div>*/}
             {/*</Skeleton>*/}
           </div>
