@@ -17,6 +17,7 @@ import UserManagementPage from './page/UserManagementPage.jsx';
 import SigninPage from './page/SigninPage.jsx';
 import RoomListPage from './page/RoomListPage.jsx';
 import RoomDetailPage from './page/RoomDetailPage.jsx';
+import DashboardV2Page from './page/DashboardV2Page.jsx';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         >
           <Route path="/" element={<Navigate to="/dashboard" />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/dashboard/new" element={<DashboardV2Page />} />
           <Route path="/action-groups" element={<ActionGroupPage />} />
           <Route path="/rooms" element={<RoomListPage />} />
           <Route path="/rooms/new" element={<RoomDetailPage />} />

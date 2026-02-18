@@ -1,0 +1,230 @@
+/* Scoped Wrapper */
+.traffic-dashboard-scope {
+    --t-bg-card: #ffffff;
+    --t-border: #e2e8f0;
+    --t-text-primary: #1e293b;
+    --t-text-secondary: #64748b;
+    --t-accent-blue: #3b82f6; /* 파란색 (물/Wave) */
+    --t-accent-red: #ef4444;  /* 경고 */
+    --t-pipe-bg: #f1f5f9;     /* 파이프 배경 */
+    --t-glass-border: rgba(59, 130, 246, 0.2);
+
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    box-sizing: border-box;
+}
+
+/* 모든 자식 요소의 box-sizing 초기화 */
+.traffic-dashboard-scope *,
+.traffic-dashboard-scope *::before,
+.traffic-dashboard-scope *::after {
+    box-sizing: inherit;
+}
+
+/* Card Container */
+.traffic-dashboard-scope .pipe-card {
+    background: var(--t-bg-card);
+    border: 1px solid var(--t-border);
+    border-radius: 16px;
+    width: 380px; /* 카드 너비 고정 */
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.traffic-dashboard-scope .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--t-pipe-bg);
+}
+
+.traffic-dashboard-scope .page-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--t-text-primary);
+}
+
+.traffic-dashboard-scope .status-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+}
+
+.traffic-dashboard-scope .status-badge.live {
+    background-color: #dbeafe;
+    color: var(--t-accent-blue);
+}
+
+/* Pipe Layout */
+.traffic-dashboard-scope .pipe-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.traffic-dashboard-scope .pipe-section {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+/* 1. Top Section */
+.traffic-dashboard-scope .top-section {
+    height: 100px;
+    align-items: flex-end; /* 파이프와 연결 */
+}
+
+/* Common Emitter Container (Pipe) */
+.traffic-dashboard-scope .emitter-container {
+    width: 60px; /* 파이프 두께 */
+    height: 100%;
+    background-color: var(--t-pipe-bg);
+    border-left: 1px solid var(--t-border);
+    border-right: 1px solid var(--t-border);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 2. Middle Section (Tank) */
+.traffic-dashboard-scope .middle-section {
+    height: 120px;
+    margin: -1px 0; /* 테두리 끊김 방지 */
+    z-index: 1;
+}
+
+.traffic-dashboard-scope .glass-tank {
+    width: 120px; /* 탱크는 파이프보다 넓게 */
+    height: 100%;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--t-glass-border);
+    border-radius: 0 0 24px 24px; /* 둥근 바닥 비커 모양 */
+    border-top: none;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.05);
+}
+
+/* Wave Slot */
+.traffic-dashboard-scope .wave-slot {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
+
+/* Tank Ruler */
+.traffic-dashboard-scope .tank-ruler {
+    position: absolute;
+    right: 6px;
+    top: 10px;
+    bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: right;
+    z-index: 10;
+    pointer-events: none;
+}
+.traffic-dashboard-scope .tank-ruler span {
+    font-size: 0.6rem;
+    color: var(--t-text-secondary);
+    opacity: 0.6;
+}
+
+/* Center Overlay Info */
+.traffic-dashboard-scope .center-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 20;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 8px 16px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+    opacity: 0.9;
+    border: 1px solid white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    width: max-content;
+}
+
+.traffic-dashboard-scope .current-users {
+    display: block;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--t-text-primary);
+}
+.traffic-dashboard-scope .capacity-rate {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--t-accent-blue);
+}
+
+/* 3. Bottom Section */
+.traffic-dashboard-scope .bottom-section {
+    height: 80px;
+    align-items: flex-start;
+}
+/* 하단 파이프는 위쪽이 연결된 느낌 */
+.traffic-dashboard-scope .bottom-section .emitter-container {
+    border-top: none;
+    background: linear-gradient(to bottom, var(--t-pipe-bg), #ffffff);
+}
+
+/* HUD Panels */
+.traffic-dashboard-scope .hud-panel {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.traffic-dashboard-scope .hud-panel.left { left: 0; top: 20px; text-align: left; }
+.traffic-dashboard-scope .hud-panel.right { right: 0; top: 40px; text-align: right; }
+.traffic-dashboard-scope .hud-panel.bottom-center { bottom: -10px; text-align: center; width: 100%; }
+
+/* Stats Text */
+.traffic-dashboard-scope .stat-group .label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--t-text-secondary);
+    margin-bottom: 2px;
+}
+.traffic-dashboard-scope .stat-group .value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--t-text-primary);
+    font-feature-settings: "tnum"; /* 숫자 너비 고정 */
+}
+.traffic-dashboard-scope .stat-group.warning .value {
+    color: var(--t-accent-red);
+}
+
+/* Mock Visuals (컴포넌트 없을 때 대체용) */
+.traffic-dashboard-scope .mock-visual {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: var(--t-text-secondary);
+    opacity: 0.5;
+}
+.traffic-dashboard-scope .mock-wave {
+    width: 100%;
+    background: linear-gradient(to top, #3b82f6, #60a5fa);
+    position: absolute;
+    bottom: 0;
+    transition: height 0.5s ease;
+    opacity: 0.8;
+}
