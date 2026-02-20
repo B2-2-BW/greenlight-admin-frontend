@@ -1,18 +1,5 @@
 import { useEffect, useRef, useId } from 'react';
 
-const dynamicColor = (roomStatus) => {
-  switch (roomStatus) {
-    case '폭주':
-      return '#FF0000AA';
-    case '혼잡':
-      return '#FFA500AA';
-    case '원활':
-      return '#00AA00AA';
-    default:
-      return '#DCDCDCAA';
-  }
-};
-
 /**
  * TrafficWave Component
  *
@@ -22,7 +9,7 @@ const dynamicColor = (roomStatus) => {
  * @param {number} speed - 파도의 속도 (기본: 0.15)
  */
 export default function Wave({
-  roomStatus = '원활',
+  color = '#DCDCDCAA',
   height = 50, // 0 ~ 100%
   amplitude = 4, // 0이면 정지 상태(사각형)
   speed = 0.15,
@@ -35,7 +22,6 @@ export default function Wave({
   });
 
   const gradientId = useId();
-  const mainColor = dynamicColor(roomStatus);
 
   useEffect(() => {
     // [성능 최적화] amplitude가 0이면 애니메이션 루프를 시작하지 않음
@@ -82,8 +68,8 @@ export default function Wave({
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
         <defs>
           <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={mainColor} stopOpacity="1" />
-            <stop offset="100%" stopColor={mainColor} stopOpacity="0.4" />
+            <stop offset="0%" stopColor={color} stopOpacity="1" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.4" />
           </linearGradient>
         </defs>
         <path ref={pathRef} fill={`url(#${gradientId})`} d="M 0 100 L 100 100 L 100 100 Z" />

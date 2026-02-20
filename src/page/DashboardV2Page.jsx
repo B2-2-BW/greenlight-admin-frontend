@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import Funnel2 from '../component/dashboard-v2/Funnel2.jsx';
 import PipeCard from '../component/dashboard-v2/PipeCard.jsx';
-import Wave from '../component/dashboard-v2/Wave.jsx';
-import { Button } from '@heroui/react';
+import { DashboardClient } from '../api/dashboard/index.js';
+import { RoomClient } from '../api/room/index.js';
+import { Switch } from '@heroui/react';
 
 const layoutStyle = {
   container: {
@@ -33,208 +33,125 @@ const getRoomCapacityRate = (currentUsers, maxCapacity) => {
   return rate;
 };
 
-const getRoomStatus = (rate) => {
-  if (rate >= 0.8) {
-    return '폭주';
-  } else if (rate >= 0.4) {
-    return '혼잡';
-  } else {
-    return '원활';
+const calculateSummary = (detail) => {
+  if (detail == null) {
+    return {};
   }
-};
+  const values = Object.values(detail);
+  const summary = values.reduce(
+    (acc, curr) => {
+      // // 가중치 합산 (대기시간 * 대기인원)
+      // acc.weightedWaitTimeSum += curr.estimatedWaitTime * curr.waitingCount;
 
-const getWaitingStatus = (rate) => {
-  if (rate >= 600) {
-    return '폭주';
-  } else if (rate >= 60) {
-    return '혼잡';
-  } else {
-    return '원활';
-  }
+      // 단순 총합 계산
+      acc.estimatedWaitTime = Math.max(acc.estimatedWaitTime, curr.estimatedWaitTime);
+      acc.waitingCount += curr.waitingCount;
+      acc.roomCapacity += curr.roomCapacity;
+      acc.roomCustomerCount += curr.roomCustomerCount;
+      acc.inflowRate += curr.inflowRate;
+      acc.enteredRate += curr.enteredRate;
+      acc.outflowRate += curr.outflowRate;
+
+      return acc;
+    },
+    {
+      // weightedWaitTimeSum: 0,
+      estimatedWaitTime: 0,
+      waitingCount: 0,
+      roomCapacity: 0,
+      roomCustomerCount: 0,
+      inflowRate: 0,
+      enteredRate: 0,
+      outflowRate: 0,
+    }
+  );
+
+  // 가중 평균 계산: (각 방의 대기시간 * 대기인원)의 총합 / 전체 대기인원
+  // summary.estimatedWaitTime =
+  //   summary.waitingCount > 0 ? Math.round(summary.weightedWaitTimeSum / summary.waitingCount) : 0;
+
+  return summary;
 };
 
 export default function DashboardV2Page() {
-  const [mainData, setMainData] = useState(null);
-  const [subDataList, setSubDataList] = useState([]);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
-  const [emitSignal, setEmitSignal] = useState(null);
+  const [roomList, setRoomList] = useState([]);
+  const [dashboardTraffic, setDashboardTraffic] = useState({});
 
-  const [inflowOptions, setInflowOptions] = useState([]);
-  const [enteredOptions, setEnteredOptions] = useState([]);
-  const [outflowOptions, setOutflowOptions] = useState([]);
-  const [waveOptions, setWaveOptions] = useState([]);
+  const [mock, setMock] = useState(false);
 
-  const simulate = () => {
-    setEmitSignal((v) => v + 1);
-
-    const waves = [];
-    const inflow = [];
-    const entered = [];
-    const outflow = [];
-    const mockList = Array.from({ length: 8 }).map((_, i) => ({
-      id: i,
-      name: `서비스 구역 ${i + 1}`,
-      description: `서비스 구역 상세`,
-      waitingCount: Math.floor(Math.random() * 2000),
-      inflowRate: Math.floor(Math.random() * 120),
-      maxCapacity: 3000,
-      currentUsers: Math.floor(Math.random() * 3000),
-      outflowRate: Math.floor(Math.random() * 80),
-      status: 'LIVE',
-    }));
-    for (let i = 0; i < mockList.length; i++) {
-      const rate = mockList[i].currentUsers / mockList[i].maxCapacity;
-      mockList[i].capacityRate = rate;
-      mockList[i].roomStatus = getRoomStatus(rate);
-      const expectedWaitTime = Math.round(mockList[i].waitingCount / Math.max(mockList[i].outflowRate, 1));
-      mockList[i].expectedWait = expectedWaitTime;
-      mockList[i].waitingStatus = getWaitingStatus(expectedWaitTime);
-      waves.push({
-        height: rate * 100,
-      });
+  const fetchRoomList = async () => {
+    try {
+      const roomList = await RoomClient.getRoomList();
+      setRoomList(roomList);
+    } finally {
+      setIsPageLoading(false);
     }
-
-    for (let i = 0; i < subDataList.length; i++) {
-      inflow.push({
-        quantity: Math.ceil(mockList[i].inflowRate / 50),
-        duration: 2.5,
-        delay: 0.1,
-      });
-      entered.push({
-        quantity: Math.ceil(mockList[i].outflowRate / 50),
-        duration: 2.5,
-        delay: 0.1,
-      });
-      outflow.push({
-        quantity: Math.ceil(mockList[i].outflowRate / 5),
-        duration: 0.5,
-        delay: 0.1,
-      });
-    }
-
-    setSubDataList(mockList);
-    setInflowOptions(inflow);
-    setEnteredOptions(entered);
-    setOutflowOptions(outflow);
-    setWaveOptions(waves);
   };
 
   useEffect(() => {
-    // API Call Logic Here...
-    // 예시 데이터 생성
-    setMainData({
-      name: '전체 대기열 통합',
-      waitingCount: 12540,
-      expectedWait: 200,
-      inflowRate: 1200,
-      maxCapacity: 22000,
-      currentUsers: 14000,
-      outflowRate: 1150,
-      capacityRate: 0.7,
-      roomStatus: '원활',
-      waitingStatus: '혼잡',
-      status: 'LIVE',
-    });
+    fetchRoomList();
   }, []);
 
-  if (!mainData) return <div>Loading...</div>;
+  useEffect(() => {
+    // 데이터를 가져오는 비동기 함수
+    const fetchData = async () => {
+      try {
+        const result = await DashboardClient.getDashboardDetail({ window: '2s', mock: mock });
+        result.summary = calculateSummary(result?.detail);
+        setDashboardTraffic(result);
+        console.log('Data fetched:', result);
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    };
+
+    // 처음 마운트 시 한 번 실행
+    fetchData();
+
+    // 2초(2000ms)마다 fetchData 실행
+    const intervalId = setInterval(fetchData, 2000);
+
+    // 컴포넌트 언마운트 시 인터벌 제거 (메모리 누수 방지)
+    return () => clearInterval(intervalId);
+  }, [roomList, mock]);
+
+  if (isPageLoading) return <div>Loading...</div>;
 
   return (
     <>
-      <div className="absolute z-100">
-        <Button onPress={simulate}></Button>
-      </div>
       <div style={layoutStyle.container}>
         {/* 1. Main Pipe (Left Sidebar Area) */}
         <section style={{ height: '100%' }}>
           <PipeCard
             mode="main"
-            data={mainData}
-            inflowComponent={
-              <Funnel2
-                className="absolute inset-0 z-20 block w-full h-full"
-                emitSignal={emitSignal}
-                {...inflowOptions}
-                straight={false}
-                angle={10}
-                size={{ min: 3, max: 5 }}
-                speed={{ min: 2, max: 5 }}
-                colors={['#3b82f6', '#60a5fa', '#93c5fd']}
-                destroyYRatio={0.92}
-                emitWidth={20}
-              />
-            }
-            waveComponent={<Wave {...waveOptions} amplitude={0.8} speed={0.03} />}
-            outflowComponent={
-              <Funnel2
-                className="absolute inset-0 z-20 block w-full h-full"
-                emitSignal={emitSignal}
-                {...outflowOptions}
-                straight={false}
-                angle={10}
-                size={{ min: 3, max: 5 }}
-                speed={{ min: 2, max: 5 }}
-                colors={['#3b82f6', '#60a5fa', '#93c5fd']}
-                destroyYRatio={0.92}
-                emitWidth={20}
-              />
-            }
+            trafficData={dashboardTraffic?.summary}
+            room={{
+              name: '전체 대기열 통합',
+            }}
+            emitSignal={dashboardTraffic?.timestamp}
           />
         </section>
 
         {/* 2. Sub Pipes Grid (Right Area) */}
         <section style={layoutStyle.gridArea}>
-          {subDataList.map((item, i) => (
+          {roomList.map((room, i) => (
             <PipeCard
-              key={item.id}
+              key={room.roomId}
               mode="compact"
-              data={item}
-              inflowComponent={
-                <Funnel2
-                  className="absolute inset-0 z-20 block w-full h-full"
-                  emitSignal={emitSignal}
-                  {...inflowOptions[i]}
-                  straight={false}
-                  angle={20}
-                  size={{ min: 3, max: 5 }}
-                  speed={{ min: 2, max: 5 }}
-                  colors={['#3b82f6', '#60a5fa', '#93c5fd']}
-                  destroyYRatio={0.99}
-                  emitWidth={30}
-                />
-              }
-              enteredComponent={
-                <Funnel2
-                  className="absolute inset-0 z-20 block w-full h-full"
-                  emitSignal={emitSignal}
-                  {...inflowOptions[i]}
-                  straight={true}
-                  size={{ min: 3, max: 3 }}
-                  speed={{ min: 1.5, max: 1.5 }}
-                  colors={['#3b82f6', '#60a5fa', '#93c5fd']}
-                  destroyYRatio={0.92}
-                  emitWidth={0}
-                />
-              }
-              waveComponent={
-                <Wave roomStatus={subDataList[i].roomStatus} {...waveOptions[i]} amplitude={1.5} speed={0.03} />
-              }
-              outflowComponent={
-                <Funnel2
-                  className="absolute inset-0 z-20 block w-full h-full"
-                  emitSignal={emitSignal}
-                  {...outflowOptions[i]}
-                  straight={false}
-                  angle={10}
-                  size={{ min: 2, max: 3 }}
-                  speed={{ min: 2, max: 3 }}
-                  destroyYRatio={0.92}
-                  emitWidth={20}
-                />
-              }
+              room={room}
+              trafficData={dashboardTraffic?.detail?.[room.roomId]}
+              emitSignal={dashboardTraffic?.timestamp}
             />
           ))}
         </section>
+
+        <div className="absolute bottom-20 right-20">
+          <Switch isSelected={mock} onValueChange={setMock}>
+            테스트데이터
+          </Switch>
+        </div>
       </div>
     </>
   );
