@@ -38,7 +38,7 @@ const calculateSummary = (detail) => {
     return {};
   }
   const values = Object.values(detail);
-  const summary = values.reduce(
+  return values.reduce(
     (acc, curr) => {
       // // 가중치 합산 (대기시간 * 대기인원)
       // acc.weightedWaitTimeSum += curr.estimatedWaitTime * curr.waitingCount;
@@ -47,10 +47,13 @@ const calculateSummary = (detail) => {
       acc.estimatedWaitTime = Math.max(acc.estimatedWaitTime, curr.estimatedWaitTime);
       acc.waitingCount += curr.waitingCount;
       acc.roomCapacity += curr.roomCapacity;
-      acc.roomCustomerCount += curr.roomCustomerCount;
+      acc.activeCustomerCount += curr.activeCustomerCount;
       acc.inflowRate += curr.inflowRate;
       acc.enteredRate += curr.enteredRate;
       acc.outflowRate += curr.outflowRate;
+      acc.inflow += curr.inflow;
+      acc.entered += curr.entered;
+      acc.outflow += curr.outflow;
 
       return acc;
     },
@@ -59,18 +62,15 @@ const calculateSummary = (detail) => {
       estimatedWaitTime: 0,
       waitingCount: 0,
       roomCapacity: 0,
-      roomCustomerCount: 0,
+      activeCustomerCount: 0,
+      inflow: 0,
+      entered: 0,
+      outflow: 0,
       inflowRate: 0,
       enteredRate: 0,
       outflowRate: 0,
     }
   );
-
-  // 가중 평균 계산: (각 방의 대기시간 * 대기인원)의 총합 / 전체 대기인원
-  // summary.estimatedWaitTime =
-  //   summary.waitingCount > 0 ? Math.round(summary.weightedWaitTimeSum / summary.waitingCount) : 0;
-
-  return summary;
 };
 
 export default function DashboardV2Page() {
@@ -111,7 +111,7 @@ export default function DashboardV2Page() {
     fetchData();
 
     // 2초(2000ms)마다 fetchData 실행
-    const intervalId = setInterval(fetchData, 2000);
+    const intervalId = setInterval(fetchData, 3000);
 
     // 컴포넌트 언마운트 시 인터벌 제거 (메모리 누수 방지)
     return () => clearInterval(intervalId);

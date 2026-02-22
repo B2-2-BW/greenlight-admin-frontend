@@ -88,6 +88,49 @@ const getRoomStatusFromCapacityRate = (rate) => {
   }
 };
 
+const calculateFunnelParam = (n) => {
+  // N < 30
+  if (n < 30) {
+    return {
+      quantity: 1,
+      duration: n / 10,
+      delay: 0.1,
+    };
+  }
+
+  if (n > 150) {
+    return {
+      quantity: 5,
+      duration: 3,
+      delay: 0.1,
+    };
+  }
+  // N >= 30
+  const duration = 3;
+
+  // N이 30으로 딱딱 떨어지면 delay=0.1 고정
+  if (n % 30 === 0) {
+    return {
+      quantity: n / 30,
+      duration,
+      delay: 0.1,
+    };
+  }
+
+  // 그 외: delay를 조절하되 0.1에 가장 가깝게 quantity 선택
+  const qFloor = Math.max(1, Math.floor(n / 30));
+  const qCeil = Math.max(1, Math.ceil(n / 30));
+
+  const delayFloor = (qFloor * duration) / n;
+  const delayCeil = (qCeil * duration) / n;
+
+  const pickFloor = Math.abs(delayFloor - 0.1) <= Math.abs(delayCeil - 0.1);
+  const quantity = pickFloor ? qFloor : qCeil;
+  const delay = (quantity * duration) / n;
+
+  return { quantity, duration, delay };
+};
+
 /**
  * PipeCard
  * @param {string} mode - 'main' | 'compact' (기본값 compact)
@@ -104,11 +147,14 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
     navigate(`/rooms/${roomId}`);
   };
 
-  const inflowQuantity = trafficData?.inflowRate ? Math.ceil(trafficData.inflowRate / 50) : 0;
-  const enteredQuantity = trafficData?.enteredRate ? Math.ceil(trafficData.enteredRate / 50) : 0;
-  const outflowQuantity = trafficData?.outflowRate ? Math.ceil(trafficData.outflowRate / 50) : 0;
-  const roomCapacityRate = trafficData?.roomCustomerCount
-    ? trafficData.roomCustomerCount / trafficData.roomCapacity
+  const inflowParam = calculateFunnelParam(trafficData?.inflow);
+  const enteredParam = calculateFunnelParam(trafficData?.entered);
+  const outflowParam = calculateFunnelParam(trafficData?.outflow);
+  outflowParam.quantity *= 2;
+  outflowParam.duration /= 2;
+
+  const roomCapacityRate = trafficData?.activeCustomerCount
+    ? trafficData.activeCustomerCount / trafficData.roomCapacity
     : 0;
   const queueStatus = getWaitingQueueStatus(trafficData?.estimatedWaitTime);
   const waveColor = getColorFromRoomCapacityRate(roomCapacityRate);
@@ -166,13 +212,11 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
             <Funnel2
               className="absolute inset-0 z-20 block w-full h-full"
               emitSignal={emitSignal}
-              quantity={inflowQuantity}
+              {...inflowParam}
               straight={false}
               angle={10}
               size={{ min: 3, max: 5 }}
               speed={{ min: 2, max: 5 }}
-              duration={2.5}
-              delay={0.1}
               colors={['#3b82f6', '#60a5fa', '#93c5fd']}
               emitWidth={20}
             />
@@ -211,13 +255,11 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
             <Funnel2
               className="absolute inset-0 z-20 block w-full h-full"
               emitSignal={emitSignal}
-              quantity={enteredQuantity}
+              {...enteredParam}
               straight={true}
               size={{ min: 3, max: 3 }}
               speed={{ min: 1.5, max: 1.5 }}
               colors={['#3b82f6', '#60a5fa', '#93c5fd']}
-              duration={2.5}
-              delay={0.1}
               emitWidth={0}
             />
           </div>
@@ -236,7 +278,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
               {/* 현재수 / 최대수 라인 */}
               <div className="flex items-baseline justify-center gap-1 tabular-nums">
                 <span className="font-bold text-[#1e293b]" style={{ fontSize: isMain ? '1.6rem' : '1.2rem' }}>
-                  {trafficData?.roomCustomerCount?.toLocaleString()}
+                  {trafficData?.activeCustomerCount?.toLocaleString()}
                 </span>
                 <span className="font-medium text-[#64748b]" style={{ fontSize: isMain ? '0.9rem' : '0.7rem' }}>
                   / {trafficData?.roomCapacity?.toLocaleString()}
@@ -266,13 +308,11 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
             <Funnel2
               className="absolute inset-0 z-20 block w-full h-full"
               emitSignal={emitSignal}
-              quantity={outflowQuantity}
+              {...outflowParam}
               straight={false}
               angle={10}
               size={{ min: 2, max: 3 }}
               speed={{ min: 2, max: 3 }}
-              duration={2.5}
-              delay={0.1}
               emitWidth={20}
             />
           </div>
