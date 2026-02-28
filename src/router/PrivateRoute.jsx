@@ -19,7 +19,6 @@ function PrivateRoute({ children }) {
   }
 
   const me = useUserStore.getState().user;
-  console.log(me);
   if (me == null) {
     UserClient.me().then((user) => {
       console.log(user);

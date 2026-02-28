@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import PipeCard from '../component/dashboard-v2/PipeCard.jsx';
 import { DashboardClient } from '../api/dashboard/index.js';
 import { RoomClient } from '../api/room/index.js';
-import { Switch } from '@heroui/react';
 
 const layoutStyle = {
   container: {
@@ -25,50 +24,44 @@ const layoutStyle = {
   },
 };
 
-const getRoomCapacityRate = (currentUsers, maxCapacity) => {
-  const rate = currentUsers / maxCapacity;
-  if (!isNaN(rate)) {
-    return 0;
-  }
-  return rate;
-};
+// const getRoomCapacityRate = (currentUsers, maxCapacity) => {
+//   const rate = currentUsers / maxCapacity;
+//   if (!isNaN(rate)) {
+//     return 0;
+//   }
+//   return rate;
+// };
 
-const calculateSummary = (detail) => {
-  if (detail == null) {
+const calculateSummary = (result) => {
+  if (result?.detail == null) {
     return {};
   }
-  const values = Object.values(detail);
+  const values = Object.values(result.detail);
   return values.reduce(
     (acc, curr) => {
-      // // 가중치 합산 (대기시간 * 대기인원)
-      // acc.weightedWaitTimeSum += curr.estimatedWaitTime * curr.waitingCount;
-
       // 단순 총합 계산
       acc.estimatedWaitTime = Math.max(acc.estimatedWaitTime, curr.estimatedWaitTime);
+      acc.totalWaiting += curr.totalWaiting;
+      acc.totalActive += curr.totalActive;
       acc.waitingCount += curr.waitingCount;
-      acc.roomCapacity += curr.roomCapacity;
-      acc.activeCustomerCount += curr.activeCustomerCount;
-      acc.inflowRate += curr.inflowRate;
+      acc.enteredCount += curr.enteredCount;
+      acc.exitedCount += curr.exitedCount;
+      acc.waitingRate += curr.waitingRate;
       acc.enteredRate += curr.enteredRate;
-      acc.outflowRate += curr.outflowRate;
-      acc.inflow += curr.inflow;
-      acc.entered += curr.entered;
-      acc.outflow += curr.outflow;
+      acc.exitedRate += curr.exitedRate;
 
       return acc;
     },
     {
-      // weightedWaitTimeSum: 0,
       estimatedWaitTime: 0,
+      totalWaiting: 0,
+      totalActive: 0,
       waitingCount: 0,
-      roomCapacity: 0,
-      activeCustomerCount: 0,
-      inflow: 0,
-      entered: 0,
-      outflow: 0,
-      inflowRate: 0,
+      enteredCount: 0,
+      exitedCount: 0,
+      waitingRate: 0,
       enteredRate: 0,
-      outflowRate: 0,
+      exitedRate: 0,
     }
   );
 };
@@ -78,8 +71,7 @@ export default function DashboardV2Page() {
 
   const [roomList, setRoomList] = useState([]);
   const [dashboardTraffic, setDashboardTraffic] = useState({});
-
-  const [mock, setMock] = useState(false);
+  const metricVersion = useRef(0);
 
   const fetchRoomList = async () => {
     try {
@@ -97,25 +89,37 @@ export default function DashboardV2Page() {
   useEffect(() => {
     // 데이터를 가져오는 비동기 함수
     const fetchData = async () => {
-      try {
-        const result = await DashboardClient.getDashboardDetail({ window: '2s', mock: mock });
-        result.summary = calculateSummary(result?.detail);
-        setDashboardTraffic(result);
-        console.log('Data fetched:', result);
-      } catch (error) {
-        console.error('Polling error:', error);
-      }
+      DashboardClient.getDashboardDetail({ version: metricVersion.current })
+        .then((res) => {
+          console.log('version', metricVersion);
+          const result = res.data;
+          metricVersion.current = result.version;
+
+          result.summary = calculateSummary(result);
+          setDashboardTraffic(result);
+          console.log('Data fetched:', result);
+        })
+        .catch((error) => {
+          if (error.status !== 304) {
+            console.error('Polling error:', error);
+          }
+        });
     };
 
     // 처음 마운트 시 한 번 실행
     fetchData();
 
-    // 2초(2000ms)마다 fetchData 실행
-    const intervalId = setInterval(fetchData, 3000);
+    // 1초(1000ms)마다 fetchData 실행
+    const intervalId = setInterval(fetchData, 1000);
 
     // 컴포넌트 언마운트 시 인터벌 제거 (메모리 누수 방지)
     return () => clearInterval(intervalId);
-  }, [roomList, mock]);
+  }, [roomList]);
+
+  const mainRoom = {
+    name: '전체 대기열 통합',
+    capacity: roomList.reduce((acc, cur) => acc + (cur.capacity || 0), 0),
+  };
 
   if (isPageLoading) return <div>Loading...</div>;
 
@@ -127,30 +131,28 @@ export default function DashboardV2Page() {
           <PipeCard
             mode="main"
             trafficData={dashboardTraffic?.summary}
-            room={{
-              name: '전체 대기열 통합',
-            }}
-            emitSignal={dashboardTraffic?.timestamp}
+            room={mainRoom}
+            emitSignal={dashboardTraffic?.version}
           />
         </section>
 
         {/* 2. Sub Pipes Grid (Right Area) */}
         <section style={layoutStyle.gridArea}>
-          {roomList.map((room, i) => (
+          {roomList.map((room) => (
             <PipeCard
               key={room.roomId}
               mode="compact"
               room={room}
               trafficData={dashboardTraffic?.detail?.[room.roomId]}
-              emitSignal={dashboardTraffic?.timestamp}
+              emitSignal={dashboardTraffic?.version}
             />
           ))}
         </section>
 
         <div className="absolute bottom-20 right-20">
-          <Switch isSelected={mock} onValueChange={setMock}>
-            테스트데이터
-          </Switch>
+          {/*<Switch isSelected={mock} onValueChange={setMock}>*/}
+          {/*  테스트데이터*/}
+          {/*</Switch>*/}
         </div>
       </div>
     </>

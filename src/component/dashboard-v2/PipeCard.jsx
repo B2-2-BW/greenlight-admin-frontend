@@ -147,15 +147,14 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
     navigate(`/rooms/${roomId}`);
   };
 
-  const inflowParam = calculateFunnelParam(trafficData?.inflow);
-  const enteredParam = calculateFunnelParam(trafficData?.entered);
-  const outflowParam = calculateFunnelParam(trafficData?.outflow);
-  outflowParam.quantity *= 2;
-  outflowParam.duration /= 2;
+  const waitingCount = calculateFunnelParam(trafficData?.waitingCount);
+  const enteredCount = calculateFunnelParam(trafficData?.enteredCount);
+  const exitedCount = calculateFunnelParam(trafficData?.exitedCount);
+  exitedCount.quantity *= 2;
+  exitedCount.duration /= 2;
 
-  const roomCapacityRate = trafficData?.activeCustomerCount
-    ? trafficData.activeCustomerCount / trafficData.roomCapacity
-    : 0;
+  const roomCapacityRate = trafficData?.totalActive ? trafficData.totalActive / room.capacity : 0;
+
   const queueStatus = getWaitingQueueStatus(trafficData?.estimatedWaitTime);
   const waveColor = getColorFromRoomCapacityRate(roomCapacityRate);
   const roomStatus = getRoomStatusFromCapacityRate(roomCapacityRate);
@@ -193,7 +192,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
           {!isMain && (
             <CapacityControl
               isDisabled={isMain}
-              value={room?.maxCapacity} // 데이터 모델에 maxCapacity가 있어야 함
+              value={room?.capacity} // 데이터 모델에 maxCapacity가 있어야 함
               onChange={(newMax) => handleCapacityChange(room?.roomId, newMax)}
             />
           )}
@@ -205,14 +204,14 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
         <div className={`w-full flex justify-center relative ${isMain ? 'h-[120px]' : 'h-[60px]'}`}>
           {/* 진입 속도 (Simple Label) */}
           <div className={styles.flowRateLabel} style={{ top: -10 }}>
-            <span className={styles.icon}>⬇</span> {trafficData?.inflowRate}/s
+            <span className={styles.icon}>⬇</span> {trafficData?.waitingRate}/s
           </div>
           {/* Emitter Container */}
           <div className={styles.emitterPipe}>
             <Funnel2
               className="absolute inset-0 z-20 block w-full h-full"
               emitSignal={emitSignal}
-              {...inflowParam}
+              {...waitingCount}
               straight={false}
               angle={10}
               size={{ min: 3, max: 5 }}
@@ -242,7 +241,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
               <div>
                 <span>대기</span>
                 <span className={`ml-1 font-bold ${isMain ? 'text-lg' : 'text-base'}`}>
-                  {trafficData?.waitingCount?.toLocaleString()}
+                  {trafficData?.totalWaiting?.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -255,7 +254,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
             <Funnel2
               className="absolute inset-0 z-20 block w-full h-full"
               emitSignal={emitSignal}
-              {...enteredParam}
+              {...enteredCount}
               straight={true}
               size={{ min: 3, max: 3 }}
               speed={{ min: 1.5, max: 1.5 }}
@@ -278,10 +277,10 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
               {/* 현재수 / 최대수 라인 */}
               <div className="flex items-baseline justify-center gap-1 tabular-nums">
                 <span className="font-bold text-[#1e293b]" style={{ fontSize: isMain ? '1.6rem' : '1.2rem' }}>
-                  {trafficData?.activeCustomerCount?.toLocaleString()}
+                  {trafficData?.totalActive?.toLocaleString()}
                 </span>
                 <span className="font-medium text-[#64748b]" style={{ fontSize: isMain ? '0.9rem' : '0.7rem' }}>
-                  / {trafficData?.roomCapacity?.toLocaleString()}
+                  / {room.capacity?.toLocaleString()}
                 </span>
               </div>
 
@@ -308,7 +307,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
             <Funnel2
               className="absolute inset-0 z-20 block w-full h-full"
               emitSignal={emitSignal}
-              {...outflowParam}
+              {...exitedCount}
               straight={false}
               angle={10}
               size={{ min: 2, max: 3 }}
@@ -319,7 +318,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
 
           {/* 이탈 속도 (Simple Label) */}
           <div className={styles.flowRateLabel} style={{ bottom: -5 }}>
-            <span className={styles.icon}>⬇</span> {trafficData?.outflowRate}/s
+            <span className={styles.icon}>⬇</span> {trafficData?.exitRate}/s
           </div>
         </div>
       </div>

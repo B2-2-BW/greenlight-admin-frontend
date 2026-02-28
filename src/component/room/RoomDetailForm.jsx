@@ -78,8 +78,8 @@ export default function RoomDetailForm({ onPressBack }) {
   const [selectDefaultRuleType, setSelectDefaultRuleType] = useState('ALL');
   const [editRoomRules, setEditRoomRules] = useState([{ ...defaultRoomRule }]);
 
-
-  const [editAdType, setEditAdType] = useState('IMAGE');
+  const [selectAdImageType, setSelectAdImageType] = useState('URL');
+  const [editAdImageUrl, setEditAdImageUrl] = useState('');
 
   const navigate = useNavigate();
 
@@ -96,8 +96,9 @@ export default function RoomDetailForm({ onPressBack }) {
     setEditCapacity(0);
     setEditMaxTrafficPerSecond(0);
     setEditEnabled(false);
-    setSelectDefaultRuleType('ALL')
-    setEditDefaultDestinationUrl('')
+    setSelectDefaultRuleType('ALL');
+    setEditDefaultDestinationUrl('');
+    setEditAdImageUrl('');
   };
 
   const handleMaxTrafficPerSecondChange = (val) => {
@@ -120,7 +121,9 @@ export default function RoomDetailForm({ onPressBack }) {
       setEditCapacity(data.capacity || '');
       setEditMaxTrafficPerSecond(data.maxTrafficPerSecond ?? 0);
       setEditEnabled(data?.enabled != null ? data.enabled : false);
+      setEditDefaultDestinationUrl(data?.defaultDestinationUrl.trim());
       setSelectDefaultRuleType(data?.defaultRuleType);
+      setEditAdImageUrl(data?.adImageUrl.trim()); // TODO adImageUrl 추가하기
     } catch (error) {
       console.error('Error fetching:', error);
       setErrorStatus(error.status);
@@ -149,6 +152,7 @@ export default function RoomDetailForm({ onPressBack }) {
       enabled: editEnabled,
       defaultRuleType: selectDefaultRuleType,
       defaultDestinationUrl: editDefaultDestinationUrl,
+      adImageUrl: editAdImageUrl,
     };
 
     try {
@@ -212,6 +216,33 @@ export default function RoomDetailForm({ onPressBack }) {
     setSelectDefaultRuleType(e.target.value);
   };
 
+  const getEditAdComponent = () => {
+    switch (selectAdImageType) {
+      case 'URL':
+        return (
+          <Input
+            className="w-full max-w-md"
+            errorMessage="."
+            label="대기열 광고 이미지 URL"
+            name="description"
+            placeholder="https://example.com/image.jpg"
+            type="text"
+            description="HTTPS 프로토콜만 지원하며, 대기열 대기 중 사용자에게 노출될 배너 이미지의 전체 경로를 입력해 주세요. (권장 규격: 1080x1920px, JPG/PNG 형식)"
+            value={editAdImageUrl}
+            onChange={(e) => setEditAdImageUrl(e.target.value)}
+            {...requiredInputProps}
+          />
+        );
+      case 'UPLOAD_IMAGE':
+        return (
+          <div className="mt-4 flex">
+            지원예정
+            {/*<Input type="file">ff</Input>*/}
+          </div>
+        );
+    }
+  };
+
   if (errorStatus === 404) {
     return <NotFoundPage />;
   } else if (errorStatus === 500) {
@@ -220,10 +251,7 @@ export default function RoomDetailForm({ onPressBack }) {
 
   return (
     <>
-      <Form
-        className="w-full flex flex-col"
-        onSubmit={handleSubmit}
-      >
+      <Form className="w-full flex flex-col" onSubmit={handleSubmit}>
         <div className="relative w-full flex flex-col gap-4">
           <div className="w-full">
             <div className="flex justify-between items-center">
@@ -427,29 +455,23 @@ export default function RoomDetailForm({ onPressBack }) {
               <div id="room-type-radio-group">
                 <div className="mb-2 text-base after:content-['*'] after:text-danger after:ms-0.5">광고 유형</div>
                 <RadioGroup
-                  value={editAdType}
+                  value={selectAdImageType}
                   isRequired
                   errorMessage="다음 옵션 중 하나를 선택하세요."
-                  onValueChange={setEditAdType}
+                  onValueChange={setSelectAdImageType}
                   orientation="horizontal"
                   classNames={{
                     wrapper: 'flex',
                   }}
                 >
-                  <ActionTypeRadio description="배너 이미지를 업로드하여 노출합니다" value="IMAGE">
+                  <ActionTypeRadio description="이미지 URL을 입력합니다." value="URL">
+                    URL 입력
+                  </ActionTypeRadio>
+                  <ActionTypeRadio description="배너 이미지를 업로드하여 노출합니다" value="IMAGE_UPLOAD">
                     이미지 업로드
                   </ActionTypeRadio>
-                  <ActionTypeRadio description="제목/본문 텍스트와 배경, 폰트 색상을 직접 편집합니다." value="TEXT">
-                    직접 입력
-                  </ActionTypeRadio>
                 </RadioGroup>
-
-                {editAdType === 'IMAGE' && (
-                  <div className="mt-4 flex">
-                    <img width="500" src="/sample_upload2.png" />
-                    <Input type="file">ff</Input>
-                  </div>
-                )}
+                <div className="mt-12">{getEditAdComponent()}</div>
               </div>
             </Skeleton>
           </SectionTitle>
