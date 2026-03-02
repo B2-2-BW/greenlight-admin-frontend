@@ -318,7 +318,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
 
           {/* 이탈 속도 (Simple Label) */}
           <div className={styles.flowRateLabel} style={{ bottom: -5 }}>
-            <span className={styles.icon}>⬇</span> {trafficData?.exitRate}/s
+            <span className={styles.icon}>⬇</span> {trafficData?.exitedRate}/s
           </div>
         </div>
       </div>
