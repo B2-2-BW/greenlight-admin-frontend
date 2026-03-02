@@ -1,0 +1,169 @@
+.card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    position: relative;
+    transition: transform 0.2s;
+}
+
+/* --- Compact Mode (Grid Item) --- */
+.compactCard {
+    height: 400px; /* 고정 높이 */
+    min-width: 260px;
+}
+
+/* --- Main Mode (Featured Item) --- */
+.mainCard {
+    height: 100%; /* 부모 높이 채움 */
+    min-height: 656px;
+    border: 2px solid #3b82f6;
+    /*background: #f8fafc;*/
+}
+
+.mainCard .pageName {
+    font-size: 1.2rem;
+}
+
+.mainCard .currentUsers {
+    font-size: 1.5rem;
+}
+
+/* Header */
+.header {
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pageName {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+.badge {
+    background: #3b82f6;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    margin-left: 6px;
+}
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ccc;
+}
+
+.statusDot.live {
+    background: #22c55e;
+    box-shadow: 0 0 4px #22c55e;
+}
+
+/* Body Layout */
+.pipeBody {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0;
+    position: relative;
+}
+
+.mainTopSection, .mainBottomSection {
+    height: 150px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    position: relative;
+}
+
+/* Sections */
+.topSection, .bottomSection {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    position: relative;
+}
+
+.middleSection {
+    flex: 1; /* 남은 공간 차지 */
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    z-index: 1;
+    margin: -2px 0; /* 연결 부위 자연스럽게 */
+}
+
+/* Emitter Box (Pipe) */
+.emitterPipe {
+    width: 60px; /* 파이프 두께 더 얇게 */
+    height: 100%;
+    background: #f1f5f9;
+    border-left: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    position: relative;
+    z-index: 0
+}
+
+.bottomSection .emitterPipe, .mainBottomSection .emitterPipe {
+    border-top: none;
+    background: linear-gradient(to bottom, #f1f5f9, #fff);
+}
+
+.tankContainer {
+    width: 120px; /* 탱크 너비 */
+    height: 100%;
+    border: 1px solid #cbd5e1;
+    border-top: none;
+    border-radius: 0 0 20px 20px;
+    background: rgba(255, 255, 255, 0.8);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Tank */
+.mainTankContainer {
+    width: 180px; /* 탱크 너비 */
+}
+
+.waveWrapper {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Stats & Labels */
+.flowRateLabel {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #64748b;
+    background: #fff;
+    padding: 2px 6px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.tankOverlay {
+    white-space: nowrap;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+}

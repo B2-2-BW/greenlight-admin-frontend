@@ -53,6 +53,14 @@ const timestampToDateTime = (timestamp) => {
   return new Date(timestamp).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
 };
 
+const toMMSS = (totalSeconds) => {
+  const secs = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+  const ss = String(secs % 60).padStart(2, '0');
+  return `${mm}:${ss}`;
+};
+
 export const DateUtil = {
   timestampToDateTime,
+  toMMSS,
 };
