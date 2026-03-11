@@ -75,7 +75,7 @@ export default function DashboardV2Page() {
 
   const fetchRoomList = async () => {
     try {
-      const roomList = await RoomClient.getRoomList();
+      const roomList = await RoomClient.getRoomList({ enabled: true });
       setRoomList(roomList);
     } finally {
       setIsPageLoading(false);
@@ -91,7 +91,7 @@ export default function DashboardV2Page() {
     const fetchData = async () => {
       DashboardClient.getDashboardDetail({ version: metricVersion.current })
         .then((res) => {
-          console.log('version', metricVersion);
+          // console.log('version', metricVersion);
           const result = res.data;
           metricVersion.current = result.version;
 

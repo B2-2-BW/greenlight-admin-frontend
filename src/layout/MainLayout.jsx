@@ -12,11 +12,12 @@ import {
 } from '../icon/Icons.jsx';
 import { GRAFANA_EXTERNAL_URL, JENKINS_EXTERNAL_URL } from '../client/config.js';
 
+// TODO 사용자 권한에 따라 표기되는 메뉴 제어, url을 통한 접근도 제어
 const menuLists = [
   [
-    { title: '대시보드', prependIcon: <HomeIcon color="#6b7280" />, path: '/dashboard', menuId: 1 },
+    // { title: '대시보드', prependIcon: <HomeIcon color="#6b7280" />, path: '/dashboard', menuId: 1 },
 
-    { title: '대시보드2', prependIcon: <HomeIcon color="#6b7280" />, path: '/dashboard/new', menuId: 2 },
+    { title: '대시보드', prependIcon: <HomeIcon color="#6b7280" />, path: '/dashboard', menuId: 2 },
     {
       title: '대기열',
       prependIcon: <CalendarIcon color="#6b7280" />,
