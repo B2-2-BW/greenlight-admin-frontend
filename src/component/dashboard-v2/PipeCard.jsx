@@ -204,7 +204,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
         <div className={`w-full flex justify-center relative ${isMain ? 'h-[120px]' : 'h-[60px]'}`}>
           {/* 진입 속도 (Simple Label) */}
           <div className={styles.flowRateLabel} style={{ top: -10 }}>
-            <span className={styles.icon}>⬇</span> {trafficData?.waitingRate}/s
+            <span className={styles.icon}>⬇</span> {trafficData?.waitingRate.toFixed(1)}/s
           </div>
           {/* Emitter Container */}
           <div className={styles.emitterPipe}>
@@ -318,7 +318,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
 
           {/* 이탈 속도 (Simple Label) */}
           <div className={styles.flowRateLabel} style={{ bottom: -5 }}>
-            <span className={styles.icon}>⬇</span> {trafficData?.exitedRate}/s
+            <span className={styles.icon}>⬇</span> {trafficData?.exitedRate.toFixed(1)}/s
           </div>
         </div>
       </div>

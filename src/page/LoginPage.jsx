@@ -23,7 +23,6 @@ export default function LoginPage() {
 
     const response = await UserClient.login({ loginId, password });
 
-    console.log(import.meta.env)
     if (response.status === 401 || response.status === 404) {
       addToast({
         title: '로그인 실패',

@@ -33,14 +33,14 @@ function App() {
           }
         >
           <Route path="/" element={<Navigate to="/dashboard" />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/dashboard/new" element={<DashboardV2Page />} />
-          <Route path="/action-groups" element={<ActionGroupPage />} />
+          {/*<Route path="/dashboard" element={<DashboardPage />} />*/}
+          <Route path="/dashboard" element={<DashboardV2Page />} />
+          {/*<Route path="/action-groups" element={<ActionGroupPage />} />*/}
           <Route path="/rooms" element={<RoomListPage />} />
           <Route path="/rooms/new" element={<RoomDetailPage />} />
           <Route path="/rooms/:roomId" element={<RoomDetailPage />} />
-          <Route path="/action-groups/new" element={<ActionGroupDetailPage />} />
-          <Route path="/action-groups/:actionGroupId" element={<ActionGroupDetailPage />} />
+          {/*<Route path="/action-groups/new" element={<ActionGroupDetailPage />} />*/}
+          {/*<Route path="/action-groups/:actionGroupId" element={<ActionGroupDetailPage />} />*/}
           <Route path="/schedulers" element={<SchedulerPage />} />
           <Route path="/settings" element={<SystemSettingsPage />} />
           <Route path="/users" element={<UserManagementPage />} />

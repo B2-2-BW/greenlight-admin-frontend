@@ -6,6 +6,7 @@ import { ActionGroupClient } from '../../api/action-group/index.js';
 import { RoomClient } from '../../api/room/index.js';
 
 const columns = [
+  { name: 'ID', uid: 'roomId' },
   { name: '이름', uid: 'description' },
   { name: '활성/비활성', uid: 'enabled' },
   { name: '최대사용자수', uid: 'capacity' },
@@ -66,7 +67,7 @@ export default function RoomListTable({ onPress }) {
       >
         <TableHeader columns={columns} style={{ padding: 0, margin: 0 }}>
           {(column) => (
-            <TableColumn key={column.uid} align={column.uid === 'actions' ? 'center' : 'start'}>
+            <TableColumn key={column.uid} align={column.uid === 'capacity' ? 'center' : 'start'}>
               {column.name}
             </TableColumn>
           )}
