@@ -11,7 +11,7 @@ import ActionGroupPage from './page/ActionGroupPage.jsx';
 import ActionGroupDetailPage from './page/ActionGroupDetailPage.jsx';
 import BadRequestPage from './page/BadRequestPage.jsx';
 import SomethingWentWrongPage from './page/SomethingWentWrongPage.jsx';
-import SystemSettingsPage from './page/SystemSettingsPage.jsx';
+import SiteSettingsPage from './page/SiteSettingsPage.jsx';
 import SchedulerPage from './page/SchedulerPage.jsx';
 import UserManagementPage from './page/UserManagementPage.jsx';
 import SigninPage from './page/SigninPage.jsx';
@@ -42,7 +42,7 @@ function App() {
           {/*<Route path="/action-groups/new" element={<ActionGroupDetailPage />} />*/}
           {/*<Route path="/action-groups/:actionGroupId" element={<ActionGroupDetailPage />} />*/}
           <Route path="/schedulers" element={<SchedulerPage />} />
-          <Route path="/settings" element={<SystemSettingsPage />} />
+          <Route path="/settings" element={<SiteSettingsPage />} />
           <Route path="/users" element={<UserManagementPage />} />
           <Route path="/notfound" element={<NotFoundPage />} />
           <Route path="/forbidden" element={<BadRequestPage />} />
