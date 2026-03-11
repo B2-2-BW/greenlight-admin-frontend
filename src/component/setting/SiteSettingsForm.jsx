@@ -1,8 +1,12 @@
 import { Button, Form, cn, Input, Skeleton, Switch } from '@heroui/react';
 import SectionTitle from '../common/SectionTitle.jsx';
-import { optionalInputProps } from '../../shared/props.js';
+import { optionalInputProps, readonlyInputProps, requiredInputProps } from '../../shared/props.js';
 import { EyeFilledIcon, EyeSlashFilledIcon } from '../../icon/Icons.jsx';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { RoomClient } from '../../api/room/index.js';
+import { SiteClient } from '../../api/site/index.js';
+import { useUserStore } from '../../store/user.jsx';
+import { ToastUtil } from '../../util/toastUtil.js';
 
 const enabledMessage = {
   true: {
@@ -15,21 +19,65 @@ const enabledMessage = {
   },
 };
 
-export default function SystemSettingsForm() {
+export default function SiteSettingsForm() {
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+  const [siteInfo, setSiteInfo] = useState({});
 
-  const [editSystemEnabled, setEditSystemEnabled] = useState(true);
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const [editSiteEnabled, setEditSiteEnabled] = useState(true);
+
+  const fetchSiteInfo = async () => {
+    setIsPageLoading(true);
+    // clearForm();
+
+    try {
+      const me = useUserStore.getState().user;
+      const res = await SiteClient.findSite(me.siteId);
+      const data = res.data;
+      setSiteInfo(data);
+      setEditSiteEnabled(data?.siteEnabled);
+    } catch (error) {
+      console.error('Error fetching siteInfo:', error);
+    } finally {
+      setIsPageLoading(false);
+    }
   };
+
+  // Location 이동 시 실행
+  useEffect(() => {
+    fetchSiteInfo();
+  }, []);
+
+  const reloadForm = () => {
+    setEditSiteEnabled(siteInfo?.siteEnabled);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitLoading(true);
+    const data = {
+      siteEnabled: editSiteEnabled,
+    };
+
+    try {
+      // 없는 경우 생성 화면
+      const response = await SiteClient.updateSiteInfo(siteInfo.siteId, data);
+      if (response.status !== 200) {
+        throw new Error('failed to create room ' + JSON.stringify(response));
+      }
+      ToastUtil.success('시스템 설정', '성공적으로 저장했습니다.');
+    } catch (error) {
+      console.error(error.response);
+      ToastUtil.error('시스템 설정', '저장에 실패했습니다.');
+      reloadForm();
+    } finally {
+      setIsSubmitLoading(false);
+    }
+  };
+
   return (
     <>
-      <Form
-        className="w-full flex flex-col"
-        // onReset={() => setAction('reset')}
-        onSubmit={handleSubmit}
-      >
+      <Form className="w-full flex flex-col" onSubmit={handleSubmit}>
         <div className="relative w-full flex flex-col gap-4">
           <div className="w-full">
             <div className="flex justify-between items-center">
@@ -48,7 +96,28 @@ export default function SystemSettingsForm() {
             {/*  </div>*/}
             {/*</Skeleton>*/}
           </div>
-
+          <SectionTitle title="사이트 정보">
+            <Skeleton className="" isLoaded={!isPageLoading}>
+              <div className="flex flex-col w-full gap-6">
+                <Input
+                  className="w-full max-w-md"
+                  label="사이트 ID"
+                  name="siteId"
+                  type="text"
+                  value={siteInfo?.siteId}
+                  {...readonlyInputProps}
+                />
+                <Input
+                  className="w-full max-w-md"
+                  label="사이트명"
+                  name="siteName"
+                  type="text"
+                  value={siteInfo?.siteName}
+                  {...readonlyInputProps}
+                />
+              </div>
+            </Skeleton>
+          </SectionTitle>
           <SectionTitle title="대기열 관리">
             <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>
               <div className="flex flex-col w-full gap-6">
@@ -58,8 +127,8 @@ export default function SystemSettingsForm() {
                   </div>
 
                   <Switch
-                    isSelected={editSystemEnabled}
-                    onValueChange={setEditSystemEnabled}
+                    isSelected={editSiteEnabled}
+                    onValueChange={setEditSiteEnabled}
                     classNames={{
                       base: cn(
                         'inline-flex flex-row-reverse w-full max-w-md bg-content1 hover:bg-content2 items-center',
@@ -79,8 +148,8 @@ export default function SystemSettingsForm() {
                     }}
                   >
                     <div className="flex flex-col gap-1">
-                      <p className="text-base">{enabledMessage[editSystemEnabled]?.title}</p>
-                      <p className="text-sm text-default-400">{enabledMessage[editSystemEnabled]?.subtitle}</p>
+                      <p className="text-base">{enabledMessage[editSiteEnabled]?.title}</p>
+                      <p className="text-sm text-default-400">{enabledMessage[editSiteEnabled]?.subtitle}</p>
                     </div>
                   </Switch>
                 </div>

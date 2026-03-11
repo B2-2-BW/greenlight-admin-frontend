@@ -10,7 +10,12 @@ const findSite = async (siteId) => {
   );
 };
 
+const updateSiteInfo = async (siteId, data) => {
+  return await commonAxiosInstance.put(`/sites/${siteId}`, data);
+};
+
 const SiteClient = {
   findSite,
+  updateSiteInfo,
 };
 export { SiteClient };
