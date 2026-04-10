@@ -1,10 +1,5 @@
 import {
   Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
   Input,
   Button,
   DropdownTrigger,
@@ -12,7 +7,6 @@ import {
   DropdownMenu,
   DropdownItem,
   Chip,
-  User,
   Pagination,
 } from '@heroui/react';
 import { useCallback, useMemo, useState } from 'react';
@@ -395,9 +389,11 @@ export default function UserListTable() {
     switch (columnKey) {
       case 'name':
         return (
-          <User avatarProps={{ radius: 'lg', src: user.avatar }} description={user.email} name={cellValue}>
+          <>
+            {/*<User avatarProps={{ radius: 'lg', src: user.avatar }} description={user.email} name={cellValue}>*/}
             {user.email}
-          </User>
+            {/*</User>*/}
+          </>
         );
       case 'role':
         return (
@@ -578,22 +574,22 @@ export default function UserListTable() {
       onSelectionChange={setSelectedKeys}
       onSortChange={setSortDescriptor}
     >
-      <TableHeader columns={headerColumns}>
+      <Table.Header columns={headerColumns}>
         {(column) => (
-          <TableColumn
+          <Table.Column
             key={column.uid}
             align={column.uid === 'actions' ? 'center' : 'start'}
             allowsSorting={column.sortable}
           >
             {column.name}
-          </TableColumn>
+          </Table.Column>
         )}
-      </TableHeader>
-      <TableBody emptyContent={'No users found'} items={sortedItems}>
+      </Table.Header>
+      <Table.Body emptyContent={'No users found'} items={sortedItems}>
         {(item) => (
-          <TableRow key={item.id}>{(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}</TableRow>
+          <Table.Row key={item.id}>{(columnKey) => <Table.Cell>{renderCell(item, columnKey)}</Table.Cell>}</Table.Row>
         )}
-      </TableBody>
+      </Table.Body>
     </Table>
   );
 }

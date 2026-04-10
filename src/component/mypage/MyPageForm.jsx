@@ -1,5 +1,5 @@
 import { Button, Form, Input, Skeleton } from '@heroui/react';
-import SectionTitle from '../common/SectionTitle.jsx';
+import FormSection from '../common/FormSection.jsx';
 import { optionalInputProps } from '../../shared/props.js';
 import { EyeFilledIcon, EyeSlashFilledIcon } from '../../icon/Icons.jsx';
 import { useState } from 'react';
@@ -39,7 +39,7 @@ export default function MyPageForm() {
             {/*  </div>*/}
             {/*</Skeleton>*/}
           </div>
-          <SectionTitle title="비밀번호 변경">
+          <FormSection title="비밀번호 변경">
             <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>
               <div className="flex flex-col w-full gap-6">
                 <Input
@@ -110,7 +110,7 @@ export default function MyPageForm() {
                 />
               </div>
             </Skeleton>
-          </SectionTitle>
+          </FormSection>
           <div className="w-full">
             <div className="flex justify-between items-center">{/*  TODO 섹션 나누기 또는 설정화면 분리하기 */}</div>
           </div>

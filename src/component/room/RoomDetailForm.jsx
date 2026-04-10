@@ -1,31 +1,37 @@
 import {
   Button,
   cn,
+  Description,
+  FieldError,
   Form,
   Input,
-  NumberInput,
+  Label,
+  ListBox,
+  NumberField,
+  Radio,
   RadioGroup,
   Select,
-  SelectItem,
   Skeleton,
+  Spinner,
   Switch,
+  Tabs,
+  TextField,
   Tooltip,
-  useDisclosure,
+  useOverlayState,
 } from '@heroui/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import DeleteSvg from '../../icon/Delete.jsx';
 import ArrowBackSvg from '../../icon/ArrowBackSvg.jsx';
-import SectionTitle from '../common/SectionTitle.jsx';
-import ConfirmModal from '../ConfirmModal.jsx';
+import FormSection from '../common/FormSection.jsx';
+import ConfirmAlertDialog from '../ConfirmModal.jsx';
 import RoomStatusChip from './RoomStatusChip.jsx';
 import NotFoundPage from '../../page/NotFoundPage.jsx';
 import SomethingWentWrongPage from '../../page/SomethingWentWrongPage.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
-import { readonlyInputProps, requiredInputProps } from '../../shared/props.js';
-import ActionTypeRadio from '../action/ActionTypeRadio.jsx';
 import { RoomClient } from '../../api/room/index.js';
 import RoomRuleItemList from './RoomRuleItemList.jsx';
+import { ArrowLeft, TrashBin, TriangleExclamation } from '@gravity-ui/icons';
 
 const enabledMessage = {
   true: {
@@ -54,6 +60,17 @@ const DEFAULT_RULE_TYPES = [
     description: 'URL에 특정 문자를 포함하는 경우를 제외하고 대기열이 활성화됩니다',
   },
 ];
+
+const ROOM_ENVIRONMENT_RADIO_OPTIONS = [
+  { value: 'LIVE', description: '운영 환경을 위한 대기열 입니다.', title: '운영 (LIVE)' },
+  { value: 'DEV', description: '개발 환경을 위한 대기열 입니다.', title: '개발 (DEV)' },
+];
+
+const IMAGE_AD_RADIO_OPTIONS = [
+  { value: 'URL', description: '이미지 URL을 입력합니다.', title: 'URL 입력' },
+  { value: 'IMAGE_UPLOAD', description: '배너 이미지를 업로드하여 노출합니다.', title: '이미지 업로드' },
+];
+
 const defaultRoomRule = {
   paramName: '',
   paramValue: '',
@@ -65,7 +82,7 @@ export default function RoomDetailForm({ onPressBack }) {
   const [errorStatus, setErrorStatus] = useState(null);
   const { roomId } = useParams();
 
-  const [isPageLoading, setIsPageLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
 
   const [room, setRoom] = useState(null);
@@ -77,18 +94,13 @@ export default function RoomDetailForm({ onPressBack }) {
   const [editDefaultDestinationUrl, setEditDefaultDestinationUrl] = useState('');
   const [selectDefaultRuleType, setSelectDefaultRuleType] = useState('ALL');
   const [editRoomRules, setEditRoomRules] = useState([{ ...defaultRoomRule }]);
-
+  const [selectRoomEnvironment, setSelectRoomEnvironment] = useState('DEV');
   const [selectAdImageType, setSelectAdImageType] = useState('URL');
   const [editAdImageUrl, setEditAdImageUrl] = useState('');
 
   const navigate = useNavigate();
 
-  const {
-    isOpen: isOpenConfirm,
-    onOpen: onOpenConfirm,
-    onOpenChange: onOpenChangeConfirm,
-    onClose: onCloseConfirm,
-  } = useDisclosure();
+  const state = useOverlayState();
 
   const clearForm = () => {
     setEditName('');
@@ -99,6 +111,7 @@ export default function RoomDetailForm({ onPressBack }) {
     setSelectDefaultRuleType('ALL');
     setEditDefaultDestinationUrl('');
     setEditAdImageUrl('');
+    setSelectRoomEnvironment('DEV');
   };
 
   const handleMaxTrafficPerSecondChange = (val) => {
@@ -109,9 +122,10 @@ export default function RoomDetailForm({ onPressBack }) {
     setEditCapacity(val);
   };
 
-  const fetchRoom = async () => {
-    setIsPageLoading(true);
-    clearForm();
+  const fetchRoom = async (fetchOptions = { clear: true }) => {
+    if (fetchOptions.clear) {
+      clearForm();
+    }
 
     try {
       const data = await RoomClient.getRoomById(roomId);
@@ -122,8 +136,9 @@ export default function RoomDetailForm({ onPressBack }) {
       setEditMaxTrafficPerSecond(data.maxTrafficPerSecond ?? 0);
       setEditEnabled(data?.enabled != null ? data.enabled : false);
       setEditDefaultDestinationUrl(data?.defaultDestinationUrl.trim());
-      setSelectDefaultRuleType(data?.defaultRuleType);
+      setSelectDefaultRuleType(data?.defaultRuleType || 'ALL');
       setEditAdImageUrl(data?.adImageUrl.trim()); // TODO adImageUrl 추가하기
+      setSelectRoomEnvironment(data.roomEnviornmnet || 'DEV');
     } catch (error) {
       console.error('Error fetching:', error);
       setErrorStatus(error.status);
@@ -135,6 +150,7 @@ export default function RoomDetailForm({ onPressBack }) {
   // Location 이동 시 실행
   useEffect(() => {
     if (!roomId) {
+      setIsPageLoading(false);
       return;
     }
     fetchRoom();
@@ -142,7 +158,6 @@ export default function RoomDetailForm({ onPressBack }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitLoading(true);
 
     const data = {
       name: editName,
@@ -153,13 +168,14 @@ export default function RoomDetailForm({ onPressBack }) {
       defaultRuleType: selectDefaultRuleType,
       defaultDestinationUrl: editDefaultDestinationUrl,
       adImageUrl: editAdImageUrl,
+      roomEnvironment: selectRoomEnvironment,
     };
 
     try {
       if (roomId) {
         // roomId가 있는 경우 업데이트 화면
         await RoomClient.updateRoomById(roomId, data);
-        await fetchRoom();
+        await fetchRoom({ clear: false });
       } else {
         // 없는 경우 생성 화면
         const response = await RoomClient.createRoom(data);
@@ -178,7 +194,15 @@ export default function RoomDetailForm({ onPressBack }) {
     }
   };
 
-  const handleDeleteConfirmed = async () => {
+  const handleDeleteRoomPress = useCallback(() => {
+    if (room?.enabled) {
+      ToastUtil.error('활성화 상태의 대기열은 삭제할 수 없습니다.', '대기열을 먼저 비활성화 해 주세요');
+      return; // 활성화 상태의 대기열은 삭제불가
+    }
+    state.setOpen(true);
+  });
+
+  const handleDeleteConfirmed = useCallback(async () => {
     setIsSubmitLoading(true);
     try {
       await RoomClient.deleteRoomById(roomId);
@@ -187,7 +211,7 @@ export default function RoomDetailForm({ onPressBack }) {
     } catch (error) {
       if (error.status === 409) {
         ToastUtil.error('대기열을 삭제할 수 없습니다,', error.response?.data?.detail);
-        onCloseConfirm();
+        state.setOpen(false);
       } else {
         console.error('삭제 실패:', error);
         ToastUtil.error('대기열 삭제', '삭제에 실패했습니다.');
@@ -195,7 +219,7 @@ export default function RoomDetailForm({ onPressBack }) {
     } finally {
       setIsSubmitLoading(false);
     }
-  };
+  }, []);
 
   const handleChangeRoomRule = (idx, field, value) => {
     const newRules = editRoomRules.map((rule, i) => (i === idx ? { ...rule, [field]: value } : rule));
@@ -212,35 +236,8 @@ export default function RoomDetailForm({ onPressBack }) {
     setEditRoomRules(newRules);
   };
 
-  const handleSelectDefaultRuleTypeChange = (e) => {
-    setSelectDefaultRuleType(e.target.value);
-  };
-
-  const getEditAdComponent = () => {
-    switch (selectAdImageType) {
-      case 'URL':
-        return (
-          <Input
-            className="w-full max-w-md"
-            errorMessage="."
-            label="대기열 광고 이미지 URL"
-            name="description"
-            placeholder="https://example.com/image.jpg"
-            type="text"
-            description="HTTPS 프로토콜만 지원하며, 대기열 대기 중 사용자에게 노출될 배너 이미지의 전체 경로를 입력해 주세요. (권장 규격: 1080x1920px, JPG/PNG 형식)"
-            value={editAdImageUrl}
-            onChange={(e) => setEditAdImageUrl(e.target.value)}
-            {...requiredInputProps}
-          />
-        );
-      case 'UPLOAD_IMAGE':
-        return (
-          <div className="mt-4 flex">
-            지원예정
-            {/*<Input type="file">ff</Input>*/}
-          </div>
-        );
-    }
+  const handleSelectDefaultRuleTypeChange = (value) => {
+    setSelectDefaultRuleType(value);
   };
 
   if (errorStatus === 404) {
@@ -255,241 +252,333 @@ export default function RoomDetailForm({ onPressBack }) {
         <div className="relative w-full flex flex-col gap-4">
           <div className="w-full">
             <div className="flex justify-between items-center">
-              <div className="text-sm text-default-400 mb-1">{room?.name}</div>
-              <div className="flex flex-row gap-6">
+              {isPageLoading ? (
+                <Skeleton className="rounded-lg w-full h-10"></Skeleton>
+              ) : (
+                <div className="flex items-baseline gap-2">
+                  <div className="font-bold text-3xl">대기열 {roomId == null ? '생성' : '상세'}</div>
+                  {<RoomStatusChip enabled={room?.enabled} />}
+                </div>
+              )}
+              <div className="flex flex-row gap-4">
                 {roomId && (
-                  <Tooltip content="대기열 삭제하기">
-                    <Button size="sm" className="p-1" isIconOnly variant="light" onPress={onOpenConfirm}>
-                      <DeleteSvg />
+                  <Tooltip shouldCloseOnPress={false}>
+                    <Button size="md" isIconOnly variant="ghost" onPress={handleDeleteRoomPress}>
+                      <TrashBin className="h-5 w-5" />
                     </Button>
+                    <Tooltip.Content showArrow placement="left">
+                      대기열 삭제하기
+                    </Tooltip.Content>
                   </Tooltip>
                 )}
-                <Tooltip content="뒤로가기">
-                  <Button size="sm" isIconOnly variant="light" onPress={onPressBack}>
-                    <ArrowBackSvg />
+                <Tooltip>
+                  <Button size="md" isIconOnly variant="ghost" onPress={onPressBack}>
+                    <ArrowLeft className="h-5 w-5" />
                   </Button>
+                  <Tooltip.Content showArrow placement="top">
+                    뒤로가기
+                  </Tooltip.Content>
                 </Tooltip>
               </div>
             </div>
-            <Skeleton className="rounded-lg w-full h-10" isLoaded={!isPageLoading}>
-              <div className="flex items-baseline gap-2">
-                <div className="font-bold text-3xl">대기열 {roomId == null ? '생성' : '상세'}</div>
-                {<RoomStatusChip enabled={room?.enabled} />}
-              </div>
-            </Skeleton>
           </div>
-          <SectionTitle title="기본 설정">
-            <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>
+          <FormSection title="기본 설정">
+            {isPageLoading ? (
+              <div className="flex flex-col gap-6">
+                <Skeleton className="rounded-lg w-full h-18" />
+                <Skeleton className="rounded-lg w-full h-21" />
+                <Skeleton className="rounded-lg w-full h-21" />
+              </div>
+            ) : (
               <div className="flex flex-col w-full gap-6">
                 {roomId != null && (
-                  <Input
-                    className="w-full max-w-md"
-                    label="대기열 ID"
-                    name="roomId"
-                    type="text"
-                    value={roomId}
-                    {...readonlyInputProps}
-                  />
+                  <TextField name="roomId" type="text" isReadOnly className="w-full max-w-2xl" variant="default">
+                    <Label className="text-base">대기열 ID</Label>
+                    <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={roomId} />
+                  </TextField>
                 )}
-                <Input
-                  className="w-full max-w-md"
-                  label="대기열 이름"
-                  placeholder="대기열 이름을 입력하세요."
-                  name="name"
-                  description="대기열의 이름 입니다."
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  {...requiredInputProps}
-                />
-                <Input
-                  className="w-full max-w-md"
-                  errorMessage="대기열 설명은 필수값입니다."
-                  label="대기열 설명"
-                  name="description"
-                  placeholder="대기열에 대해 알려주세요."
-                  type="text"
-                  description="대기열에 대한 상세 설명입니다."
-                  value={editDescription}
-                  onChange={(e) => setDescription(e.target.value)}
-                  {...requiredInputProps}
-                />
-              </div>
-            </Skeleton>
-          </SectionTitle>
-          {/*<Skeleton className="rounded-lg w-full" isLoaded={!isEventLoading}></Skeleton>*/}
-          <SectionTitle title="유량 제어">
-            <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>
-              <div className="flex flex-col w-full gap-6">
-                <div>
-                  <div className="mb-2 text-base after:content-['*'] after:text-danger after:ms-0.5">
-                    대기열 활성/비활성화
-                  </div>
+                <TextField name="roomName" type="text" isRequired className="w-full max-w-2xl" variant="default">
+                  <Label className="text-base">대기열 이름</Label>
+                  <Input
+                    className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
+                    placeholder="대기열 이름을 입력하세요."
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                  />
+                  <Description className="text-sm">대기열의 이름 입니다.</Description>
+                  <FieldError>필수 입력값입니다.</FieldError>
+                </TextField>
+                <TextField name="description" type="text" isRequired className="w-full max-w-2xl" variant="default">
+                  <Label className="text-base">대기열 설명</Label>
+                  <Input
+                    className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
+                    placeholder="대기열에 대해 알려주세요."
+                    value={editDescription}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                  <Description className="text-sm">대기열에 대한 상세 설명입니다.</Description>
+                  <FieldError>필수 입력값입니다.</FieldError>
+                </TextField>
 
+                <RadioGroup
+                  isRequired
+                  value={selectRoomEnvironment}
+                  onChange={setSelectRoomEnvironment}
+                  variant="secondary"
+                >
+                  <Label className="text-base" isRequired>
+                    대기열 환경 태그
+                  </Label>
+                  <div className="flex gap-2 items-center max-w-2xl">
+                    {ROOM_ENVIRONMENT_RADIO_OPTIONS.map((option) => (
+                      <Radio
+                        key={option.value}
+                        value={option.value}
+                        className="flex-1 rounded-2xl data-[selected=true]:ring-2 ring ring-neutral-300 bg-surface px-5 py-4 transition-all data-[selected=true]:ring-accent"
+                      >
+                        <Radio.Control>
+                          <Radio.Indicator />
+                        </Radio.Control>
+                        <Radio.Content>
+                          <div className="flex flex-col gap-1">
+                            <Label>{option.title}</Label>
+                            <Description>{option.description}</Description>
+                          </div>
+                        </Radio.Content>
+                      </Radio>
+                    ))}
+                  </div>
+                  <FieldError>다음 옵션 중 하나를 선택하세요.</FieldError>
+                </RadioGroup>
+              </div>
+            )}
+          </FormSection>
+          {/*<Skeleton className="rounded-lg w-full" isLoaded={!isEventLoading}></Skeleton>*/}
+          <FormSection title="유량 제어">
+            {isPageLoading ? (
+              <div className="flex flex-col gap-6">
+                <Skeleton className="rounded-lg w-full h-28" />
+                <Skeleton className="rounded-lg w-full h-27" />
+                <Skeleton className="rounded-lg w-full h-27" />
+              </div>
+            ) : (
+              <div className="flex flex-col w-full gap-6">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-base" isRequired>
+                    대기열 활성/비활성화
+                  </Label>
                   <Switch
                     isSelected={editEnabled}
-                    onValueChange={setEditEnabled}
-                    classNames={{
-                      base: cn(
-                        'inline-flex flex-row-reverse w-full max-w-md bg-content1 hover:bg-content2 items-center',
-                        'justify-between cursor-pointer rounded-lg gap-2 p-4 border-2 border-default',
-                        'data-[selected=true]:border-primary'
-                      ),
-                      wrapper: 'p-0 h-4 overflow-visible',
-                      thumb: cn(
-                        'w-6 h-6 border-2 shadow-lg',
-                        'group-data-[hover=true]:border-primary',
-                        //selected
-                        'group-data-[selected=true]:ms-6',
-                        // pressed
-                        'group-data-[pressed=true]:w-7',
-                        'group-data-selected:group-data-pressed:ms-4'
-                      ),
-                    }}
+                    onChange={setEditEnabled}
+                    className={cn(
+                      'inline-flex flex-row-reverse w-full max-w-lg bg-white hover:bg-neutral-100 items-center',
+                      'justify-between cursor-pointer rounded-lg gap-2 p-4 border-2',
+                      'data-selected:border-accent'
+                    )}
+                    isRequired
                   >
-                    <div className="flex flex-col gap-1">
-                      <p className="text-base">{enabledMessage[editEnabled]?.title}</p>
-                      <p className="text-sm text-default-400">{enabledMessage[editEnabled]?.subtitle}</p>
-                    </div>
+                    <Switch.Control className="h-5 w-10">
+                      <Switch.Thumb className={`size-4 bg-white ${editEnabled ? 'ms-5.5' : ''}`}>
+                        <Switch.Icon />
+                      </Switch.Thumb>
+                    </Switch.Control>
+
+                    <Switch.Content className="flex flex-col gap-1">
+                      <Label className="text-base cursor-pointer">{enabledMessage[editEnabled]?.title}</Label>
+                      <Description className="text-sm text-default-400">
+                        {enabledMessage[editEnabled]?.subtitle}
+                      </Description>
+                    </Switch.Content>
                   </Switch>
                 </div>
-                <NumberInput
-                  className="w-full max-w-md"
-                  label="최대 사용자수"
-                  name="capacity"
-                  placeholder=" "
+
+                <NumberField
+                  value={editCapacity}
+                  onChange={handleCapacityChange}
                   minValue={0}
-                  description={
+                  variant="primary"
+                  isRequired
+                >
+                  <Label className="text-base">최대 사용자수</Label>
+                  <NumberField.Group className="w-40 ring-1 focus-within:ring-2 ring-neutral-200 focus-within:ring-accent">
+                    <NumberField.DecrementButton />
+                    <NumberField.Input />
+                    <NumberField.IncrementButton />
+                  </NumberField.Group>
+                  <Description className="text-sm">
                     <div className="flex flex-col text-sm">
                       <span>화면에 머무를 수 있는 사용자 수를 제한합니다.</span>
                       <span>0으로 설정하면 화면으로 진입할 수 없게 됩니다.</span>
                     </div>
-                  }
-                  value={editCapacity}
-                  onValueChange={handleCapacityChange}
-                  {...requiredInputProps}
-                  classNames={{
-                    inputWrapper: 'max-w-40',
-                  }}
-                />
-                <NumberInput
-                  className="w-full max-w-md"
-                  label="초당 유입량"
-                  name="maxTrafficPerSecond"
-                  placeholder=" "
-                  minValue={0}
-                  description={
-                    <div className="flex flex-col text-sm">
-                      <span>1초마다 화면으로 고객이 입장하는 속도를 조절합니다.</span>
-                      <span>0으로 설정하면 진입이 멈춥니다.</span>
-                    </div>
-                  }
+                  </Description>
+                </NumberField>
+
+                <NumberField
                   value={editMaxTrafficPerSecond}
-                  onValueChange={handleMaxTrafficPerSecondChange}
-                  {...requiredInputProps}
-                  classNames={{
-                    inputWrapper: 'max-w-40',
-                  }}
-                />
-              </div>
-            </Skeleton>
-          </SectionTitle>
-          <SectionTitle title="대기열 규칙">
-            <Input
-              className="w-full max-w-2xl"
-              label="기본 목적지 URL"
-              placeholder="https://www.example.com"
-              name="defaultDestinationUrl"
-              description="목적지가 명시되지 않았을 때 이 URL로 이동하게 됩니다."
-              type="text"
-              value={editDefaultDestinationUrl}
-              onChange={(e) => setEditDefaultDestinationUrl(e.target.value)}
-              {...requiredInputProps}
-            />
-            <div>
-              <div className="mb-2 text-base after:content-['*'] after:text-danger after:ms-0.5">
-                대기열 적용 규칙 유형
-              </div>
-              <Select
-                className="max-w-[20rem] mt-0"
-                items={DEFAULT_RULE_TYPES}
-                selectedKeys={[selectDefaultRuleType]}
-                onChange={handleSelectDefaultRuleTypeChange}
-                description={DEFAULT_RULE_TYPES.filter((t) => t.value === selectDefaultRuleType).map(
-                  (v) => v.description
-                )}
-                popoverProps={{
-                  classNames: {
-                    content: 'w-96',
-                  },
-                }}
-                {...requiredInputProps}
-              >
-                {(defaultType) => (
-                  <SelectItem key={defaultType.value} textValue={defaultType.name}>
-                    <div className="flex gap-2 items-center">
-                      <div className="flex flex-col">
-                        <span className="text-small">{defaultType.name}</span>
-                        <span className="text-tiny text-default-400">{defaultType.description}</span>
-                      </div>
+                  onChange={handleMaxTrafficPerSecondChange}
+                  minValue={0}
+                  isRequired
+                >
+                  <Label className="text-base">최대 사용자수</Label>
+                  <NumberField.Group className="w-40 ring-1 focus-within:ring-2 ring-neutral-200 focus-within:ring-accent">
+                    <NumberField.DecrementButton />
+                    <NumberField.Input />
+                    <NumberField.IncrementButton />
+                  </NumberField.Group>
+                  <Description className="text-sm">
+                    <div className="flex flex-col text-sm">
+                      <span>화면에 머무를 수 있는 사용자 수를 제한합니다.</span>
+                      <span>0으로 설정하면 화면으로 진입할 수 없게 됩니다.</span>
                     </div>
-                  </SelectItem>
-                )}
-              </Select>
-            </div>
-            {(selectDefaultRuleType === 'INCLUDE' || selectDefaultRuleType === 'EXCLUDE') && (
-              <div id="room-rules">
-                <div className="mb-2 text-sm">대기열 적용 규칙</div>
-                <RoomRuleItemList
-                  rules={editRoomRules}
-                  onChange={handleChangeRoomRule}
-                  onAdd={handleAddRoomRule}
-                  onDelete={handleRemoveRoomRule}
-                />
+                  </Description>
+                </NumberField>
               </div>
             )}
-          </SectionTitle>
-
-          <SectionTitle title="대기화면 구성">
-            <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>
-              <div id="room-type-radio-group">
-                <div className="mb-2 text-base after:content-['*'] after:text-danger after:ms-0.5">광고 유형</div>
-                <RadioGroup
-                  value={selectAdImageType}
-                  isRequired
-                  errorMessage="다음 옵션 중 하나를 선택하세요."
-                  onValueChange={setSelectAdImageType}
-                  orientation="horizontal"
-                  classNames={{
-                    wrapper: 'flex',
-                  }}
-                >
-                  <ActionTypeRadio description="이미지 URL을 입력합니다." value="URL">
-                    URL 입력
-                  </ActionTypeRadio>
-                  <ActionTypeRadio description="배너 이미지를 업로드하여 노출합니다" value="IMAGE_UPLOAD">
-                    이미지 업로드
-                  </ActionTypeRadio>
-                </RadioGroup>
-                <div className="mt-12">{getEditAdComponent()}</div>
+          </FormSection>
+          <FormSection title="대기열 규칙">
+            {isPageLoading ? (
+              <div className="flex flex-col gap-6">
+                <Skeleton className="rounded-lg w-full h-22" />
+                <Skeleton className="rounded-lg w-full h-22" />
               </div>
-            </Skeleton>
-          </SectionTitle>
+            ) : (
+              <div className="flex flex-col gap-6">
+                <TextField
+                  name="defaultDestinationUrl"
+                  type="text"
+                  className="w-full max-w-2xl"
+                  variant="primary"
+                  isRequired
+                >
+                  <Label className="text-base">기본 목적지 URL</Label>
+                  <Input
+                    className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
+                    placeholder="https://www.example.com"
+                    value={editDefaultDestinationUrl}
+                    onChange={(e) => setEditDefaultDestinationUrl(e.target.value)}
+                  />
+                  <Description className="text-sm">목적지가 명시되지 않았을 때 이 URL로 이동하게 됩니다.</Description>
+                  <FieldError>필수 항목을 입력해 주세요.</FieldError>
+                </TextField>
+                <div>
+                  <Select isRequired value={selectDefaultRuleType} onChange={handleSelectDefaultRuleTypeChange}>
+                    <Label className="text-base">대기열 적용 규칙 유형</Label>
+                    <Select.Trigger className="max-w-40 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
+                      <Select.Value>{({ state }) => state.selectedItems[0]?.textValue}</Select.Value>
+                      <Select.Indicator />
+                    </Select.Trigger>
+
+                    <Select.Popover placement="bottom start">
+                      <ListBox>
+                        {DEFAULT_RULE_TYPES.map((defaultType) => (
+                          <ListBox.Item key={defaultType.value} id={defaultType.value} textValue={defaultType.name}>
+                            <div className="flex gap-2 items-center">
+                              <div className="flex flex-col">
+                                <span className="text-sm">{defaultType.name}</span>
+                                <span className="text-xs text-neutral-400">{defaultType.description}</span>
+                              </div>
+                            </div>
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                    <Description className="text-sm">
+                      {DEFAULT_RULE_TYPES.filter((t) => t.value === selectDefaultRuleType).map((v) => v.description)}
+                    </Description>
+                    <FieldError>필수 항목을 입력해 주세요.</FieldError>
+                  </Select>
+                </div>
+                {(selectDefaultRuleType === 'INCLUDE' || selectDefaultRuleType === 'EXCLUDE') && (
+                  <div id="room-rules">
+                    <div className="mb-2 text-sm">대기열 적용 규칙</div>
+                    <RoomRuleItemList
+                      rules={editRoomRules}
+                      onChange={handleChangeRoomRule}
+                      onAdd={handleAddRoomRule}
+                      onDelete={handleRemoveRoomRule}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </FormSection>
+
+          <FormSection title="대기화면 구성">
+            {isPageLoading ? (
+              <div className="flex flex-col gap-6">
+                <Skeleton className="rounded-lg w-full h-28" />
+                <Skeleton className="rounded-lg w-full h-27" />
+              </div>
+            ) : (
+              <div id="flex flex-col gap-6">
+                <RadioGroup isRequired value={selectAdImageType} onChange={setSelectAdImageType} variant="secondary">
+                  <Label className="text-base" isRequired>
+                    광고 유형
+                  </Label>
+                  <div className="flex gap-2 items-center max-w-2xl">
+                    {IMAGE_AD_RADIO_OPTIONS.map((option) => (
+                      <Radio
+                        key={option.value}
+                        value={option.value}
+                        className="flex-1 rounded-2xl data-[selected=true]:ring-2 ring ring-neutral-300 bg-surface px-5 py-4 transition-all data-[selected=true]:ring-accent"
+                      >
+                        <Radio.Control>
+                          <Radio.Indicator />
+                        </Radio.Control>
+                        <Radio.Content>
+                          <div className="flex flex-col gap-1">
+                            <Label>{option.title}</Label>
+                            <Description>{option.description}</Description>
+                          </div>
+                        </Radio.Content>
+                      </Radio>
+                    ))}
+                  </div>
+                  <FieldError>다음 옵션 중 하나를 선택하세요.</FieldError>
+                </RadioGroup>
+                <div className="mt-6">
+                  {selectAdImageType === 'URL' ? (
+                    <TextField name="adImageUrl" type="text" className="w-full max-w-2xl" variant="primary" isRequired>
+                      <Label className="text-base">대기열 광고 이미지 URL</Label>
+                      <Input
+                        className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
+                        placeholder="https://example.com/image.jpg"
+                        value={editAdImageUrl}
+                        onChange={(e) => setEditAdImageUrl(e.target.value)}
+                      />
+                      <Description className="flex flex-col text-sm">
+                        <span>
+                          HTTPS 프로토콜만 지원하며, 대기열 대기 중 사용자에게 노출될 배너 이미지의 전체 경로를 입력해
+                          주세요.
+                        </span>
+                        <span>(권장 규격: 1080x1920px, JPG/PNG 형식)</span>
+                      </Description>
+                      <FieldError>필수 항목을 입력해 주세요.</FieldError>
+                    </TextField>
+                  ) : (
+                    <div className="mt-4 flex"> 기능 추후 지원예정</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </FormSection>
         </div>
         <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
-          <Button size="lg" color="primary" variant="shadow" type="submit" isLoading={isSubmitLoading} fullWidth>
+          <Button type="submit" className="h-10 rounded-2xl" isPending={isSubmitLoading} fullWidth>
+            {isSubmitLoading ? <Spinner color="current" size="sm" /> : null}
             저장하기
           </Button>
         </div>
       </Form>
 
-      <ConfirmModal
-        isOpen={isOpenConfirm}
-        onOpenChange={onOpenChangeConfirm}
-        title="대기열 삭제"
-        message="정말로 이 대기열을 삭제하시겠습니까?"
+      <ConfirmAlertDialog
+        title="정말로 이 대기열을 삭제하시겠습니까?"
+        message="대기열이 즉시 삭제되며 이 작업은 복구할 수 없습니다."
+        confirmMessage="삭제하기"
+        isOpen={state.isOpen}
         onConfirm={handleDeleteConfirmed}
-        onCancel={onCloseConfirm}
+        onOpenChange={state.setOpen}
       />
     </>
   );

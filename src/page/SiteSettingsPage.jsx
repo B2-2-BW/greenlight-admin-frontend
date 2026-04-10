@@ -7,9 +7,11 @@ export default function SiteSettingsPage() {
   }, []);
   return (
     <>
-      <div className="p-4 max-w-[1080px]">
-        <div className="font-bold text-3xl mt-8 mb-4">시스템 설정</div>
-        <SiteSettingsForm />
+      <div className="w-full bg-neutral-50">
+        <div className="p-4 max-w-[1080px]">
+          <div className="font-bold text-3xl mt-8 mb-4">시스템 설정</div>
+          <SiteSettingsForm />
+        </div>
       </div>
     </>
   );

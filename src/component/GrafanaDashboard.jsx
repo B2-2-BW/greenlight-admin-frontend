@@ -1,5 +1,5 @@
 import GrafanaPanel from './GrafanaPanel.jsx';
-import { Card, CardBody, CardHeader } from '@heroui/react';
+import { Card } from '@heroui/react';
 import DashboardTitle from './DashboardTitle.jsx';
 
 const embedLinks = {
@@ -50,27 +50,27 @@ export default function GrafanaDashboard() {
       <div className="flex flex-col gap-4">
         <DashboardTitle title="서버 통계 (Core API)" />
         <Card shadow="sm">
-          <CardBody className="flex flex-col gap-2 w-full">
+          <Card.Content className="flex flex-col gap-2 w-full">
             <div className="flex gap-2 w-full">
               <GrafanaPanel path={embedLinks.pressure} />
               <GrafanaPanel path={embedLinks.cpuBusy} />
               <GrafanaPanel path={embedLinks.ramUsed} />
             </div>
-          </CardBody>
+          </Card.Content>
         </Card>
 
         <DashboardTitle title="사용자 유입량" />
         <Card shadow="sm">
-          <CardBody className="flex flex-col gap-2 w-full">
+          <Card.Content className="flex flex-col gap-2 w-full">
             <div className="flex gap-2 w-full h-[200px]">
               <GrafanaPanel path={embedLinks.springCoreRps} />
               <GrafanaPanel path={embedLinks.redisFlow} />
             </div>
-          </CardBody>
+          </Card.Content>
         </Card>
         <DashboardTitle title="API 성능" />
         <Card shadow="sm">
-          <CardBody className="flex flex-col gap-2 w-full">
+          <Card.Content className="flex flex-col gap-2 w-full">
             <div className="flex gap-2 w-full h-[200px]">
               <GrafanaPanel path={embedLinks.springCoreP95} />
               <GrafanaPanel path={embedLinks.springCoreP99} />
@@ -81,7 +81,7 @@ export default function GrafanaDashboard() {
             <div className="h-[280px]">
               <GrafanaPanel path={embedLinks.springCoreLog} />
             </div>
-          </CardBody>
+          </Card.Content>
         </Card>
       </div>
     </>

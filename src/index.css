@@ -2,8 +2,8 @@
 layer(base);
 
 @import 'tailwindcss';
+@import "@heroui/styles";
 
-@config '../tailwind.config.js';
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
@@ -12,6 +12,14 @@ layer(base);
   If we ever want to remove these styles, we need to add an explicit border
   color utility to any element that depends on these defaults.
 */
+:root {
+  --accent: #20814C;
+  --focus: #20814C;
+  /*--color-primary-foreground: #FFFFFF;*/
+  /*--color-primary-tertiary: #FB0000;*/
+  /*--color-primary-focus: #20814C;*/
+}
+
 @layer base {
   *,
   ::after,
@@ -19,6 +27,21 @@ layer(base);
   ::backdrop,
   ::file-selector-button {
     border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@layer components {
+  .textfield .label {
+    font-size: var(--text-base); /* text-base (1rem) */
+  }
+  .textfield .input {
+    font-size: var(--text-base); /* text-base (1rem) */
+  }
+  .textfield .description {
+    font-size: var(--text-sm); /* text-base (1rem) */
+  }
+  .textfield .field-error {
+    font-size: var(--text-sm); /* text-base (1rem) */
   }
 }
 

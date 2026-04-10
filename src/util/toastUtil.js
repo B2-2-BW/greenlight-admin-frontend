@@ -1,19 +1,11 @@
-import { addToast } from '@heroui/toast';
+import { toast } from '@heroui/react';
 
 const success = (title, description) => {
-  addToast({
-    title: title,
-    description: description,
-    color: 'success',
-  });
+  toast.success(title, { description });
 };
 
 const error = (title, description) => {
-  addToast({
-    title: title,
-    description: description,
-    color: 'danger',
-  });
+  toast.danger(title, { description });
 };
 export const ToastUtil = {
   success,
