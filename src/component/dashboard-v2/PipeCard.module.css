@@ -1,7 +1,5 @@
 .card {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
     display: flex;
     flex-direction: column;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -19,7 +17,6 @@
 .mainCard {
     height: 100%; /* 부모 높이 채움 */
     min-height: 656px;
-    border: 2px solid #3b82f6;
     /*background: #f8fafc;*/
 }
 

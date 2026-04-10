@@ -12,8 +12,10 @@ export default function RoomDetailPage() {
   }, []);
   return (
     <>
-      <div className="p-4 max-w-[1080px] h-[100vh-64px]">
-        <RoomDetailForm onPressBack={onPressBack} />
+      <div className="w-full  bg-neutral-50">
+        <div className="p-4 max-w-[1080px] h-[100vh-64px]">
+          <RoomDetailForm onPressBack={onPressBack} />
+        </div>
       </div>
     </>
   );

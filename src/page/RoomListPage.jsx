@@ -1,22 +1,49 @@
 import { useNavigate } from 'react-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import RoomListTopContent from '../component/room/RoomListTopContent.jsx';
 import RoomListTable from '../component/room/RoomListTable.jsx';
+import { Chip } from '@heroui/react';
+import { TriangleExclamation } from '@gravity-ui/icons';
+import { useUserStore } from '../store/user.jsx';
+import { SiteClient } from '../api/site/index.js';
 
 export default function RoomListPage() {
   const navigate = useNavigate();
+  const [siteEnabled, setSiteEnabled] = useState(true);
 
   const onPress = (roomId) => {
     navigate(`/rooms/${roomId}`);
   };
 
+  const fetchSiteInfo = async () => {
+    const me = useUserStore.getState().user;
+    const res = await SiteClient.findSite(me.siteId);
+    setSiteEnabled(res?.data?.siteEnabled || false);
+  };
+
   useEffect(() => {
     document.title = '대기열 목록 | Greenlight Admin';
+    fetchSiteInfo();
   }, []);
+
   return (
     <>
       <div className="p-4 max-w-[1080px]">
-        <div className="font-bold text-3xl mt-8 mb-4">대기열 목록</div>
+        <div className="flex items-baseline gap-2">
+          <div className="font-bold text-3xl mt-8 mb-4">대기열 목록</div>
+          {!siteEnabled && (
+            <Chip
+              className="select-none cursor-pointer"
+              color="warning"
+              variant="primary"
+              size="lg"
+              onClick={() => navigate('/settings')}
+            >
+              <TriangleExclamation className="mr-1" />
+              대기열 시스템 비활성화
+            </Chip>
+          )}
+        </div>
         <RoomListTopContent /> {/* 이거는 기능 동작 필요 없어서 일단 무시 */}
         <RoomListTable onPress={onPress} />
       </div>

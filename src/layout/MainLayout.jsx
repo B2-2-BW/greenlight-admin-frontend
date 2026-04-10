@@ -1,6 +1,6 @@
 import SideBar from '../component/SideBar.jsx';
 import NavBar from '../component/NavBar.jsx';
-import { Outlet, useNavigate } from 'react-router';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import { useState } from 'react';
 import {
   CalendarIcon,
@@ -26,12 +26,12 @@ const menuLists = [
     },
   ],
   [
-    {
-      title: '스케쥴러 관리',
-      prependIcon: <ClockFilledIcon color="#6b7280" />,
-      path: '/schedulers',
-      menuId: 14,
-    },
+    // {
+    //   title: '스케쥴러 관리',
+    //   prependIcon: <ClockFilledIcon color="#6b7280" />,
+    //   path: '/schedulers',
+    //   menuId: 14,
+    // },
     {
       title: '시스템 설정',
       prependIcon: <SettingsFilledIcon color="#6b7280" />,
@@ -61,29 +61,11 @@ const externalMenuList = [
   },
 ];
 export default function MainLayout() {
-  const [currentMenuId, setCurrentMenuId] = useState(null);
-  // if (currentMenu == null) do something
-  const handleMenuClick = (menu) => {
-    if (!menu.path && !menu.link) return;
-
-    if (menu.path) {
-      navigate(menu.path);
-    }
-    if (menu.link) {
-      window.open(menu.link);
-    }
-  };
-  const navigate = useNavigate();
   return (
-    <div className="MainLayout">
-      <SideBar
-        menuLists={menuLists}
-        currentMenuId={currentMenuId}
-        onClick={handleMenuClick}
-        externalMenuList={externalMenuList}
-      />
+    <div className="MainLayout ">
+      <SideBar menuLists={menuLists} externalMenuList={externalMenuList} />
       <NavBar />
-      <div className="ml-52 overflow-none">
+      <div className="ml-52 overflow-none ">
         <Outlet />
       </div>
     </div>

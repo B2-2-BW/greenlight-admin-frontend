@@ -1,4 +1,4 @@
-import { Card, CardBody, CardHeader, cn, Skeleton, Switch } from '@heroui/react';
+import { Card, cn, Skeleton, Switch } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { SchedulerClient } from '../../api/scheduler/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
@@ -26,12 +26,12 @@ function SchedulerCard({ scheduler, updateStatus, isUpdateLoading }) {
   }, [scheduler]);
   return (
     <Card className="py-4">
-      <CardHeader className="pb-0 pt-2 px-4 flex-col items-start">
+      <Card.Header className="pb-0 pt-2 px-4 flex-col items-start">
         <p className="text-xs uppercase font-bold">{schedulerDescription[scheduler.schedulerType].title}</p>
         <small className="text-neutral-500">{schedulerDescription[scheduler.schedulerType].description}</small>
         <h4 className="font-semibold text-lg">{schedulerDescription[scheduler.schedulerType].name}</h4>
-      </CardHeader>
-      <CardBody className="overflow-visible p-4">
+      </Card.Header>
+      <Card.Content className="overflow-visible p-4">
         <div className="min-w-44">
           <Switch
             isDisabled={isUpdateLoading}
@@ -68,7 +68,7 @@ function SchedulerCard({ scheduler, updateStatus, isUpdateLoading }) {
             </div>
           </Switch>
         </div>
-      </CardBody>
+      </Card.Content>
     </Card>
   );
 }
@@ -82,7 +82,7 @@ export default function SchedulerList() {
       const res = await SchedulerClient.getSchedulerStatusList();
       setSchedulers(res);
     } catch (e) {
-      console.log(e);
+      console.error(e);
       ToastUtil.error('스케쥴러 조회 실패', '스케쥴러를 조회할 수 없습니다. 관리자에게 문의해주세요. ' + e);
     } finally {
       setIsPageLoading(false);
@@ -102,7 +102,7 @@ export default function SchedulerList() {
       }
       ToastUtil.success('스케쥴러 상태 변경', msg);
     } catch (e) {
-      console.log(e);
+      console.error(e);
       ToastUtil.error('스케쥴러 상태 변경 실패', '스케쥴러 상태를 변경에 실패했습니다. ' + e.message);
     } finally {
       await fetchSchedulers();

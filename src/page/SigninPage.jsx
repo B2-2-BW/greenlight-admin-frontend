@@ -1,4 +1,4 @@
-import { Button, Card, CardBody, CardFooter, CardHeader, Divider, Form, Input } from '@heroui/react';
+import { Button, Card, Separator, Form, Input, TextField, Label, FieldError, Description } from '@heroui/react';
 import { useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import logo from '/logo.png';
@@ -42,7 +42,7 @@ export default function SigninPage() {
           setErrors({ siteId: null });
         } else {
           setVerifiedSiteId('');
-          setErrors({ siteId: '유효하지 않은 소속코드입니다.' });
+          setErrors({ siteId: true });
           if (response?.status !== 404) {
             // 404인 경우 딱히 검증할 필요가 없음
             console.log(JSON.stringify(response));
@@ -63,32 +63,32 @@ export default function SigninPage() {
   useEffect(() => {
     document.title = '회원가입 | Greenlight Admin';
   }, []);
+
   return (
     <div className="flex flex-col items-center justify-center h-screen">
-      <Card className="px-8 py-8">
-        <CardHeader className="flex flex-col items-start">
-          <img className="w-28" src={logo} alt="GreenLight Logo" />
+      <Card className="px-8 py-8 shadow-[0_0_24px_0_rgba(0,0,0,0.15)]">
+        <Card.Header className="flex flex-col items-start">
+          <img className="w-28 cursor-pointer" src={logo} alt="GreenLight Logo" onClick={() => navigate('/')} />
           <span className="text-3xl font-bold mt-8 mb-4">회원가입</span>
-        </CardHeader>
-        <CardBody className="w-[600px]">
-          <Form onSubmit={handleSignin} validationErrors={errors} className="flex gap-4">
-            <div className="flex w-full items-baseline gap-2">
-              <Input
-                name="siteId"
-                label="소속코드"
-                type="text"
-                isRequired
-                value={siteId}
-                onChange={onSiteIdInputChange}
-                {...commonInputProps}
-              />
-              <Button
-                isLoading={isSiteVerificationLoading}
-                onPress={handleSiteIdVerification}
-                isDisabled={siteId.trim().length === 0 || verifiedSiteId.trim().length > 0}
-              >
-                {isSiteVerificationLoading ? '' : siteId === verifiedSiteId ? '검증완료' : '검증하기'}
-              </Button>
+        </Card.Header>
+        <Card.Content className="w-[600px]">
+          <Form onSubmit={handleSignin} validationErrors={errors} className="flex flex-col gap-4">
+            <div className="flex w-full gap-2">
+              <TextField name="siteId" type="text" isRequired>
+                <Label>소속코드</Label>
+                <div className="flex w-full">
+                  <Input value={siteId} onChange={onSiteIdInputChange} fullWidth />
+                  <Button
+                    isLoading={isSiteVerificationLoading}
+                    onPress={handleSiteIdVerification}
+                    isDisabled={siteId.trim().length === 0 || verifiedSiteId.trim().length > 0}
+                  >
+                    {isSiteVerificationLoading ? '' : siteId === verifiedSiteId ? '검증완료' : '검증하기'}
+                  </Button>
+                </div>
+                <Description>대기열 시스템의 소속코드입니다. 관리자 문의를 통해 발급받을 수 있습니다.</Description>
+                <FieldError>유효하지 않은 소속코드입니다.</FieldError>
+              </TextField>
             </div>
             <Input
               {...commonInputProps}
@@ -153,12 +153,12 @@ export default function SigninPage() {
               onChange={(e) => setPhoneNumber(e.currentTarget.value)}
             />
 
-            <Divider />
+            <Separator />
             <Button className="h-12" color="primary" type="submit" fullWidth isLoading={false}>
               <span className="text-medium">가입 신청하기</span>
             </Button>
           </Form>
-        </CardBody>
+        </Card.Content>
       </Card>
     </div>
   );

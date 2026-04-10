@@ -1,24 +1,28 @@
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button } from '@heroui/react';
+import { AlertDialog, Button } from '@heroui/react';
 
-export default function ConfirmModal({ isOpen, onOpenChange, title, message, onConfirm, onCancel }) {
+export default function ConfirmModal({ isOpen, onConfirm, onOpenChange, title, message, confirmMessage }) {
   return (
-    <Modal isDismissable={false} isKeyboardDismissDisabled={true} isOpen={isOpen} onOpenChange={onOpenChange}>
-      <ModalContent>
-        <>
-          <ModalHeader className="flex flex-col gap-1">{title}</ModalHeader>
-          <ModalBody>
-            <div>{message}</div>
-          </ModalBody>
-          <ModalFooter>
-            <Button color="danger" variant="light" onPress={onCancel}>
-              취소
-            </Button>
-            <Button color="primary" onPress={onConfirm}>
-              확인
-            </Button>
-          </ModalFooter>
-        </>
-      </ModalContent>
-    </Modal>
+    <AlertDialog isOpen={isOpen} onOpenChange={onOpenChange}>
+      <AlertDialog.Backdrop className="z-100001">
+        <AlertDialog.Container>
+          <AlertDialog.Dialog className="sm:max-w-[400px]">
+            <AlertDialog.CloseTrigger />
+            <AlertDialog.Header>
+              <AlertDialog.Icon status="danger" />
+              <AlertDialog.Heading>{title}</AlertDialog.Heading>
+            </AlertDialog.Header>
+            <AlertDialog.Body>{message}</AlertDialog.Body>
+            <AlertDialog.Footer>
+              <Button slot="close" variant="tertiary">
+                취소하기
+              </Button>
+              <Button slot="close" variant="danger" onPress={onConfirm}>
+                {confirmMessage || '확인'}
+              </Button>
+            </AlertDialog.Footer>
+          </AlertDialog.Dialog>
+        </AlertDialog.Container>
+      </AlertDialog.Backdrop>
+    </AlertDialog>
   );
 }

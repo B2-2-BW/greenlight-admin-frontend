@@ -1,4 +1,4 @@
-import { Accordion, AccordionItem, Button, Input, Select, SelectItem } from '@heroui/react';
+import { Accordion, AccordionItem, Button, Input, ListBox, Select } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import ArrowBackSvg from '../../icon/ArrowBackSvg.jsx';
 import ChevronSvg from '../../icon/ChevronSvg.jsx';
@@ -57,16 +57,26 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
                       },
                     }}
                   >
-                    {(operator) => (
-                      <SelectItem key={operator.value} textValue={operator.name}>
-                        <div className="flex gap-2 items-center">
-                          <div className="flex flex-col">
-                            <span className="text-small">{operator.name}</span>
-                            <span className="text-tiny text-default-400">{operator.description}</span>
-                          </div>
-                        </div>
-                      </SelectItem>
-                    )}
+                    <Select.Trigger>
+                      <Select.Value />
+                      <Select.Indicator />
+                    </Select.Trigger>
+
+                    <Select.Popover>
+                      <ListBox>
+                        {(operator) => (
+                          <ListBox.Item key={operator.value} textValue={operator.name}>
+                            <div className="flex gap-2 items-center">
+                              <div className="flex flex-col">
+                                <span className="text-small">{operator.name}</span>
+                                <span className="text-tiny text-default-400">{operator.description}</span>
+                              </div>
+                            </div>
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        )}
+                      </ListBox>
+                    </Select.Popover>
                   </Select>
                   <Input
                     size="sm"

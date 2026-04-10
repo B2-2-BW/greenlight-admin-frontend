@@ -1,9 +1,6 @@
-import { Button, Form, cn, Input, Skeleton, Switch } from '@heroui/react';
-import SectionTitle from '../common/SectionTitle.jsx';
-import { optionalInputProps, readonlyInputProps, requiredInputProps } from '../../shared/props.js';
-import { EyeFilledIcon, EyeSlashFilledIcon } from '../../icon/Icons.jsx';
+import { Button, cn, Description, Form, Input, Label, Skeleton, Switch, TextField } from '@heroui/react';
+import FormSection from '../common/FormSection.jsx';
 import { useEffect, useState } from 'react';
-import { RoomClient } from '../../api/room/index.js';
 import { SiteClient } from '../../api/site/index.js';
 import { useUserStore } from '../../store/user.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
@@ -78,7 +75,7 @@ export default function SiteSettingsForm() {
   return (
     <>
       <Form className="w-full flex flex-col" onSubmit={handleSubmit}>
-        <div className="relative w-full flex flex-col gap-4">
+        <div className="relative w-full flex flex-col gap-4 min-h-[600px]">
           <div className="w-full">
             <div className="flex justify-between items-center">
               <div className="flex flex-row gap-6">
@@ -96,66 +93,65 @@ export default function SiteSettingsForm() {
             {/*  </div>*/}
             {/*</Skeleton>*/}
           </div>
-          <SectionTitle title="사이트 정보">
-            <Skeleton className="" isLoaded={!isPageLoading}>
-              <div className="flex flex-col w-full gap-6">
-                <Input
-                  className="w-full max-w-md"
-                  label="사이트 ID"
-                  name="siteId"
-                  type="text"
-                  value={siteInfo?.siteId}
-                  {...readonlyInputProps}
-                />
-                <Input
-                  className="w-full max-w-md"
-                  label="사이트명"
-                  name="siteName"
-                  type="text"
-                  value={siteInfo?.siteName}
-                  {...readonlyInputProps}
-                />
+          <FormSection title="사이트 정보">
+            {isPageLoading ? (
+              <div className="flex flex-col gap-6">
+                <Skeleton className="rounded-lg w-md h-16" />
+                <Skeleton className="rounded-lg w-md h-16" />
               </div>
-            </Skeleton>
-          </SectionTitle>
-          <SectionTitle title="대기열 관리">
-            <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>
+            ) : (
               <div className="flex flex-col w-full gap-6">
-                <div>
-                  <div className="mb-2 text-base after:content-['*'] after:text-danger after:ms-0.5">
+                <TextField name="siteId" type="text" className="w-full max-w-md" isReadOnly>
+                  <Label className="text-base">사이트 ID</Label>
+                  <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={siteInfo?.siteId} />
+                </TextField>
+
+                <TextField name="siteName" type="text" isReadOnly className="w-full max-w-md" variant="default">
+                  <Label className="text-base">사이트명</Label>
+                  <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={siteInfo?.siteName} />
+                </TextField>
+              </div>
+            )}
+          </FormSection>
+          <FormSection title="대기열 관리">
+            {isPageLoading ? (
+              <div className="flex flex-col gap-6">
+                <Skeleton className="rounded-lg w-md h-29" />
+              </div>
+            ) : (
+              <div className="flex flex-col w-full gap-6">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-base" isRequired>
                     대기열 시스템 활성/비활성화
-                  </div>
+                  </Label>
 
                   <Switch
                     isSelected={editSiteEnabled}
-                    onValueChange={setEditSiteEnabled}
-                    classNames={{
-                      base: cn(
-                        'inline-flex flex-row-reverse w-full max-w-md bg-content1 hover:bg-content2 items-center',
-                        'justify-between cursor-pointer rounded-lg gap-2 p-4 border-2 border-default',
-                        'data-[selected=true]:border-primary'
-                      ),
-                      wrapper: 'p-0 h-4 overflow-visible',
-                      thumb: cn(
-                        'w-6 h-6 border-2 shadow-lg',
-                        'group-data-[hover=true]:border-primary',
-                        //selected
-                        'group-data-[selected=true]:ms-6',
-                        // pressed
-                        'group-data-[pressed=true]:w-7',
-                        'group-data-selected:group-data-pressed:ms-4'
-                      ),
-                    }}
+                    onChange={setEditSiteEnabled}
+                    className={cn(
+                      'inline-flex flex-row-reverse w-full max-w-lg bg-white hover:bg-neutral-100 items-center',
+                      'justify-between cursor-pointer rounded-lg gap-2 p-4 border-2',
+                      'data-selected:border-accent'
+                    )}
+                    isRequired
                   >
-                    <div className="flex flex-col gap-1">
-                      <p className="text-base">{enabledMessage[editSiteEnabled]?.title}</p>
-                      <p className="text-sm text-default-400">{enabledMessage[editSiteEnabled]?.subtitle}</p>
-                    </div>
+                    <Switch.Control className="h-5 w-10">
+                      <Switch.Thumb className={`size-4 bg-white ${editSiteEnabled ? 'ms-5.5' : ''}`}>
+                        <Switch.Icon />
+                      </Switch.Thumb>
+                    </Switch.Control>
+
+                    <Switch.Content className="flex flex-col gap-1">
+                      <Label className="text-base cursor-pointer">{enabledMessage[editSiteEnabled]?.title}</Label>
+                      <Description className="text-sm text-default-400">
+                        {enabledMessage[editSiteEnabled]?.subtitle}
+                      </Description>
+                    </Switch.Content>
                   </Switch>
                 </div>
               </div>
-            </Skeleton>
-          </SectionTitle>
+            )}
+          </FormSection>
 
           {/*<SectionTitle title="활성사용자/세션 유지시간">*/}
           {/*  <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>*/}
@@ -170,7 +166,7 @@ export default function SiteSettingsForm() {
           {/*</SectionTitle>*/}
         </div>
         <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
-          <Button size="lg" color="primary" variant="shadow" type="submit" isLoading={isSubmitLoading} fullWidth>
+          <Button size="lg" className="h-10 rounded-2xl" type="submit" isLoading={isSubmitLoading} fullWidth>
             저장하기
           </Button>
         </div>

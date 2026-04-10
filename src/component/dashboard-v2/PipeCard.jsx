@@ -1,11 +1,10 @@
 import styles from './PipeCard.module.css';
 import { Button, Chip } from '@heroui/react';
-import CapacityControl from './CapacityControl.jsx';
+import QuickSetting from './QuickSetting.jsx';
 import { DateUtil } from '../../util/dateUtil.jsx';
 import { useNavigate } from 'react-router';
 import Funnel2 from './Funnel2.jsx';
 import Wave from './Wave.jsx';
-import { useEffect, useMemo, useState } from 'react';
 
 const getCapacityLabelBackgroundColor = (status) => {
   switch (status) {
@@ -35,7 +34,7 @@ const getColorFromRoomCapacityRate = (rate) => {
 
 const statusColorMap = {
   진입불가: { labelColor: '#FFFFFF', color: '#D4D4D8', backgroundColor: '#D4D4D8', heroUi: 'default' },
-  바로입장: { labelColor: '#FFFFFF', color: '#17C964', backgroundColor: '#17C964', heroUi: 'success' },
+  바로입장: { labelColor: '#FFFFFF', color: '#089345', backgroundColor: '#089345', heroUi: 'success' },
   폭주: { labelColor: '#FFFFFF', color: '#ea0052', backgroundColor: '#ea0052', heroUi: 'danger' },
   혼잡: { labelColor: '#000000', color: '#ec7d00', backgroundColor: '#F5A524', heroUi: 'warning' },
   원활: { labelColor: '#FFFFFF', color: '#20814C', backgroundColor: '#20814C', heroUi: 'primary' },
@@ -50,12 +49,7 @@ const getHexColorFromStatus = (stat) => {
 
 const getQueueStatusChip = (stat) => {
   return (
-    <Chip
-      size="lg"
-      color={getHeroUiColorFromStatus(stat)}
-      variant={stat === '바로입장' ? 'flat' : 'solid'}
-      classNames="text-lg min-w-16 min-h-4 text-center"
-    >
+    <Chip size="lg" color={getHeroUiColorFromStatus(stat)} variant="soft" className="min-w-16 min-h-4 text-center">
       {stat}
     </Chip>
   );
@@ -141,8 +135,6 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
   const navigate = useNavigate();
   const isMain = mode === 'main';
 
-  const handleCapacityChange = () => {};
-
   const navigateToRoomDetail = (roomId) => {
     navigate(`/rooms/${roomId}`);
   };
@@ -160,7 +152,9 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
   const roomStatus = getRoomStatusFromCapacityRate(roomCapacityRate);
 
   return (
-    <div className={`${styles.card} ${isMain ? styles.mainCard : styles.compactCard}`}>
+    <div
+      className={`rounded-xl bg-white flex flex-col shadow-background-secondary shadow-lg relative transition-transform ${isMain ? 'border-accent h-full min-h-[656px] border-2' : 'border-neutral-200 h-[400px] min-w-[260px] border'}`}
+    >
       {/* 1. Header: 타이틀 & 상태 */}
       <div className={styles.header}>
         <div className={styles.titleGroup}>
@@ -171,8 +165,8 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
             </div>
           ) : (
             <div className="flex items-baseline gap-1">
-              <Button className="px-1" variant="light" onPress={() => navigateToRoomDetail(room.roomId)}>
-                <div className="flex gap-2 items-end">
+              <Button variant="ghost" onPress={() => navigateToRoomDetail(room.roomId)}>
+                <div className="flex px-0.5 gap-2 items-end">
                   <span className="text-base">{room?.name}</span>
                   {/*<div className="flex gap-1 text-neutral-600">*/}
                   {/*<span>{data?.description}</span>*/}
@@ -188,15 +182,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
             </div>
           )}
         </div>
-        <div>
-          {!isMain && (
-            <CapacityControl
-              isDisabled={isMain}
-              value={room?.capacity} // 데이터 모델에 maxCapacity가 있어야 함
-              onChange={(newMax) => handleCapacityChange(room?.roomId, newMax)}
-            />
-          )}
-        </div>
+        <div>{!isMain && <QuickSetting room={room} />}</div>
       </div>
 
       <div className={styles.pipeBody}>
