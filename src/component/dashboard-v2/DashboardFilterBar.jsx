@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
-import { AlertDialog, Button, Disclosure, Dropdown, Label, Tabs, useOverlayState } from '@heroui/react';
-import { Gear, Power } from '@gravity-ui/icons';
+import { useCallback, useState } from 'react';
+import { AlertDialog, Button, Dropdown, Label, ListBox, Select, Tabs, useOverlayState } from '@heroui/react';
+import { Funnel, Gear, Power } from '@gravity-ui/icons';
 import { SiteClient } from '../../api/site/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { useUserStore } from '../../store/user.jsx';
 import { useDashboard } from '../../provider/DashboardProvider.jsx';
+import { useDashboardFilter } from '../../hooks/dashboard/useDashboardFilter.js';
 
 const ENVIRONMENTS = [
   { key: 'LIVE', label: 'LIVE' },
@@ -18,6 +19,69 @@ const TAGS = [
   { key: 'payment', label: 'Payment' },
   { key: 'notification', label: 'Notification' },
 ];
+
+function EnvironmentFilterSelect({ selectedKey, onSelectionChange }) {
+  return (
+    <Tabs className="w-40" selectedKey={selectedKey} onSelectionChange={onSelectionChange}>
+      <Tabs.ListContainer>
+        <Tabs.List aria-label="Dashboard Bar Environment Tab" className="*:data-selected:text-accent-foreground *:h-7">
+          {ENVIRONMENTS.map((env) => (
+            <Tabs.Tab id={env.key} key={env.key}>
+              {env.label}
+              <Tabs.Indicator className="bg-accent" />
+            </Tabs.Tab>
+          ))}
+        </Tabs.List>
+      </Tabs.ListContainer>
+    </Tabs>
+  );
+}
+
+function EnabledFilterSelect({ value, onChange }) {
+  // value: true | false | null
+
+  const convertEnabledSelectionToLabel = useCallback((keys) => {
+    const hasTrue = keys.includes('true');
+    const hasFalse = keys.includes('false');
+    if (hasTrue && hasFalse) {
+      return '모두';
+    } else if (hasTrue) {
+      return '활성';
+    } else if (hasFalse) {
+      return '비활성';
+    } else {
+      return '상태';
+    }
+  }, []);
+
+  const enabledSelectFilterLabel = convertEnabledSelectionToLabel(value);
+
+  return (
+    <Select
+      placeholder="대기열 활성상태"
+      selectionMode="multiple"
+      value={value}
+      onChange={(keys) => onChange({ enabled: keys })}
+    >
+      <Button className="text-base" variant={enabledSelectFilterLabel === '상태' ? 'tertiary' : 'secondary'}>
+        <Funnel />
+        {enabledSelectFilterLabel}
+      </Button>
+      <Select.Popover className="w-32" placement="bottom start">
+        <ListBox selectionMode="multiple">
+          <ListBox.Item id="true" textValue="활성">
+            <ListBox.ItemIndicator />
+            활성
+          </ListBox.Item>
+          <ListBox.Item id="false" textValue="비활성">
+            <ListBox.ItemIndicator />
+            비활성
+          </ListBox.Item>
+        </ListBox>
+      </Select.Popover>
+    </Select>
+  );
+}
 
 function DisableSiteAlert({ isOpen, onOpenChange, onConfirm }) {
   return (
@@ -58,19 +122,21 @@ const dashboardSettings = [
 ];
 
 export function DashboardFilterBar() {
-  const [selectedEnv, setSelectedEnv] = useState('LIVE');
   const [selectedTags, setSelectedTags] = useState([]);
   const disableSiteAlertState = useOverlayState();
 
-  const { fetchRoomList } = useDashboard();
+  const { fetchRoomList, dashboardFilter, updateDashboardFilter } = useDashboard();
 
-  const onEnvChange = (env) => {
-    console.log('onEnvChange', env);
-    setSelectedEnv(env);
-  };
-  const onTagChange = (tagList) => {
-    console.log('onTagChange', tagList);
-  };
+  const onRoomEnvironmentChange = useCallback(
+    (env) => {
+      updateDashboardFilter({ roomEnvironment: env });
+    },
+    [updateDashboardFilter]
+  );
+
+  // const onTagChange = (tagList) => {
+  //   console.log('onTagChange', tagList);
+  // };
 
   const handleDisableSite = async () => {
     const data = {
@@ -113,26 +179,29 @@ export function DashboardFilterBar() {
 
   return (
     <div className="flex grow justify-between items-center">
-      <div className="w-40">
-        <Tabs className="w-full max-w-md" selectedKey={selectedEnv} onSelectionChange={onEnvChange}>
-          <Tabs.ListContainer>
-            <Tabs.List
-              aria-label="Dashboard Bar Environment Tab"
-              className="*:data-selected:text-accent-foreground *:h-7"
-            >
-              {ENVIRONMENTS.map((env) => (
-                <Tabs.Tab id={env.key} key={env.key}>
-                  {env.label}
-                  <Tabs.Indicator className="bg-accent" />
-                </Tabs.Tab>
-              ))}
-            </Tabs.List>
-          </Tabs.ListContainer>
-        </Tabs>
+      <div className="flex items-center gap-2">
+        {/*<Popover>*/}
+        {/*  <Button className="text-base">*/}
+        {/*    <Funnel />*/}
+        {/*    Filter*/}
+        {/*  </Button>*/}
+        {/*  <Popover.Content className="max-w-64" placement="bottom start">*/}
+        {/*    <Popover.Dialog>*/}
+        {/*      <Popover.Heading>대시보드 필터</Popover.Heading>*/}
+        {/*      */}
+        {/*    </Popover.Dialog>*/}
+        {/*  </Popover.Content>*/}
+        {/*</Popover>*/}
+        <EnvironmentFilterSelect
+          selectedKey={dashboardFilter.roomEnvironment}
+          onSelectionChange={onRoomEnvironmentChange}
+        />
+
+        <EnabledFilterSelect value={dashboardFilter.enabled} onChange={updateDashboardFilter} />
       </div>
 
       <Dropdown>
-        <Button aria-label="dashboard-bar-settings" slot="trigger" variant="secondary" className="text-base">
+        <Button aria-label="dashboard-bar-settings" slot="trigger" variant="tertiary" className="text-base">
           <Gear />
           대시보드 설정
         </Button>

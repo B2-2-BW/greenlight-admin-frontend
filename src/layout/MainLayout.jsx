@@ -38,12 +38,12 @@ const menuLists = [
       path: '/settings',
       menuId: 15,
     },
-    {
-      title: '사용자 관리',
-      prependIcon: <UserFilledIcon color="#6b7280" />,
-      path: '/users',
-      menuId: 16,
-    },
+    // {
+    //   title: '사용자 관리',
+    //   prependIcon: <UserFilledIcon color="#6b7280" />,
+    //   path: '/users',
+    //   menuId: 16,
+    // },
   ],
 ];
 const externalMenuList = [

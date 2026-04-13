@@ -441,7 +441,7 @@ export default function UserListTable() {
   }, [page]);
 
   const onRowsPerPageChange = useCallback((e) => {
-    setRowsPerPage(Number(e.target.value));
+    setRowsPerPage(Number(e.target.selectedKey));
     setPage(1);
   }, []);
 

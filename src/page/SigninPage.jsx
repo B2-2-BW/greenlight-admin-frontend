@@ -57,7 +57,7 @@ export default function SigninPage() {
       // siteId가 바뀌면 verified는 무조건 초기화
       setVerifiedSiteId('');
     }
-    setSiteId(e.target.value);
+    setSiteId(e.target.selectedKey);
   };
 
   useEffect(() => {

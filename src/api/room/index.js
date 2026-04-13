@@ -8,8 +8,7 @@ const getRoomById = async (roomId) => {
 
 // 액션그룹 리스트 정보 조회
 const getRoomList = async (query) => {
-  const { data } = await commonAxiosInstance.get(`/rooms`, { params: query });
-  return data;
+  return commonAxiosInstance.get(`/rooms`, { params: query });
 };
 const createRoom = async (data) => {
   return commonAxiosInstance.post(`/rooms`, data);

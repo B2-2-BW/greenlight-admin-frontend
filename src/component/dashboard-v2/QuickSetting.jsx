@@ -179,7 +179,12 @@ const QuickSetting = ({ room }) => {
               </div>
               <Separator />
               <div className="flex flex-col gap-2">
-                <Button variant="danger-soft" onPress={() => disableAlertState.setOpen(true)} fullWidth>
+                <Button
+                  variant="danger-soft"
+                  onPress={() => disableAlertState.setOpen(true)}
+                  fullWidth
+                  isDisabled={room?.enabled === false}
+                >
                   <Power />
                   대기열 비활성화
                 </Button>
