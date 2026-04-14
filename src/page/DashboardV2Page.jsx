@@ -123,7 +123,6 @@ export default function DashboardV2Page() {
   };
 
   useEffect(() => {
-    console.log('dashboardFilter 변화감지');
     roomVersion.current = '-';
     fetchRoomList();
 
