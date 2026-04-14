@@ -138,7 +138,7 @@ export default function RoomDetailForm({ onPressBack }) {
       setEditDefaultDestinationUrl(data?.defaultDestinationUrl.trim());
       setSelectDefaultRuleType(data?.defaultRuleType || 'ALL');
       setEditAdImageUrl(data?.adImageUrl.trim()); // TODO adImageUrl 추가하기
-      setSelectRoomEnvironment(data.roomEnviornmnet || 'DEV');
+      setSelectRoomEnvironment(data?.roomEnvironment || 'DEV');
     } catch (error) {
       console.error('Error fetching:', error);
       setErrorStatus(error.status);

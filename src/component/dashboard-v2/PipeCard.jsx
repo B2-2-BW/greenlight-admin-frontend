@@ -1,5 +1,5 @@
 import styles from './PipeCard.module.css';
-import { Button, Chip } from '@heroui/react';
+import { Button, Chip, Tooltip } from '@heroui/react';
 import QuickSetting from './QuickSetting.jsx';
 import { DateUtil } from '../../util/dateUtil.jsx';
 import { useNavigate } from 'react-router';
@@ -155,34 +155,38 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
     <div
       className={`rounded-xl bg-white flex flex-col shadow-background-secondary shadow-lg relative transition-transform ${isMain ? 'border-accent h-full min-h-[656px] border-2' : 'border-neutral-200 h-[400px] min-w-[260px] border'}`}
     >
-      {/* 1. Header: 타이틀 & 상태 */}
-      <div className={styles.header}>
-        <div className={styles.titleGroup}>
+      <div className="p-2 flex justify-between items-center gap-2 border-b w-full">
+        {/* 좌측 영역: 이름 + 상태 칩 */}
+        <div className="flex items-center min-w-0 flex-1">
           {isMain ? (
-            <div>
-              {room?.name}
-              {/*<span className={styles.badge}>TOTAL</span>*/}
-            </div>
+            <div className="truncate text-base">{room?.name}</div>
           ) : (
-            <div className="flex items-baseline gap-1">
-              <Button variant="ghost" onPress={() => navigateToRoomDetail(room.roomId)}>
-                <div className="flex px-0.5 gap-2 items-end">
-                  <span className="text-base">{room?.name}</span>
-                  {/*<div className="flex gap-1 text-neutral-600">*/}
-                  {/*<span>{data?.description}</span>*/}
-                  {/*<ExternalLinkIcon size={16} color={'#737373'} />*/}
-                  {/*</div>*/}
-                </div>
-              </Button>
+            // 2. Room name과 Chip을 붙이기 위해 gap-1.5 사용, 자식 요소 말줄임을 위해 min-w-0 필수
+            <div className="flex items-baseline gap-1.5 min-w-0 w-full">
+              {/* 4 & 5. 말줄임표(ellipse) 처리 및 Tooltip 적용 */}
+              <Tooltip showArrow={true} delay={100}>
+                <Button
+                  className="shrink min-w-0 px-1 justify-start h-auto py-1"
+                  variant="ghost"
+                  onPress={() => navigateToRoomDetail(room.roomId)}
+                >
+                  <span className="text-base truncate block w-full text-left px-1">{room?.name}</span>
+                </Button>
+                <Tooltip.Content className="text-base">{room?.name}</Tooltip.Content>
+              </Tooltip>
+
+              {/* 2. 상태 칩 영역 (shrink-0으로 공간 찌그러짐 방지) */}
               {queueStatus !== '-' && (
-                <div className={'mb-1 rounded-full ' + (queueStatus === '폭주' ? 'glow-pulse' : '')}>
+                <div className={`shrink-0 mb-1 min-w-18 rounded-full ${queueStatus === '폭주' ? 'glow-pulse' : ''}`}>
                   {getQueueStatusChip(queueStatus)}
                 </div>
               )}
             </div>
           )}
         </div>
-        <div>{!isMain && <QuickSetting room={room} />}</div>
+
+        {/* 3. 우측 기어 버튼 (shrink-0으로 가장 우측 공간 고정 확보) */}
+        <div className="shrink-0">{!isMain && <QuickSetting room={room} />}</div>
       </div>
 
       <div className={styles.pipeBody}>
