@@ -32,14 +32,18 @@ export default function RoomListTable({ onPress }) {
   const [selectedKeys, setSelectedKeys] = useState([]);
   useEffect(() => {
     const fetchRoomList = async () => {
-      try {
-        const data = await RoomClient.getRoomList();
-        setRooms(Array.isArray(data) ? data : []);
-      } catch (error) {
-        setRooms([]);
-      } finally {
-        setIsLoading(false);
-      }
+      RoomClient.getRoomList()
+        .then((res) => {
+          const data = res.data;
+          setRooms(Array.isArray(data) ? data : []);
+        })
+        .catch((err) => {
+          setRooms([]);
+          console.log(err);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     };
     fetchRoomList();
   }, []);

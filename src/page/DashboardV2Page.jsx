@@ -8,7 +8,8 @@ import { DashboardFilterBar } from '../component/dashboard-v2/DashboardFilterBar
 import { useUserStore } from '../store/user.jsx';
 import { SiteClient } from '../api/site/index.js';
 import { useNavigate } from 'react-router';
-import { FaceSurprise } from '@gravity-ui/icons';
+import { FaceSurprise, Magnifier } from '@gravity-ui/icons';
+import { useDashboardFilter } from '../hooks/dashboard/useDashboardFilter.js';
 
 const layoutStyle = {
   container: {
@@ -70,29 +71,66 @@ export default function DashboardV2Page() {
 
   const [roomList, setRoomList] = useState([]);
   const [siteEnabled, setSiteEnabled] = useState(false);
+
+  const { dashboardFilter, updateDashboardFilter } = useDashboardFilter();
+
   const [dashboardTraffic, setDashboardTraffic] = useState({});
 
   const isFetching = useRef(false);
 
-  const metricVersion = useRef(0);
+  const roomVersion = useRef('-');
+  const metricVersion = useRef('-');
 
   const navigate = useNavigate();
 
-  const fetchRoomList = useCallback(async () => {
+  const me = useUserStore.getState().user || {};
+
+  const fetchRoomList = async () => {
     // setIsPageLoading(true);
-    try {
-      const me = useUserStore.getState().user;
-      const res = await SiteClient.findSite(me.siteId);
-      const siteInfo = res.data;
 
-      setSiteEnabled(siteInfo.siteEnabled);
-
-      const roomList = await RoomClient.getRoomList({ enabled: true });
-      setRoomList(roomList);
-    } finally {
+    const res = await SiteClient.findSite(me.siteId);
+    const siteInfo = res.data;
+    setSiteEnabled(siteInfo.siteEnabled);
+    if (!siteInfo.siteEnabled || dashboardFilter.enabled.length === 0) {
+      setRoomList([]);
       setIsPageLoading(false);
+      return;
     }
-  }, []);
+
+    const param = {
+      version: roomVersion.current,
+      roomEnvironment: dashboardFilter.roomEnvironment,
+    };
+
+    if (dashboardFilter.enabled.length === 1) {
+      param.enabled = dashboardFilter.enabled.includes('true'); // 'true'를 포함하고 있으면 enabled = true, 아니면 false. length가 2라면 둘 다 선택되었으므로 null
+    }
+
+    RoomClient.getRoomList(param)
+      .then((res) => {
+        const data = res.data;
+        roomVersion.current = res.headers['room-version'];
+        setRoomList(data);
+      })
+      .catch((error) => {
+        if (error.status !== 304) {
+          console.error('Polling error:', error);
+        }
+      })
+      .finally(() => {
+        setIsPageLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    console.log('dashboardFilter 변화감지');
+    roomVersion.current = '-';
+    fetchRoomList();
+
+    const intervalId = setInterval(fetchRoomList, 10_000); // 10초마다
+
+    return () => clearInterval(intervalId); // 언마운트 시 정리
+  }, [me.siteId, dashboardFilter]);
 
   const fetchRoomById = useCallback(async (roomId) => {
     const room = await RoomClient.getRoomById(roomId);
@@ -101,21 +139,18 @@ export default function DashboardV2Page() {
 
   useEffect(() => {
     document.title = '대시보드 | Greenlight Admin';
-    fetchRoomList();
-
-    const intervalId = setInterval(fetchRoomList, 10_000); // 10초마다
-
-    return () => clearInterval(intervalId); // 언마운트 시 정리
   }, []);
 
   useEffect(() => {
     // 데이터를 가져오는 비동기 함수
     const fetchData = async () => {
-      if (isFetching.current) {
+      if (isFetching.current || roomList.length === 0) {
         return;
       }
       isFetching.current = true;
-      DashboardClient.getDashboardDetail({ version: metricVersion.current })
+      const roomIdList = roomList.map((r) => r.roomId) || [];
+
+      DashboardClient.getDashboardDetail({ version: metricVersion.current, roomIdList: roomIdList })
         .then((res) => {
           // console.log('version', metricVersion);
           const result = res.data;
@@ -142,7 +177,7 @@ export default function DashboardV2Page() {
 
     // 컴포넌트 언마운트 시 인터벌 제거 (메모리 누수 방지)
     return () => clearInterval(intervalId);
-  }, [roomList]);
+  }, [roomList, dashboardFilter]);
 
   const mainRoom = {
     name: '전체 대기열 통합',
@@ -164,7 +199,16 @@ export default function DashboardV2Page() {
 
   return (
     <>
-      <DashboardContext.Provider value={{ fetchRoomList, fetchRoomById }}>
+      <DashboardContext.Provider
+        value={{
+          fetchRoomList,
+          fetchRoomById,
+          siteEnabled,
+          setSiteEnabled,
+          dashboardFilter,
+          updateDashboardFilter,
+        }}
+      >
         <div className="relative">
           {!siteEnabled && (
             <div className="absolute h-[calc(100vh-68px)] w-full z-12 top-0 left-0 flex items-center justify-center bg-white/40 dark:bg-neutral-950/60 backdrop-blur-xs">
@@ -192,34 +236,45 @@ export default function DashboardV2Page() {
             </div>
           )}
 
-          <div className="pt-4 px-4 flex items-baseline gap-2">
+          <div className="pt-4 px-4 flex items-baseline gap-4">
             <div className="font-bold text-3xl">대시보드</div>
             <DashboardFilterBar />
           </div>
-          <div style={layoutStyle.container}>
-            {/* 1. Main Pipe (Left Sidebar Area) */}
-            <section style={{ height: '100%' }}>
-              <PipeCard
-                mode="main"
-                trafficData={dashboardTraffic?.summary}
-                room={mainRoom}
-                emitSignal={dashboardTraffic?.version}
-              />
-            </section>
-
-            {/* 2. Sub Pipes Grid (Right Area) */}
-            <section style={layoutStyle.gridArea}>
-              {roomList.map((room) => (
+          {roomList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center mt-10">
+              <Magnifier className="h-12 w-12 mb-4" />
+              <h2 className="transition-all fade-up fade-up-3 text-xl font-semibold tracking-tight text-[#191919] mb-2">
+                검색 조건에 맞는 대기열이 없어요
+              </h2>
+              <p className="transition-all fade-up fade-up-4 text-base text-[#6b7280]">
+                조건을 조정하거나, 새로운 대기열 룸을 직접 추가해 보세요.
+              </p>
+            </div>
+          ) : (
+            <div style={layoutStyle.container}>
+              {/* 1. Main Pipe (Left Sidebar Area) */}
+              <section style={{ height: '100%' }}>
                 <PipeCard
-                  key={room.roomId}
-                  mode="compact"
-                  room={room}
-                  trafficData={dashboardTraffic?.detail?.[room.roomId]}
+                  mode="main"
+                  trafficData={dashboardTraffic?.summary}
+                  room={mainRoom}
                   emitSignal={dashboardTraffic?.version}
                 />
-              ))}
-            </section>
-          </div>
+              </section>
+
+              <section style={layoutStyle.gridArea}>
+                {roomList.map((room) => (
+                  <PipeCard
+                    key={room.roomId}
+                    mode="compact"
+                    room={room}
+                    trafficData={dashboardTraffic?.detail?.[room.roomId]}
+                    emitSignal={dashboardTraffic?.version}
+                  />
+                ))}
+              </section>
+            </div>
+          )}
         </div>
       </DashboardContext.Provider>
     </>

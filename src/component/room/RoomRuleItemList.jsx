@@ -50,7 +50,7 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
                     label="규칙 검사 연산자"
                     labelPlacement="outside"
                     selectedKeys={[rule.matchOperator]}
-                    onChange={(e) => onChange(index, 'matchOperator', e.target.value)}
+                    onChange={(e) => onChange(index, 'matchOperator', e.target.selectedKey)}
                     popoverProps={{
                       classNames: {
                         content: 'w-96',
@@ -65,7 +65,7 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
                     <Select.Popover>
                       <ListBox>
                         {(operator) => (
-                          <ListBox.Item key={operator.value} textValue={operator.name}>
+                          <ListBox.Item key={operator.selectedKey} textValue={operator.name}>
                             <div className="flex gap-2 items-center">
                               <div className="flex flex-col">
                                 <span className="text-small">{operator.name}</span>
