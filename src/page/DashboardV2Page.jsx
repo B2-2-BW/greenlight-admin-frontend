@@ -10,6 +10,7 @@ import { SiteClient } from '../api/site/index.js';
 import { useNavigate } from 'react-router';
 import { FaceSurprise, Magnifier } from '@gravity-ui/icons';
 import { useDashboardFilter } from '../hooks/dashboard/useDashboardFilter.js';
+import { usePreferenceStore } from '../store/preference.jsx';
 
 const layoutStyle = {
   container: {
@@ -72,7 +73,7 @@ export default function DashboardV2Page() {
   const [roomList, setRoomList] = useState([]);
   const [siteEnabled, setSiteEnabled] = useState(false);
 
-  const { dashboardFilter, updateDashboardFilter } = useDashboardFilter();
+  const { dashboardFilter, updateDashboardFilter } = usePreferenceStore();
 
   const [dashboardTraffic, setDashboardTraffic] = useState({});
 
@@ -83,15 +84,18 @@ export default function DashboardV2Page() {
 
   const navigate = useNavigate();
 
-  const me = useUserStore.getState().user || {};
+  const { user: me } = useUserStore();
 
-  const fetchRoomList = async () => {
-    // setIsPageLoading(true);
+  const fetchRoomList = useCallback(async () => {
+    if (!me?.siteId) {
+      setIsPageLoading(false);
+      return;
+    }
 
     const res = await SiteClient.findSite(me.siteId);
     const siteInfo = res.data;
     setSiteEnabled(siteInfo.siteEnabled);
-    if (!siteInfo.siteEnabled || dashboardFilter.enabled.length === 0) {
+    if (!siteInfo.siteEnabled || dashboardFilter?.enabled.length === 0) {
       setRoomList([]);
       setIsPageLoading(false);
       return;
@@ -99,11 +103,11 @@ export default function DashboardV2Page() {
 
     const param = {
       version: roomVersion.current,
-      roomEnvironment: dashboardFilter.roomEnvironment,
+      roomEnvironment: dashboardFilter?.roomEnvironment,
     };
 
-    if (dashboardFilter.enabled.length === 1) {
-      param.enabled = dashboardFilter.enabled.includes('true'); // 'true'를 포함하고 있으면 enabled = true, 아니면 false. length가 2라면 둘 다 선택되었으므로 null
+    if (dashboardFilter?.enabled.length === 1) {
+      param.enabled = dashboardFilter?.enabled.includes('true'); // 'true'를 포함하고 있으면 enabled = true, 아니면 false. length가 2라면 둘 다 선택되었으므로 null
     }
 
     RoomClient.getRoomList(param)
@@ -120,16 +124,16 @@ export default function DashboardV2Page() {
       .finally(() => {
         setIsPageLoading(false);
       });
-  };
+  }, [dashboardFilter?.enabled, dashboardFilter?.roomEnvironment, me]);
 
   useEffect(() => {
     roomVersion.current = '-';
-    fetchRoomList();
+    fetchRoomList().then();
 
     const intervalId = setInterval(fetchRoomList, 10_000); // 10초마다
 
     return () => clearInterval(intervalId); // 언마운트 시 정리
-  }, [me.siteId, dashboardFilter]);
+  }, [me, dashboardFilter, fetchRoomList]);
 
   const fetchRoomById = useCallback(async (roomId) => {
     const room = await RoomClient.getRoomById(roomId);
@@ -202,8 +206,6 @@ export default function DashboardV2Page() {
         value={{
           fetchRoomList,
           fetchRoomById,
-          siteEnabled,
-          setSiteEnabled,
           dashboardFilter,
           updateDashboardFilter,
         }}

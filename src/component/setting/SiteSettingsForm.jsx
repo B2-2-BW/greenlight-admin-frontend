@@ -25,7 +25,6 @@ export default function SiteSettingsForm() {
 
   const fetchSiteInfo = async () => {
     setIsPageLoading(true);
-    // clearForm();
 
     try {
       const me = useUserStore.getState().user;

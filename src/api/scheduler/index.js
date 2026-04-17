@@ -1,17 +1,17 @@
-import { schedulerAxiosInstance } from '../index.js';
+import { commonAxiosInstance } from '../index.js';
 
 const getSchedulerStatusList = async () => {
-  const { data } = await schedulerAxiosInstance.get(`/schedulers/status`);
+  const { data } = await commonAxiosInstance.get(`/schedulers/status`);
   return data;
 };
 
 const startScheduler = async (schedulerType) => {
-  const { data } = await schedulerAxiosInstance.post(`/schedulers/${schedulerType}/start`);
+  const { data } = await commonAxiosInstance.post(`/schedulers/${schedulerType}/start`);
   return data;
 };
 
 const stopScheduler = async (schedulerType) => {
-  const { data } = await schedulerAxiosInstance.post(`/schedulers/${schedulerType}/stop`);
+  const { data } = await commonAxiosInstance.post(`/schedulers/${schedulerType}/stop`);
   return data;
 };
 

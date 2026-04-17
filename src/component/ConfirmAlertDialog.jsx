@@ -1,8 +1,17 @@
 import { AlertDialog, Button } from '@heroui/react';
 
-export default function ConfirmModal({ isOpen, onConfirm, onOpenChange, title, message, confirmMessage }) {
+export default function ConfirmAlertDialog({
+  children,
+  isOpen,
+  onConfirm,
+  onOpenChange,
+  title,
+  message,
+  confirmMessage,
+}) {
   return (
     <AlertDialog isOpen={isOpen} onOpenChange={onOpenChange}>
+      {children}
       <AlertDialog.Backdrop className="z-100001">
         <AlertDialog.Container>
           <AlertDialog.Dialog className="sm:max-w-[400px]">

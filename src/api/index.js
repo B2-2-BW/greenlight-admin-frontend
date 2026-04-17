@@ -1,23 +1,15 @@
 import axios from 'axios';
-import { BASE_API_URL } from '../client/config';
-import { TokenUtil } from '../util/tokenUtil.js';
+import { LoginUtil } from '../util/loginUtil.js';
 
 const publicAxiosInstance = axios.create({
-  baseURL: BASE_API_URL,
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
 const commonAxiosInstance = axios.create({
-  baseURL: BASE_API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-const schedulerAxiosInstance = axios.create({
-  // baseURL: BASE_SCHEDULER_URL,
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,7 +17,7 @@ const schedulerAxiosInstance = axios.create({
 
 commonAxiosInstance.interceptors.request.use(
   (config) => {
-    const token = TokenUtil.getToken();
+    const token = LoginUtil.getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,4 +26,23 @@ commonAxiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-export { commonAxiosInstance, publicAxiosInstance, schedulerAxiosInstance };
+commonAxiosInstance.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        await LoginUtil.issueAndSetAccessToken();
+        return commonAxiosInstance(originalRequest);
+      } catch (err) {
+        window.location.href = '/login';
+        return Promise.reject(err);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+export { commonAxiosInstance, publicAxiosInstance };

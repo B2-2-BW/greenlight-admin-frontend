@@ -28,7 +28,6 @@ export function useDashboardFilter() {
       ...dashboardFilter,
       ...partial,
     };
-    console.log('update dashboardFilter', newFilter);
     setDashboardFilter(newFilter);
 
     setCookie(COOKIE_NAME, newFilter, {

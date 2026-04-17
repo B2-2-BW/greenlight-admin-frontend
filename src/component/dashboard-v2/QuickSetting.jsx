@@ -25,9 +25,10 @@ import { RoomClient } from '../../api/room/index.js';
 
 const steps = [-100, -10, 10, 100];
 
-function DisableAlert({ isOpen, onOpenChange, onConfirm }) {
+function DisableAlert({ children, isOpen, onOpenChange, onConfirm }) {
   return (
     <AlertDialog isOpen={isOpen} onOpenChange={onOpenChange}>
+      {children}
       <AlertDialog.Backdrop className="z-100001">
         <AlertDialog.Container>
           <AlertDialog.Dialog className="sm:max-w-[400px]">
@@ -108,20 +109,18 @@ const QuickSetting = ({ room }) => {
 
   return (
     <>
-      <DisableAlert
-        isOpen={disableAlertState.isOpen}
-        onOpenChange={disableAlertState.setOpen}
-        onConfirm={disableRoom}
-      />
+      {/*<DisableAlert*/}
+      {/*  isOpen={disableAlertState.isOpen}*/}
+      {/*  onOpenChange={disableAlertState.setOpen}*/}
+      {/*  onConfirm={disableRoom}*/}
+      {/*/>*/}
 
       <Popover isOpen={isOpen} onOpenChange={handleQuickSettingOpen}>
-        <Popover.Trigger>
-          <Button isIconOnly variant="ghost">
-            <Gear />
-          </Button>
-        </Popover.Trigger>
+        <Button isIconOnly variant="ghost">
+          <Gear />
+        </Button>
 
-        <Popover.Content placement="bottom left" className="border-black/40 border">
+        <Popover.Content placement="bottom left" className="border-black/20 border">
           <Popover.Dialog className="flex flex-col gap-2">
             <Popover.Heading className="font-semibold">
               빠른설정 | <span className="font-normal">{room.name}</span>
@@ -179,15 +178,16 @@ const QuickSetting = ({ room }) => {
               </div>
               <Separator />
               <div className="flex flex-col gap-2">
-                <Button
-                  variant="danger-soft"
-                  onPress={() => disableAlertState.setOpen(true)}
-                  fullWidth
-                  isDisabled={room?.enabled === false}
+                <DisableAlert
+                  isOpen={disableAlertState.isOpen}
+                  onOpenChange={disableAlertState.setOpen}
+                  onConfirm={disableRoom}
                 >
-                  <Power />
-                  대기열 비활성화
-                </Button>
+                  <Button variant="danger-soft" fullWidth isDisabled={room?.enabled === false}>
+                    <Power />
+                    대기열 비활성화
+                  </Button>
+                </DisableAlert>
               </div>
             </div>
           </Popover.Dialog>

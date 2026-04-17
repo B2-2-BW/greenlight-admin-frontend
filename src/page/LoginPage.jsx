@@ -2,9 +2,11 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import { Button, Card, FieldError, Form, Input, Label, Switch, TextField } from '@heroui/react';
 import logo from '/logo.png';
-import { TokenUtil } from '../util/tokenUtil.js';
+import { LoginUtil } from '../util/loginUtil.js';
 import { UserClient } from '../api/user/index.js';
 import { ToastUtil } from '../util/toastUtil.js';
+import { useCookies } from 'react-cookie';
+import { usePreferenceStore } from '../store/preference.jsx';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -13,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberUser, setRememberUser] = useState(false);
   const [errors, setErrors] = useState({});
+  const { loginPreference, updateLoginPreference } = usePreferenceStore();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -27,7 +30,7 @@ export default function LoginPage() {
       return;
     }
 
-    const response = await UserClient.login({ loginId, password });
+    const response = await UserClient.login({ loginId, password, autoLogin: rememberUser });
 
     if (response.status === 401 || response.status === 404) {
       ToastUtil.error('로그인 실패', '아이디 또는 비밀번호가 잘못되었습니다.');
@@ -38,7 +41,8 @@ export default function LoginPage() {
       return;
     }
 
-    TokenUtil.saveToken(response.data.accessToken, rememberUser);
+    LoginUtil.setAccessToken(response.data.accessToken);
+    updateLoginPreference({ autoLogin: rememberUser });
 
     const params = new URLSearchParams(search);
     const to = params.get('redirect') || '/'; // redirect가 있다면 해당 url로 없다면 /로 이동

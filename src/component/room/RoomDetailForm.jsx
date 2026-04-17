@@ -24,7 +24,7 @@ import { useNavigate, useParams } from 'react-router';
 import DeleteSvg from '../../icon/Delete.jsx';
 import ArrowBackSvg from '../../icon/ArrowBackSvg.jsx';
 import FormSection from '../common/FormSection.jsx';
-import ConfirmAlertDialog from '../ConfirmModal.jsx';
+import ConfirmAlertDialog from '../ConfirmAlertDialog.jsx';
 import RoomStatusChip from './RoomStatusChip.jsx';
 import NotFoundPage from '../../page/NotFoundPage.jsx';
 import SomethingWentWrongPage from '../../page/SomethingWentWrongPage.jsx';
@@ -194,13 +194,19 @@ export default function RoomDetailForm({ onPressBack }) {
     }
   };
 
-  const handleDeleteRoomPress = useCallback(() => {
-    if (room?.enabled) {
-      ToastUtil.error('활성화 상태의 대기열은 삭제할 수 없습니다.', '대기열을 먼저 비활성화 해 주세요');
-      return; // 활성화 상태의 대기열은 삭제불가
-    }
-    state.setOpen(true);
-  });
+  const handleDeleteRoomPress = useCallback(
+    (isOpen) => {
+      if (isOpen) {
+        // 열리는 상태일 때
+        if (room?.enabled) {
+          ToastUtil.error('활성화 상태의 대기열은 삭제할 수 없습니다.', '대기열을 먼저 비활성화 해 주세요');
+          return; // 활성화 상태의 대기열은 삭제불가
+        }
+      }
+      state.setOpen(isOpen);
+    },
+    [room]
+  );
 
   const handleDeleteConfirmed = useCallback(async () => {
     setIsSubmitLoading(true);
@@ -262,14 +268,23 @@ export default function RoomDetailForm({ onPressBack }) {
               )}
               <div className="flex flex-row gap-4">
                 {roomId && (
-                  <Tooltip shouldCloseOnPress={false}>
-                    <Button size="md" isIconOnly variant="ghost" onPress={handleDeleteRoomPress}>
-                      <TrashBin className="h-5 w-5" />
-                    </Button>
-                    <Tooltip.Content showArrow placement="left">
-                      대기열 삭제하기
-                    </Tooltip.Content>
-                  </Tooltip>
+                  <ConfirmAlertDialog
+                    title="정말로 이 대기열을 삭제하시겠습니까?"
+                    message="대기열이 즉시 삭제되며 이 작업은 복구할 수 없습니다."
+                    confirmMessage="삭제하기"
+                    isOpen={state.isOpen}
+                    onConfirm={handleDeleteConfirmed}
+                    onOpenChange={handleDeleteRoomPress}
+                  >
+                    <Tooltip shouldCloseOnPress={false}>
+                      <Button size="md" isIconOnly variant="ghost">
+                        <TrashBin className="h-5 w-5" />
+                      </Button>
+                      <Tooltip.Content showArrow placement="left">
+                        대기열 삭제하기
+                      </Tooltip.Content>
+                    </Tooltip>
+                  </ConfirmAlertDialog>
                 )}
                 <Tooltip>
                   <Button size="md" isIconOnly variant="ghost" onPress={onPressBack}>
@@ -571,15 +586,6 @@ export default function RoomDetailForm({ onPressBack }) {
           </Button>
         </div>
       </Form>
-
-      <ConfirmAlertDialog
-        title="정말로 이 대기열을 삭제하시겠습니까?"
-        message="대기열이 즉시 삭제되며 이 작업은 복구할 수 없습니다."
-        confirmMessage="삭제하기"
-        isOpen={state.isOpen}
-        onConfirm={handleDeleteConfirmed}
-        onOpenChange={state.setOpen}
-      />
     </>
   );
 }
