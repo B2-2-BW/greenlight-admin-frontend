@@ -72,8 +72,7 @@ const IMAGE_AD_RADIO_OPTIONS = [
 ];
 
 const defaultRoomRule = {
-  paramName: '',
-  paramValue: '',
+  value: '',
   matchOperator: 'EQUAL',
   description: '',
 };
@@ -111,6 +110,7 @@ export default function RoomDetailForm({ onPressBack }) {
     setSelectDefaultRuleType('ALL');
     setEditDefaultDestinationUrl('');
     setEditAdImageUrl('');
+    setEditRoomRules([defaultRoomRule]);
     setSelectRoomEnvironment('DEV');
   };
 
@@ -136,6 +136,7 @@ export default function RoomDetailForm({ onPressBack }) {
       setEditMaxTrafficPerSecond(data.maxTrafficPerSecond ?? 0);
       setEditEnabled(data?.enabled != null ? data.enabled : false);
       setEditDefaultDestinationUrl(data?.defaultDestinationUrl.trim());
+      setEditRoomRules(data?.roomRules || []);
       setSelectDefaultRuleType(data?.defaultRuleType || 'ALL');
       setEditAdImageUrl(data?.adImageUrl.trim()); // TODO adImageUrl 추가하기
       setSelectRoomEnvironment(data?.roomEnvironment || 'DEV');
@@ -168,7 +169,9 @@ export default function RoomDetailForm({ onPressBack }) {
       defaultRuleType: selectDefaultRuleType,
       defaultDestinationUrl: editDefaultDestinationUrl,
       adImageUrl: editAdImageUrl,
+      roomRules: editRoomRules,
       roomEnvironment: selectRoomEnvironment,
+      updateRule: true,
     };
 
     try {
@@ -434,7 +437,7 @@ export default function RoomDetailForm({ onPressBack }) {
                   minValue={0}
                   isRequired
                 >
-                  <Label className="text-base">최대 사용자수</Label>
+                  <Label className="text-base">초당 유입량</Label>
                   <NumberField.Group className="w-40 ring-1 focus-within:ring-2 ring-neutral-200 focus-within:ring-accent">
                     <NumberField.DecrementButton />
                     <NumberField.Input />
@@ -442,8 +445,8 @@ export default function RoomDetailForm({ onPressBack }) {
                   </NumberField.Group>
                   <Description className="text-sm">
                     <div className="flex flex-col text-sm">
-                      <span>화면에 머무를 수 있는 사용자 수를 제한합니다.</span>
-                      <span>0으로 설정하면 화면으로 진입할 수 없게 됩니다.</span>
+                      <span>1초마다 화면으로 고객이 입장하는 속도를 조절합니다.</span>
+                      <span>0으로 설정하면 진입이 멈춥니다.</span>
                     </div>
                   </Description>
                 </NumberField>
@@ -489,8 +492,8 @@ export default function RoomDetailForm({ onPressBack }) {
                           <ListBox.Item key={defaultType.value} id={defaultType.value} textValue={defaultType.name}>
                             <div className="flex gap-2 items-center">
                               <div className="flex flex-col">
-                                <span className="text-sm">{defaultType.name}</span>
-                                <span className="text-xs text-neutral-400">{defaultType.description}</span>
+                                <span className="text-base">{defaultType.name}</span>
+                                <span className="text-sm text-neutral-500">{defaultType.description}</span>
                               </div>
                             </div>
                             <ListBox.ItemIndicator />
@@ -505,8 +508,8 @@ export default function RoomDetailForm({ onPressBack }) {
                   </Select>
                 </div>
                 {(selectDefaultRuleType === 'INCLUDE' || selectDefaultRuleType === 'EXCLUDE') && (
-                  <div id="room-rules">
-                    <div className="mb-2 text-sm">대기열 적용 규칙</div>
+                  <div id="room-rules" className="flex flex-col gap-2">
+                    <Label className="text-base">대기열 적용 규칙 목록</Label>
                     <RoomRuleItemList
                       rules={editRoomRules}
                       onChange={handleChangeRoomRule}
