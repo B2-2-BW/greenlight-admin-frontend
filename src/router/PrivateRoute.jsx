@@ -52,7 +52,7 @@ function PrivateRoute({ children }) {
   useEffect(() => {
     let cancelled = false;
 
-    if (authStatus !== 'authenticated' || user != null) return;
+    if (authStatus !== 'authenticated' || user?.siteId != null) return;
 
     UserClient.me()
       .then((res) => {
