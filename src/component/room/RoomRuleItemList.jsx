@@ -26,7 +26,7 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
                 <div className="flex items-center text-sm mb-1 pl-1">
                   <Label>대기열 규칙 {index + 1}</Label>
                 </div>
-                <Surface variant="default" className="rounded-lg p-2 bg-neutral-50">
+                <Surface variant="default" className="rounded-lg p-2 bg-neutral-50 max-w-2xl">
                   <div className="flex justify-between items-start">
                     <div className="flex gap-2 mb-2 items-start">
                       <Select
@@ -66,10 +66,10 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
                         <FieldError>필수 항목을 입력해 주세요.</FieldError>
                       </TextField>
 
-                      <TextField name="description" type="text">
+                      <TextField name="description" type="text" className="grow">
                         <Label className="text-sm font-normal">비고</Label>
                         <Input
-                          className="w-120 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent text-sm"
+                          className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent text-sm"
                           value={rule.description}
                           onChange={(e) => onChange(index, 'description', e.target.value)}
                         />

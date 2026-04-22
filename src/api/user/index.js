@@ -7,8 +7,13 @@ const createUser = async (body) => {
 };
 
 const me = async () => {
-  const { data } = await commonAxiosInstance.get('/users/me');
-  return data;
+  return await commonAxiosInstance.get(`/users/me`, {}).then(
+    (response) => response,
+    (error) => {
+      console.error(error);
+      return error.response;
+    }
+  );
 };
 
 const login = async (body) => {

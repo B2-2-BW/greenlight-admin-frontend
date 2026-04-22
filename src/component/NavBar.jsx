@@ -87,7 +87,7 @@ export default function NavBar() {
             <Button isIconOnly>
               <div className="ring-2 ring-accent rounded-full">
                 <Avatar className="border-2 border-white transition-transform">
-                  <Avatar.Fallback className="bg-accent text-white">{user?.username[0]}</Avatar.Fallback>
+                  <Avatar.Fallback className="bg-accent text-white">{user?.username?.[0]}</Avatar.Fallback>
                 </Avatar>
               </div>
             </Button>
@@ -98,7 +98,7 @@ export default function NavBar() {
                     <div className="inline-flex items-center gap-2">
                       <div className="ring-2 ring-accent rounded-full">
                         <Avatar className="border-2 border-white transition-transform">
-                          <Avatar.Fallback className="bg-accent text-white">{user?.username[0]}</Avatar.Fallback>
+                          <Avatar.Fallback className="bg-accent text-white">{user?.username?.[0]}</Avatar.Fallback>
                         </Avatar>
                       </div>
                       <div className="flex flex-col items-start">

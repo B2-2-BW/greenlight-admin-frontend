@@ -176,11 +176,10 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
               </Tooltip>
 
               {/* 2. 상태 칩 영역 (shrink-0으로 공간 찌그러짐 방지) */}
-              {queueStatus !== '-' && (
-                <div className={`shrink-0 mb-1 min-w-18 rounded-full ${queueStatus === '폭주' ? 'glow-pulse' : ''}`}>
-                  {getQueueStatusChip(queueStatus)}
-                </div>
-              )}
+
+              <div className={`shrink-0 mb-1 min-w-18 rounded-full ${queueStatus === '폭주' ? 'glow-pulse' : ''}`}>
+                {queueStatus !== '-' && getQueueStatusChip(queueStatus)}
+              </div>
             </div>
           )}
         </div>
@@ -266,10 +265,10 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
             <div className={styles.tankOverlay}>
               {/* 현재수 / 최대수 라인 */}
               <div className="flex items-baseline justify-center gap-1 tabular-nums">
-                <span className="font-bold text-[#1e293b]" style={{ fontSize: isMain ? '1.6rem' : '1.2rem' }}>
+                <span className="font-bold text-[#1e293b]" style={{ fontSize: isMain ? '1.7rem' : '1.4rem' }}>
                   {trafficData?.totalActive?.toLocaleString()}
                 </span>
-                <span className="font-medium text-[#64748b]" style={{ fontSize: isMain ? '0.9rem' : '0.7rem' }}>
+                <span className="font-medium text-[#64748b]" style={{ fontSize: isMain ? '1.2rem' : '1rem' }}>
                   / {room.capacity?.toLocaleString()}
                 </span>
               </div>

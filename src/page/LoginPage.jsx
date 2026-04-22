@@ -5,8 +5,8 @@ import logo from '/logo.png';
 import { LoginUtil } from '../util/loginUtil.js';
 import { UserClient } from '../api/user/index.js';
 import { ToastUtil } from '../util/toastUtil.js';
-import { useCookies } from 'react-cookie';
 import { usePreferenceStore } from '../store/preference.jsx';
+import { useUserStore } from '../store/user.jsx';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -15,7 +15,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberUser, setRememberUser] = useState(false);
   const [errors, setErrors] = useState({});
-  const { loginPreference, updateLoginPreference } = usePreferenceStore();
+  const { updateLoginPreference } = usePreferenceStore();
+
+  const { setUser } = useUserStore();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -42,6 +44,18 @@ export default function LoginPage() {
     }
 
     LoginUtil.setAccessToken(response.data.accessToken);
+    const loginResponse = await UserClient.me();
+    if (loginResponse.status === 200) {
+      setUser(loginResponse.data);
+    } else {
+      console.error('fetch failed', loginResponse);
+      ToastUtil.error(
+        '사용자 정보 조회 실패',
+        '사용자 정보를 불러오는 데에 실패했습니다. 관리자에게 문의해주세요. ' + loginResponse?.data?.message
+      );
+      return;
+    }
+
     updateLoginPreference({ autoLogin: rememberUser });
 
     const params = new URLSearchParams(search);

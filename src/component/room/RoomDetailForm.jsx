@@ -258,7 +258,7 @@ export default function RoomDetailForm({ onPressBack }) {
   return (
     <>
       <Form className="w-full flex flex-col" onSubmit={handleSubmit}>
-        <div className="relative w-full flex flex-col gap-4">
+        <div className="relative w-full flex flex-col gap-4 min-w-2xl">
           <div className="w-full">
             <div className="flex justify-between items-center">
               {isPageLoading ? (

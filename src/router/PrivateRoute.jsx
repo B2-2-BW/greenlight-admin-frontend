@@ -55,9 +55,9 @@ function PrivateRoute({ children }) {
     if (authStatus !== 'authenticated' || user != null) return;
 
     UserClient.me()
-      .then((me) => {
+      .then((res) => {
         if (cancelled) return;
-        setUser(me);
+        setUser(res.data);
       })
       .catch((error) => {
         console.error(error);
