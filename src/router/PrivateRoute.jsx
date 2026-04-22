@@ -1,31 +1,81 @@
 import { Navigate, useLocation } from 'react-router';
-import { TokenUtil } from '../util/tokenUtil.js';
+import { LoginUtil } from '../util/loginUtil.js';
 import { useUserStore } from '../store/user.jsx';
 import { UserClient } from '../api/user/index.js';
+import { useEffect, useState } from 'react';
 
-// 인증처리 담당 Route
+// 인증처리 담당 Route, 최상단에 Wrapper로 존재
 function PrivateRoute({ children }) {
-  const { pathname } = useLocation();
-  const { setUser } = useUserStore();
+  const location = useLocation();
+  const { user, setUser } = useUserStore();
+  const [authStatus, setAuthStatus] = useState('checking');
 
-  const token = TokenUtil.getToken();
-  const result = TokenUtil.validateJwt(token);
-  if (!result?.valid) {
-    if (result?.error != null) {
-      console.error(result.error);
-    }
-    const to = { pathname: '/login', search: `?redirect=${pathname}` };
-    return <Navigate to={to} replace />;
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkAuth = async () => {
+      try {
+        let accessToken = LoginUtil.getAccessToken();
+
+        if (!accessToken) {
+          await LoginUtil.issueAndSetAccessToken();
+          accessToken = LoginUtil.getAccessToken();
+        }
+
+        const result = LoginUtil.validateJwt(accessToken);
+
+        if (!cancelled) {
+          if (result?.valid) {
+            setAuthStatus('authenticated');
+          } else {
+            if (result?.error) {
+              console.error(result.error);
+            }
+            setAuthStatus('unauthenticated');
+          }
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setAuthStatus('unauthenticated');
+        }
+      }
+    };
+
+    checkAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (authStatus !== 'authenticated' || user != null) return;
+
+    UserClient.me()
+      .then((res) => {
+        if (cancelled) return;
+        setUser(res.data);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus, user, setUser]);
+
+  if (authStatus === 'checking') {
+    return null; // 또는 로딩 스피너
   }
 
-  const me = useUserStore.getState().user;
-  if (me == null) {
-    UserClient.me().then((user) => {
-      setUser(user);
-    });
+  if (authStatus === 'unauthenticated') {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return children;
 }
-
 export default PrivateRoute;

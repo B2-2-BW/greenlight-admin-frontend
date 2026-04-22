@@ -9,7 +9,7 @@ import { useUserStore } from '../store/user.jsx';
 import { SiteClient } from '../api/site/index.js';
 import { useNavigate } from 'react-router';
 import { FaceSurprise, Magnifier } from '@gravity-ui/icons';
-import { useDashboardFilter } from '../hooks/dashboard/useDashboardFilter.js';
+import { usePreferenceStore } from '../store/preference.jsx';
 
 const layoutStyle = {
   container: {
@@ -19,11 +19,12 @@ const layoutStyle = {
     padding: '16px',
     height: 'calc(100vh - 128px)',
     // background: '#f8fafc',
+    minWidth: '720px',
     overflow: 'hidden',
   },
   gridArea: {
     display: 'grid',
-    // 반응형 그리드: 최소 220px 확보, 화면 꽉 채우기
+    // 반응형 그리드: 최소 260px 확보, 화면 꽉 채우기
     gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
     gridAutoRows: '400px', // PipeCard Compact Height와 일치
     gap: '16px',
@@ -72,7 +73,7 @@ export default function DashboardV2Page() {
   const [roomList, setRoomList] = useState([]);
   const [siteEnabled, setSiteEnabled] = useState(false);
 
-  const { dashboardFilter, updateDashboardFilter } = useDashboardFilter();
+  const { dashboardFilter, updateDashboardFilter } = usePreferenceStore();
 
   const [dashboardTraffic, setDashboardTraffic] = useState({});
 
@@ -83,15 +84,18 @@ export default function DashboardV2Page() {
 
   const navigate = useNavigate();
 
-  const me = useUserStore.getState().user || {};
+  const { user } = useUserStore();
 
-  const fetchRoomList = async () => {
-    // setIsPageLoading(true);
+  const fetchRoomList = useCallback(async () => {
+    if (!user?.siteId) {
+      setIsPageLoading(true);
+      return;
+    }
 
-    const res = await SiteClient.findSite(me.siteId);
+    const res = await SiteClient.findSite(user.siteId);
     const siteInfo = res.data;
     setSiteEnabled(siteInfo.siteEnabled);
-    if (!siteInfo.siteEnabled || dashboardFilter.enabled.length === 0) {
+    if (!siteInfo.siteEnabled || dashboardFilter?.enabled.length === 0) {
       setRoomList([]);
       setIsPageLoading(false);
       return;
@@ -99,11 +103,11 @@ export default function DashboardV2Page() {
 
     const param = {
       version: roomVersion.current,
-      roomEnvironment: dashboardFilter.roomEnvironment,
+      roomEnvironment: dashboardFilter?.roomEnvironment,
     };
 
-    if (dashboardFilter.enabled.length === 1) {
-      param.enabled = dashboardFilter.enabled.includes('true'); // 'true'를 포함하고 있으면 enabled = true, 아니면 false. length가 2라면 둘 다 선택되었으므로 null
+    if (dashboardFilter?.enabled.length === 1) {
+      param.enabled = dashboardFilter?.enabled.includes('true'); // 'true'를 포함하고 있으면 enabled = true, 아니면 false. length가 2라면 둘 다 선택되었으므로 null
     }
 
     RoomClient.getRoomList(param)
@@ -120,16 +124,21 @@ export default function DashboardV2Page() {
       .finally(() => {
         setIsPageLoading(false);
       });
-  };
+  }, [dashboardFilter?.enabled, dashboardFilter?.roomEnvironment, user.siteId]);
 
   useEffect(() => {
+    if (!user?.siteId) {
+      setIsPageLoading(true);
+      return;
+    }
+
     roomVersion.current = '-';
-    fetchRoomList();
+    fetchRoomList().then();
 
     const intervalId = setInterval(fetchRoomList, 10_000); // 10초마다
 
     return () => clearInterval(intervalId); // 언마운트 시 정리
-  }, [me.siteId, dashboardFilter]);
+  }, [user.siteId, dashboardFilter, fetchRoomList]);
 
   const fetchRoomById = useCallback(async (roomId) => {
     const room = await RoomClient.getRoomById(roomId);
@@ -142,13 +151,14 @@ export default function DashboardV2Page() {
 
   useEffect(() => {
     // 데이터를 가져오는 비동기 함수
-    const fetchData = async () => {
+    const fetchDashboardDetail = async () => {
       if (isFetching.current || roomList.length === 0) {
         return;
       }
       isFetching.current = true;
       const roomIdList = roomList.map((r) => r.roomId) || [];
 
+      console.log('fetching dashboard detail', roomIdList);
       DashboardClient.getDashboardDetail({ version: metricVersion.current, roomIdList: roomIdList })
         .then((res) => {
           // console.log('version', metricVersion);
@@ -169,10 +179,11 @@ export default function DashboardV2Page() {
     };
 
     // 처음 마운트 시 한 번 실행
-    fetchData();
+    metricVersion.current = '-';
+    fetchDashboardDetail();
 
-    // 1초(1000ms)마다 fetchData 실행
-    const intervalId = setInterval(fetchData, 3000);
+    // 1초(1000ms)마다 fetchDashboardDetail 실행
+    const intervalId = setInterval(fetchDashboardDetail, 3000);
 
     // 컴포넌트 언마운트 시 인터벌 제거 (메모리 누수 방지)
     return () => clearInterval(intervalId);
@@ -202,13 +213,11 @@ export default function DashboardV2Page() {
         value={{
           fetchRoomList,
           fetchRoomById,
-          siteEnabled,
-          setSiteEnabled,
           dashboardFilter,
           updateDashboardFilter,
         }}
       >
-        <div className="relative">
+        <div className="relative min-w-xl">
           {!siteEnabled && (
             <div className="absolute h-[calc(100vh-68px)] w-full z-12 top-0 left-0 flex items-center justify-center bg-white/40 dark:bg-neutral-950/60 backdrop-blur-xs">
               <Surface className="flex flex-col items-center gap-5 px-8 py-8 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xl max-w-sm w-[calc(100%-2rem)]">

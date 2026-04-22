@@ -5,7 +5,7 @@ import { SiteClient } from '../../api/site/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { useUserStore } from '../../store/user.jsx';
 import { useDashboard } from '../../provider/DashboardProvider.jsx';
-import { useDashboardFilter } from '../../hooks/dashboard/useDashboardFilter.js';
+import { usePreferenceStore } from '../../store/preference.jsx';
 
 const ENVIRONMENTS = [
   { key: 'LIVE', label: 'LIVE' },
@@ -41,6 +41,9 @@ function EnabledFilterSelect({ value, onChange }) {
   // value: true | false | null
 
   const convertEnabledSelectionToLabel = useCallback((keys) => {
+    if (!keys) {
+      return '상태';
+    }
     const hasTrue = keys.includes('true');
     const hasFalse = keys.includes('false');
     if (hasTrue && hasFalse) {
@@ -125,14 +128,13 @@ export function DashboardFilterBar() {
   const [selectedTags, setSelectedTags] = useState([]);
   const disableSiteAlertState = useOverlayState();
 
-  const { fetchRoomList, dashboardFilter, updateDashboardFilter } = useDashboard();
+  const { fetchRoomList } = useDashboard();
 
-  const onRoomEnvironmentChange = useCallback(
-    (env) => {
-      updateDashboardFilter({ roomEnvironment: env });
-    },
-    [updateDashboardFilter]
-  );
+  const { dashboardFilter, updateDashboardFilter } = usePreferenceStore();
+
+  const onRoomEnvironmentChange = useCallback((env) => {
+    updateDashboardFilter({ roomEnvironment: env });
+  }, []);
 
   // const onTagChange = (tagList) => {
   //   console.log('onTagChange', tagList);
@@ -193,11 +195,11 @@ export function DashboardFilterBar() {
         {/*  </Popover.Content>*/}
         {/*</Popover>*/}
         <EnvironmentFilterSelect
-          selectedKey={dashboardFilter.roomEnvironment}
+          selectedKey={dashboardFilter?.roomEnvironment}
           onSelectionChange={onRoomEnvironmentChange}
         />
 
-        <EnabledFilterSelect value={dashboardFilter.enabled} onChange={updateDashboardFilter} />
+        <EnabledFilterSelect value={dashboardFilter?.enabled} onChange={updateDashboardFilter} />
       </div>
 
       <Dropdown>

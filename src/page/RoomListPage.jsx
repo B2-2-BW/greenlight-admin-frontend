@@ -17,8 +17,20 @@ export default function RoomListPage() {
 
   const fetchSiteInfo = async () => {
     const me = useUserStore.getState().user;
-    const res = await SiteClient.findSite(me.siteId);
-    setSiteEnabled(res?.data?.siteEnabled || false);
+    if (!me) {
+      return;
+    }
+    SiteClient.findSite(me?.siteId)
+      .then((res) => {
+        if (res.status === 200) {
+          setSiteEnabled(res.data?.siteEnabled || false);
+        } else {
+          console.error('failed to reload site', res);
+        }
+      })
+      .catch((err) => {
+        console.error('network error while reloading site', err);
+      });
   };
 
   useEffect(() => {

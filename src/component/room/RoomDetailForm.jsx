@@ -24,7 +24,7 @@ import { useNavigate, useParams } from 'react-router';
 import DeleteSvg from '../../icon/Delete.jsx';
 import ArrowBackSvg from '../../icon/ArrowBackSvg.jsx';
 import FormSection from '../common/FormSection.jsx';
-import ConfirmAlertDialog from '../ConfirmModal.jsx';
+import ConfirmAlertDialog from '../ConfirmAlertDialog.jsx';
 import RoomStatusChip from './RoomStatusChip.jsx';
 import NotFoundPage from '../../page/NotFoundPage.jsx';
 import SomethingWentWrongPage from '../../page/SomethingWentWrongPage.jsx';
@@ -72,8 +72,7 @@ const IMAGE_AD_RADIO_OPTIONS = [
 ];
 
 const defaultRoomRule = {
-  paramName: '',
-  paramValue: '',
+  value: '',
   matchOperator: 'EQUAL',
   description: '',
 };
@@ -111,6 +110,7 @@ export default function RoomDetailForm({ onPressBack }) {
     setSelectDefaultRuleType('ALL');
     setEditDefaultDestinationUrl('');
     setEditAdImageUrl('');
+    setEditRoomRules([defaultRoomRule]);
     setSelectRoomEnvironment('DEV');
   };
 
@@ -136,6 +136,7 @@ export default function RoomDetailForm({ onPressBack }) {
       setEditMaxTrafficPerSecond(data.maxTrafficPerSecond ?? 0);
       setEditEnabled(data?.enabled != null ? data.enabled : false);
       setEditDefaultDestinationUrl(data?.defaultDestinationUrl.trim());
+      setEditRoomRules(data?.roomRules || []);
       setSelectDefaultRuleType(data?.defaultRuleType || 'ALL');
       setEditAdImageUrl(data?.adImageUrl.trim()); // TODO adImageUrl 추가하기
       setSelectRoomEnvironment(data?.roomEnvironment || 'DEV');
@@ -168,7 +169,9 @@ export default function RoomDetailForm({ onPressBack }) {
       defaultRuleType: selectDefaultRuleType,
       defaultDestinationUrl: editDefaultDestinationUrl,
       adImageUrl: editAdImageUrl,
+      roomRules: editRoomRules,
       roomEnvironment: selectRoomEnvironment,
+      updateRule: true,
     };
 
     try {
@@ -194,13 +197,19 @@ export default function RoomDetailForm({ onPressBack }) {
     }
   };
 
-  const handleDeleteRoomPress = useCallback(() => {
-    if (room?.enabled) {
-      ToastUtil.error('활성화 상태의 대기열은 삭제할 수 없습니다.', '대기열을 먼저 비활성화 해 주세요');
-      return; // 활성화 상태의 대기열은 삭제불가
-    }
-    state.setOpen(true);
-  });
+  const handleDeleteRoomPress = useCallback(
+    (isOpen) => {
+      if (isOpen) {
+        // 열리는 상태일 때
+        if (room?.enabled) {
+          ToastUtil.error('활성화 상태의 대기열은 삭제할 수 없습니다.', '대기열을 먼저 비활성화 해 주세요');
+          return; // 활성화 상태의 대기열은 삭제불가
+        }
+      }
+      state.setOpen(isOpen);
+    },
+    [room]
+  );
 
   const handleDeleteConfirmed = useCallback(async () => {
     setIsSubmitLoading(true);
@@ -249,7 +258,7 @@ export default function RoomDetailForm({ onPressBack }) {
   return (
     <>
       <Form className="w-full flex flex-col" onSubmit={handleSubmit}>
-        <div className="relative w-full flex flex-col gap-4">
+        <div className="relative w-full flex flex-col gap-4 min-w-2xl">
           <div className="w-full">
             <div className="flex justify-between items-center">
               {isPageLoading ? (
@@ -262,14 +271,23 @@ export default function RoomDetailForm({ onPressBack }) {
               )}
               <div className="flex flex-row gap-4">
                 {roomId && (
-                  <Tooltip shouldCloseOnPress={false}>
-                    <Button size="md" isIconOnly variant="ghost" onPress={handleDeleteRoomPress}>
-                      <TrashBin className="h-5 w-5" />
-                    </Button>
-                    <Tooltip.Content showArrow placement="left">
-                      대기열 삭제하기
-                    </Tooltip.Content>
-                  </Tooltip>
+                  <ConfirmAlertDialog
+                    title="정말로 이 대기열을 삭제하시겠습니까?"
+                    message="대기열이 즉시 삭제되며 이 작업은 복구할 수 없습니다."
+                    confirmMessage="삭제하기"
+                    isOpen={state.isOpen}
+                    onConfirm={handleDeleteConfirmed}
+                    onOpenChange={handleDeleteRoomPress}
+                  >
+                    <Tooltip shouldCloseOnPress={false}>
+                      <Button size="md" isIconOnly variant="ghost">
+                        <TrashBin className="h-5 w-5" />
+                      </Button>
+                      <Tooltip.Content showArrow placement="left">
+                        대기열 삭제하기
+                      </Tooltip.Content>
+                    </Tooltip>
+                  </ConfirmAlertDialog>
                 )}
                 <Tooltip>
                   <Button size="md" isIconOnly variant="ghost" onPress={onPressBack}>
@@ -419,7 +437,7 @@ export default function RoomDetailForm({ onPressBack }) {
                   minValue={0}
                   isRequired
                 >
-                  <Label className="text-base">최대 사용자수</Label>
+                  <Label className="text-base">초당 유입량</Label>
                   <NumberField.Group className="w-40 ring-1 focus-within:ring-2 ring-neutral-200 focus-within:ring-accent">
                     <NumberField.DecrementButton />
                     <NumberField.Input />
@@ -427,8 +445,8 @@ export default function RoomDetailForm({ onPressBack }) {
                   </NumberField.Group>
                   <Description className="text-sm">
                     <div className="flex flex-col text-sm">
-                      <span>화면에 머무를 수 있는 사용자 수를 제한합니다.</span>
-                      <span>0으로 설정하면 화면으로 진입할 수 없게 됩니다.</span>
+                      <span>1초마다 화면으로 고객이 입장하는 속도를 조절합니다.</span>
+                      <span>0으로 설정하면 진입이 멈춥니다.</span>
                     </div>
                   </Description>
                 </NumberField>
@@ -474,8 +492,8 @@ export default function RoomDetailForm({ onPressBack }) {
                           <ListBox.Item key={defaultType.value} id={defaultType.value} textValue={defaultType.name}>
                             <div className="flex gap-2 items-center">
                               <div className="flex flex-col">
-                                <span className="text-sm">{defaultType.name}</span>
-                                <span className="text-xs text-neutral-400">{defaultType.description}</span>
+                                <span className="text-base">{defaultType.name}</span>
+                                <span className="text-sm text-neutral-500">{defaultType.description}</span>
                               </div>
                             </div>
                             <ListBox.ItemIndicator />
@@ -490,8 +508,8 @@ export default function RoomDetailForm({ onPressBack }) {
                   </Select>
                 </div>
                 {(selectDefaultRuleType === 'INCLUDE' || selectDefaultRuleType === 'EXCLUDE') && (
-                  <div id="room-rules">
-                    <div className="mb-2 text-sm">대기열 적용 규칙</div>
+                  <div id="room-rules" className="flex flex-col gap-2">
+                    <Label className="text-base">대기열 적용 규칙 목록</Label>
                     <RoomRuleItemList
                       rules={editRoomRules}
                       onChange={handleChangeRoomRule}
@@ -571,15 +589,6 @@ export default function RoomDetailForm({ onPressBack }) {
           </Button>
         </div>
       </Form>
-
-      <ConfirmAlertDialog
-        title="정말로 이 대기열을 삭제하시겠습니까?"
-        message="대기열이 즉시 삭제되며 이 작업은 복구할 수 없습니다."
-        confirmMessage="삭제하기"
-        isOpen={state.isOpen}
-        onConfirm={handleDeleteConfirmed}
-        onOpenChange={state.setOpen}
-      />
     </>
   );
 }

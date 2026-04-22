@@ -116,7 +116,7 @@
 }
 
 .tankContainer {
-    width: 120px; /* 탱크 너비 */
+    width: calc(100% - 60px); /* 탱크 너비 */
     height: 100%;
     border: 1px solid #cbd5e1;
     border-top: none;
@@ -128,7 +128,7 @@
 
 /* Tank */
 .mainTankContainer {
-    width: 180px; /* 탱크 너비 */
+    width: calc(100% - 40px); /* 탱크 너비 */
 }
 
 .waveWrapper {

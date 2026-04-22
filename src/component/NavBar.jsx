@@ -2,7 +2,9 @@ import { Avatar, Button, Dropdown, Label } from '@heroui/react';
 import logo from '/logo.png';
 import { useNavigate } from 'react-router';
 import { useUserStore } from '../store/user.jsx';
-import { TokenUtil } from '../util/tokenUtil.js';
+import { LoginUtil } from '../util/loginUtil.js';
+import { UserClient } from '../api/user/index.js';
+import { ToastUtil } from '../util/toastUtil.js';
 
 export default function NavBar() {
   const navigate = useNavigate();
@@ -16,10 +18,22 @@ export default function NavBar() {
   };
 
   const handleLogout = () => {
-    useUserStore.persist.clearStorage();
-    clearUser();
-    TokenUtil.clearToken();
-    navigate('/');
+    UserClient.logout()
+      .then((res) => {
+        if (res.status === 200) {
+          useUserStore.persist.clearStorage();
+          clearUser();
+          LoginUtil.clearAccessToken();
+
+          ToastUtil.success('로그아웃 성공', `정상적으로 로그아웃되었습니다.`);
+          navigate('/login');
+        } else {
+          ToastUtil.error('로그아웃 실패', `error: ${res.message}`);
+        }
+      })
+      .catch((error) => {
+        ToastUtil.error('로그아웃 실패', `error: ${error}`);
+      });
   };
 
   return (
@@ -73,7 +87,7 @@ export default function NavBar() {
             <Button isIconOnly>
               <div className="ring-2 ring-accent rounded-full">
                 <Avatar className="border-2 border-white transition-transform">
-                  <Avatar.Fallback className="bg-accent text-white">{user?.username[0]}</Avatar.Fallback>
+                  <Avatar.Fallback className="bg-accent text-white">{user?.username?.[0]}</Avatar.Fallback>
                 </Avatar>
               </div>
             </Button>
@@ -84,7 +98,7 @@ export default function NavBar() {
                     <div className="inline-flex items-center gap-2">
                       <div className="ring-2 ring-accent rounded-full">
                         <Avatar className="border-2 border-white transition-transform">
-                          <Avatar.Fallback className="bg-accent text-white">{user?.username[0]}</Avatar.Fallback>
+                          <Avatar.Fallback className="bg-accent text-white">{user?.username?.[0]}</Avatar.Fallback>
                         </Avatar>
                       </div>
                       <div className="flex flex-col items-start">

@@ -8,6 +8,7 @@ const columns = [
   { name: 'checkbox', uid: 'checkbox' },
   { name: 'ID', uid: 'roomId' },
   { name: '이름', uid: 'description' },
+  { name: '환경', uid: 'roomEnvironment' },
   { name: '활성/비활성', uid: 'enabled' },
   { name: '최대사용자수', uid: 'capacity' },
   { name: '수정일자', uid: 'updatedAt' },
