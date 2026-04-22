@@ -158,10 +158,8 @@ export default function DashboardV2Page() {
       isFetching.current = true;
       const roomIdList = roomList.map((r) => r.roomId) || [];
 
-      console.log('fetching dashboard detail', roomIdList);
       DashboardClient.getDashboardDetail({ version: metricVersion.current, roomIdList: roomIdList })
         .then((res) => {
-          // console.log('version', metricVersion);
           const result = res.data;
           metricVersion.current = result.version;
 

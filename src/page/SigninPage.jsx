@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import logo from '/logo.png';
 import { SiteClient } from '../api/site/index.js';
+import { ToastUtil } from '../util/toastUtil.js';
 
 const commonInputProps = {
   radius: 'sm',
@@ -45,7 +46,8 @@ export default function SigninPage() {
           setErrors({ siteId: true });
           if (response?.status !== 404) {
             // 404인 경우 딱히 검증할 필요가 없음
-            console.log(JSON.stringify(response));
+            ToastUtil.error('사이트 검증 실패', '사이트 검증에 실패하였습니다. 관리자에게 문의해주시기 바랍니다.');
+            console.error('failed to verify siteId', JSON.stringify(response));
           }
         }
       })
