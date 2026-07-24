@@ -10,6 +10,7 @@ import { SiteClient } from '../api/site/index.js';
 export default function RoomListPage() {
   const navigate = useNavigate();
   const [siteEnabled, setSiteEnabled] = useState(true);
+  const [filters, setFilters] = useState({ search: '', environment: 'ALL', status: 'ALL' });
 
   const onPress = (roomId) => {
     navigate(`/rooms/${roomId}`);
@@ -56,8 +57,8 @@ export default function RoomListPage() {
             </Chip>
           )}
         </div>
-        <RoomListTopContent /> {/* 이거는 기능 동작 필요 없어서 일단 무시 */}
-        <RoomListTable onPress={onPress} />
+        <RoomListTopContent filters={filters} onFiltersChange={setFilters} />
+        <RoomListTable key={`${filters.search}-${filters.environment}-${filters.status}`} filters={filters} onPress={onPress} />
       </div>
     </>
   );

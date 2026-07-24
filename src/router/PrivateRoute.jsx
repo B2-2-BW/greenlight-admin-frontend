@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 // 인증처리 담당 Route, 최상단에 Wrapper로 존재
 function PrivateRoute({ children }) {
   const location = useLocation();
-  const { user, setUser } = useUserStore();
+  const setUser = useUserStore((state) => state.setUser);
   const [authStatus, setAuthStatus] = useState('checking');
 
   useEffect(() => {
@@ -24,13 +24,20 @@ function PrivateRoute({ children }) {
 
         const result = LoginUtil.validateJwt(accessToken);
 
+        if (!result?.valid) {
+          if (result?.error) {
+            console.error(result.error);
+          }
+          if (!cancelled) setAuthStatus('unauthenticated');
+          return;
+        }
+
+        const response = await UserClient.me();
         if (!cancelled) {
-          if (result?.valid) {
+          if (response?.status === 200) {
+            setUser(response.data);
             setAuthStatus('authenticated');
           } else {
-            if (result?.error) {
-              console.error(result.error);
-            }
             setAuthStatus('unauthenticated');
           }
         }
@@ -47,26 +54,7 @@ function PrivateRoute({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [location.pathname]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (authStatus !== 'authenticated' || user?.siteId != null) return;
-
-    UserClient.me()
-      .then((res) => {
-        if (cancelled) return;
-        setUser(res.data);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authStatus, user, setUser]);
+  }, [location.pathname, setUser]);
 
   if (authStatus === 'checking') {
     return null; // 또는 로딩 스피너

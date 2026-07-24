@@ -1,7 +1,9 @@
-import { Button, cn, Description, Form, Input, Label, Skeleton, Switch, TextField } from '@heroui/react';
+import { Button, Description, Form, Input, Label, Skeleton, Switch, TextField } from '@heroui/react';
 import FormSection from '../common/FormSection.jsx';
+import ConfirmAlertDialog from '../ConfirmAlertDialog.jsx';
 import { useEffect, useState } from 'react';
 import { SiteClient } from '../../api/site/index.js';
+import { RoomClient } from '../../api/room/index.js';
 import { useUserStore } from '../../store/user.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
 
@@ -22,6 +24,14 @@ export default function SiteSettingsForm() {
   const [siteInfo, setSiteInfo] = useState({});
 
   const [editSiteEnabled, setEditSiteEnabled] = useState(true);
+  const [isRoomSyncDialogOpen, setIsRoomSyncDialogOpen] = useState(false);
+  const [isSiteSyncDialogOpen, setIsSiteSyncDialogOpen] = useState(false);
+  const [syncTarget, setSyncTarget] = useState(null);
+
+  const user = useUserStore((state) => state.user);
+  const userRole = user?.role ?? user?.userRole;
+  const canSyncRoomData = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
+  const isSuperUser = userRole === 'SUPER';
 
   const fetchSiteInfo = async () => {
     setIsPageLoading(true);
@@ -68,6 +78,37 @@ export default function SiteSettingsForm() {
       reloadForm();
     } finally {
       setIsSubmitLoading(false);
+    }
+  };
+
+  const handleSyncRoomData = async () => {
+    setSyncTarget('room');
+    try {
+      await RoomClient.syncRoomData();
+      ToastUtil.success('운영 데이터 동기화', '대기열 설정을 서버에 즉시 반영했습니다.');
+      setIsRoomSyncDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      ToastUtil.error('운영 데이터 동기화', '대기열 설정 반영에 실패했습니다.');
+    } finally {
+      setSyncTarget(null);
+    }
+  };
+
+  const handleSyncAllSiteData = async () => {
+    setSyncTarget('site');
+    try {
+      await SiteClient.syncAllSiteData();
+      ToastUtil.success(
+        '운영 데이터 동기화',
+        isSuperUser ? '모든 사이트 설정을 서버에 즉시 반영했습니다.' : '현재 사이트 설정을 서버에 즉시 반영했습니다.'
+      );
+      setIsSiteSyncDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      ToastUtil.error('운영 데이터 동기화', '사이트 설정 반영에 실패했습니다.');
+    } finally {
+      setSyncTarget(null);
     }
   };
 
@@ -127,30 +168,66 @@ export default function SiteSettingsForm() {
                   <Switch
                     isSelected={editSiteEnabled}
                     onChange={setEditSiteEnabled}
-                    className={cn(
-                      'inline-flex flex-row-reverse w-full max-w-lg bg-white hover:bg-neutral-100 items-center',
-                      'justify-between cursor-pointer rounded-lg gap-2 p-4 border-2',
-                      'data-selected:border-accent'
-                    )}
+                    className="group w-full max-w-lg"
                     isRequired
                   >
-                    <Switch.Control className="h-5 w-10">
-                      <Switch.Thumb className={`size-4 bg-white ${editSiteEnabled ? 'ms-5.5' : ''}`}>
-                        <Switch.Icon />
-                      </Switch.Thumb>
-                    </Switch.Control>
-
-                    <Switch.Content className="flex flex-col gap-1">
-                      <Label className="text-base cursor-pointer">{enabledMessage[editSiteEnabled]?.title}</Label>
-                      <Description className="text-sm text-default-400">
-                        {enabledMessage[editSiteEnabled]?.subtitle}
-                      </Description>
+                    <Switch.Content className="flex w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                      <Switch.Control>
+                        <Switch.Thumb>
+                          <Switch.Icon />
+                        </Switch.Thumb>
+                      </Switch.Control>
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <span className="text-base">{enabledMessage[editSiteEnabled]?.title}</span>
+                        <span className="text-sm text-muted">{enabledMessage[editSiteEnabled]?.subtitle}</span>
+                      </span>
                     </Switch.Content>
                   </Switch>
                 </div>
               </div>
             )}
           </FormSection>
+
+          {canSyncRoomData && (
+            <FormSection title="운영 데이터 동기화">
+              <div className="flex flex-col w-full max-w-lg gap-4">
+                <Description className="text-sm text-muted">
+                  최근 변경한 서버 설정을 즉시 다시 반영합니다. 동기화 중에는 잠시 기다려 주세요.
+                </Description>
+                <div className="flex flex-wrap gap-3">
+                  <ConfirmAlertDialog
+                    title="대기열 설정을 동기화할까요?"
+                    message="모든 대기열 설정을 서버에 즉시 다시 반영합니다."
+                    confirmMessage="대기열 동기화"
+                    isOpen={isRoomSyncDialogOpen}
+                    onConfirm={handleSyncRoomData}
+                    onOpenChange={setIsRoomSyncDialogOpen}
+                  >
+                    <Button variant="secondary" isPending={syncTarget === 'room'}>
+                      대기열 설정 동기화
+                    </Button>
+                  </ConfirmAlertDialog>
+
+                  <ConfirmAlertDialog
+                    title={isSuperUser ? '전체 사이트 설정을 동기화할까요?' : '사이트 설정을 동기화할까요?'}
+                    message={
+                      isSuperUser
+                        ? '모든 사이트 설정을 서버에 즉시 다시 반영합니다.'
+                        : '현재 사이트 설정을 서버에 즉시 다시 반영합니다.'
+                    }
+                    confirmMessage={isSuperUser ? '전체 사이트 동기화' : '사이트 동기화'}
+                    isOpen={isSiteSyncDialogOpen}
+                    onConfirm={handleSyncAllSiteData}
+                    onOpenChange={setIsSiteSyncDialogOpen}
+                  >
+                    <Button variant="secondary" isPending={syncTarget === 'site'}>
+                      {isSuperUser ? '전체 사이트 설정 동기화' : '사이트 설정 동기화'}
+                    </Button>
+                  </ConfirmAlertDialog>
+                </div>
+              </div>
+            </FormSection>
+          )}
 
           {/*<SectionTitle title="활성사용자/세션 유지시간">*/}
           {/*  <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>*/}
@@ -165,7 +242,7 @@ export default function SiteSettingsForm() {
           {/*</SectionTitle>*/}
         </div>
         <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
-          <Button size="lg" className="h-10 rounded-2xl" type="submit" isLoading={isSubmitLoading} fullWidth>
+          <Button size="lg" className="h-10 rounded-2xl" type="submit" isPending={isSubmitLoading} fullWidth>
             저장하기
           </Button>
         </div>

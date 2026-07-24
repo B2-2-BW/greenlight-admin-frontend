@@ -1,54 +1,84 @@
 import { useNavigate } from 'react-router';
-import { ChevronDownIcon, PlusIcon, SearchIcon } from '../../icon/Icons.jsx';
-import { Button, Description, Dropdown, FieldError, Input, Label, SearchField, TextField } from '@heroui/react';
-import { useState } from 'react';
+import { Button, ListBox, SearchField, Select } from '@heroui/react';
+import { useCallback, useEffect, useState } from 'react';
 
-// 이거는 기능 동작 필요 없어서 일단 무시
-export default function RoomListTopContent() {
+const environmentOptions = [
+  { id: 'ALL', label: '전체 환경' },
+  { id: 'LIVE', label: '운영 (LIVE)' },
+  { id: 'DEV', label: '개발 (DEV)' },
+];
+
+const statusOptions = [
+  { id: 'ALL', label: '전체 상태' },
+  { id: 'ENABLED', label: '활성' },
+  { id: 'DISABLED', label: '비활성' },
+];
+
+function FilterSelect({ label, value, onChange, options }) {
+  return (
+    <Select aria-label={label} value={value} onChange={onChange} className="w-36">
+      <Select.Trigger>
+        <Select.Value>{({ state }) => state.selectedItems[0]?.textValue}</Select.Value>
+        <Select.Indicator />
+      </Select.Trigger>
+      <Select.Popover>
+        <ListBox>
+          {options.map((option) => (
+            <ListBox.Item key={option.id} id={option.id} textValue={option.label}>
+              {option.label}
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </Select.Popover>
+    </Select>
+  );
+}
+
+export default function RoomListTopContent({ filters, onFiltersChange }) {
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const updateFilter = useCallback(
+    (key, value) => onFiltersChange((current) => ({ ...current, [key]: value })),
+    [onFiltersChange]
+  );
 
-  const onClickCreateButton = () => {
-    navigate('/rooms/new');
-  };
+  useEffect(() => {
+    const timer = window.setTimeout(() => updateFilter('search', searchQuery), 400);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery, updateFilter]);
 
   return (
-    <div className="flex flex-col mb-4">
-      <div className="flex justify-between gap-3 items-end">
-        <SearchField name="search" value={searchQuery} onChange={setSearchQuery} variant="secondary">
+    <div className="mb-4 flex flex-col gap-3">
+      <div className="flex flex-col items-stretch justify-between gap-3 lg:flex-row lg:items-end">
+        <SearchField
+          name="search"
+          value={searchQuery}
+          onChange={setSearchQuery}
+          className="w-full lg:max-w-sm"
+          variant="secondary"
+        >
           <SearchField.Group>
             <SearchField.SearchIcon />
-            <SearchField.Input className="w-[280px]" placeholder="대기열 이름으로 검색하기 (개발중)" />
+            <SearchField.Input placeholder="ID, 대기열 이름 또는 설명으로 검색" />
             <SearchField.ClearButton />
           </SearchField.Group>
         </SearchField>
-        <div className="flex gap-3">
-          <Dropdown>
-            <Button variant="secondary" className="text-neutral-700">
-              Status
-              <ChevronDownIcon className="text-small" />
-            </Button>
-            <Dropdown.Popover>
-              <Dropdown.Menu
-                disallowEmptySelection
-                aria-label="Table Columns"
-                closeOnSelect={false}
-                // selectedKeys={statusFilter}
-                selectionMode="multiple"
-                // onSelectionChange={setStatusFilter}
-              >
-                {/*{statusOptions.map((status) => (*/}
-                {/*    <DropdownItem key={status.uid} className="capitalize">*/}
-                {/*        {capitalize(status.name)}*/}
-                {/*    </DropdownItem>*/}
-                {/*))}*/}
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
-          <Button color="primary" onPress={onClickCreateButton}>
-            추가하기
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterSelect
+            label="대기열 환경 필터"
+            value={filters.environment}
+            onChange={(value) => updateFilter('environment', value)}
+            options={environmentOptions}
+          />
+          <FilterSelect
+            label="대기열 상태 필터"
+            value={filters.status}
+            onChange={(value) => updateFilter('status', value)}
+            options={statusOptions}
+          />
+          <Button onPress={() => navigate('/rooms/new')}>대기열 추가</Button>
         </div>
       </div>
     </div>

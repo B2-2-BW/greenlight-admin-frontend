@@ -3,13 +3,13 @@ import { Button, Description, FieldError, Input, Label, ListBox, Select, Surface
 const MATCH_OPERATORS = [
   {
     value: 'EQUAL',
-    name: '정확히 일치 (기본값)',
-    description: '파라미터 값과 규칙의 값이 정확히 일치하는지 확인합니다.',
+    name: '정확히 일치',
+    description: '요청 값이 입력한 규칙 값과 완전히 같을 때만 적용합니다.',
   },
   {
     value: 'CONTAINS',
-    name: '부분 일치',
-    description: '파라미터 값이 규칙의 값을 부분 문자열로 포함하는지 확인합니다.',
+    name: '포함',
+    description: '요청 값 안에 입력한 규칙 값이 포함되면 적용합니다.',
   },
   // { value: 'STARTSWITH', name: 'Starts with', description: '파라미터 값이 규칙의 값으로 시작하는지 확인합니다.' },
   // { value: 'ENDSWITH', name: 'Ends with', description: '파라미터 값이 규칙의 값으로 끝나는지 확인합니다.' },
@@ -24,7 +24,7 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
             rules?.map((rule, index) => (
               <div key={index}>
                 <div className="flex items-center text-sm mb-1 pl-1">
-                  <Label>대기열 규칙 {index + 1}</Label>
+                  <Label>적용 조건 {index + 1}</Label>
                 </div>
                 <Surface variant="default" className="rounded-lg p-2 bg-neutral-50 max-w-2xl">
                   <div className="flex justify-between items-start">
@@ -34,7 +34,7 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
                         value={rule.matchOperator}
                         onChange={(value) => onChange(index, 'matchOperator', value)}
                       >
-                        <Label className="text-sm font-normal">규칙 검사 연산자</Label>
+                        <Label className="text-sm font-normal">일치 방식</Label>
                         <Select.Trigger className="w-40 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
                           <Select.Value>{({ state }) => state.selectedItems[0]?.textValue}</Select.Value>
                           <Select.Indicator />
@@ -57,7 +57,7 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
                         </Select.Popover>
                       </Select>
                       <TextField isRequired name="value" type="text">
-                        <Label className="text-sm font-normal">규칙 값</Label>
+                        <Label className="text-sm font-normal">비교할 요청 값</Label>
                         <Input
                           className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent text-sm"
                           value={rule.value}
@@ -84,18 +84,11 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
               </div>
             ))}
 
-          {rules?.length === 0 && <div className="text-xs  text-default-600">적용중인 규칙이 없습니다.</div>}
+          {rules?.length === 0 && <div className="text-xs text-foreground">아직 적용 조건이 없습니다.</div>}
         </div>
 
-        <Button
-          onPress={onAdd}
-          size="sm"
-          color="primary"
-          variant="bordered"
-          radius="full"
-          className="h-6 border-1 mt-4"
-        >
-          대기열 적용 규칙 추가
+        <Button onPress={onAdd} size="sm" variant="outline" className="mt-4 h-6 rounded-full border-1">
+          적용 조건 추가
         </Button>
       </div>
     </>

@@ -29,7 +29,7 @@ function DisableAlert({ children, isOpen, onOpenChange, onConfirm }) {
   return (
     <AlertDialog isOpen={isOpen} onOpenChange={onOpenChange}>
       {children}
-      <AlertDialog.Backdrop className="z-100001">
+      <AlertDialog.Backdrop className="z-49">
         <AlertDialog.Container>
           <AlertDialog.Dialog className="sm:max-w-[400px]">
             <AlertDialog.CloseTrigger />

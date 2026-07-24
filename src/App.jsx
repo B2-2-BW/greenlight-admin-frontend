@@ -13,10 +13,17 @@ import SigninPage from './page/SigninPage.jsx';
 import RoomListPage from './page/RoomListPage.jsx';
 import RoomDetailPage from './page/RoomDetailPage.jsx';
 import DashboardV2Page from './page/DashboardV2Page.jsx';
+import AccountPage from './page/AccountPage.jsx';
+import UserDetailPage from './page/UserDetailPage.jsx';
+import AdminRoute from './router/AdminRoute.jsx';
+import ForcedPasswordChangeDialog from './component/mypage/ForcedPasswordChangeDialog.jsx';
+import SiteManagementPage from './page/SiteManagementPage.jsx';
+import SiteDetailPage from './page/SiteDetailPage.jsx';
 
 function App() {
   return (
     <>
+      <ForcedPasswordChangeDialog />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signin" element={<SigninPage />} />
@@ -35,7 +42,39 @@ function App() {
           <Route path="/rooms/:roomId" element={<RoomDetailPage />} />
           <Route path="/schedulers" element={<SchedulerPage />} />
           <Route path="/settings" element={<SiteSettingsPage />} />
-          <Route path="/users" element={<UserManagementPage />} />
+          <Route
+            path="/users"
+            element={
+              <AdminRoute>
+                <UserManagementPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/users/:userId"
+            element={
+              <AdminRoute>
+                <UserDetailPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/sites"
+            element={
+              <AdminRoute>
+                <SiteManagementPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/sites/:siteId"
+            element={
+              <AdminRoute>
+                <SiteDetailPage />
+              </AdminRoute>
+            }
+          />
+          <Route path="/account" element={<AccountPage />} />
           <Route path="/notfound" element={<NotFoundPage />} />
           <Route path="/forbidden" element={<BadRequestPage />} />
           <Route path="/opps" element={<SomethingWentWrongPage />} />

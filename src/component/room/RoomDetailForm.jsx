@@ -14,15 +14,12 @@ import {
   Skeleton,
   Spinner,
   Switch,
-  Tabs,
   TextField,
   Tooltip,
   useOverlayState,
 } from '@heroui/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import DeleteSvg from '../../icon/Delete.jsx';
-import ArrowBackSvg from '../../icon/ArrowBackSvg.jsx';
 import FormSection from '../common/FormSection.jsx';
 import ConfirmAlertDialog from '../ConfirmAlertDialog.jsx';
 import RoomStatusChip from './RoomStatusChip.jsx';
@@ -31,7 +28,7 @@ import SomethingWentWrongPage from '../../page/SomethingWentWrongPage.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { RoomClient } from '../../api/room/index.js';
 import RoomRuleItemList from './RoomRuleItemList.jsx';
-import { ArrowLeft, TrashBin, TriangleExclamation } from '@gravity-ui/icons';
+import { ArrowLeft, TrashBin } from '@gravity-ui/icons';
 
 const enabledMessage = {
   true: {
@@ -46,18 +43,18 @@ const enabledMessage = {
 const DEFAULT_RULE_TYPES = [
   {
     value: 'ALL',
-    name: 'ALL (기본값)',
-    description: '모든 요청에 대해 대기열이 활성화됩니다.',
+    name: '전체 적용 (ALL)',
+    description: '별도 조건 없이 이 대기열을 모든 요청에 적용합니다.',
   },
   {
     value: 'INCLUDE',
-    name: 'INCLUDE',
-    description: 'URL에 특정 문자를 포함하는 경우 대기열이 활성화됩니다',
+    name: '조건 일치 시 적용 (INCLUDE)',
+    description: '아래 적용 조건 중 하나와 일치하는 요청에만 대기열을 적용합니다.',
   },
   {
     value: 'EXCLUDE',
-    name: 'EXCLUDE',
-    description: 'URL에 특정 문자를 포함하는 경우를 제외하고 대기열이 활성화됩니다',
+    name: '조건 일치 시 제외 (EXCLUDE)',
+    description: '아래 적용 조건과 일치하는 요청을 제외한 나머지 요청에 대기열을 적용합니다.',
   },
 ];
 
@@ -96,12 +93,16 @@ export default function RoomDetailForm({ onPressBack }) {
   const [selectRoomEnvironment, setSelectRoomEnvironment] = useState('DEV');
   const [selectAdImageType, setSelectAdImageType] = useState('URL');
   const [editAdImageUrl, setEditAdImageUrl] = useState('');
+  const [previewAdImageUrl, setPreviewAdImageUrl] = useState('');
+  const [previewAdImageRequestId, setPreviewAdImageRequestId] = useState(0);
+  const [adImagePreviewStatus, setAdImagePreviewStatus] = useState('empty');
+  const adImagePreviewRequestIdRef = useRef(0);
 
   const navigate = useNavigate();
 
   const state = useOverlayState();
 
-  const clearForm = () => {
+  const clearForm = useCallback(() => {
     setEditName('');
     setDescription('');
     setEditCapacity(0);
@@ -112,7 +113,7 @@ export default function RoomDetailForm({ onPressBack }) {
     setEditAdImageUrl('');
     setEditRoomRules([defaultRoomRule]);
     setSelectRoomEnvironment('DEV');
-  };
+  }, []);
 
   const handleMaxTrafficPerSecondChange = (val) => {
     setEditMaxTrafficPerSecond(val);
@@ -122,31 +123,34 @@ export default function RoomDetailForm({ onPressBack }) {
     setEditCapacity(val);
   };
 
-  const fetchRoom = async (fetchOptions = { clear: true }) => {
-    if (fetchOptions.clear) {
-      clearForm();
-    }
+  const fetchRoom = useCallback(
+    async (fetchOptions = { clear: true }) => {
+      if (fetchOptions.clear) {
+        clearForm();
+      }
 
-    try {
-      const data = await RoomClient.getRoomById(roomId);
-      setRoom(data);
-      setEditName(data.name || '');
-      setDescription(data.description || '');
-      setEditCapacity(data.capacity || '');
-      setEditMaxTrafficPerSecond(data.maxTrafficPerSecond ?? 0);
-      setEditEnabled(data?.enabled != null ? data.enabled : false);
-      setEditDefaultDestinationUrl(data?.defaultDestinationUrl.trim());
-      setEditRoomRules(data?.roomRules || []);
-      setSelectDefaultRuleType(data?.defaultRuleType || 'ALL');
-      setEditAdImageUrl(data?.adImageUrl.trim()); // TODO adImageUrl 추가하기
-      setSelectRoomEnvironment(data?.roomEnvironment || 'DEV');
-    } catch (error) {
-      console.error('Error fetching:', error);
-      setErrorStatus(error.status);
-    } finally {
-      setIsPageLoading(false);
-    }
-  };
+      try {
+        const data = await RoomClient.getRoomById(roomId);
+        setRoom(data);
+        setEditName(data.name || '');
+        setDescription(data.description || '');
+        setEditCapacity(data.capacity || '');
+        setEditMaxTrafficPerSecond(data.maxTrafficPerSecond ?? 0);
+        setEditEnabled(data?.enabled != null ? data.enabled : false);
+        setEditDefaultDestinationUrl(data?.defaultDestinationUrl?.trim() ?? '');
+        setEditRoomRules(data?.roomRules || []);
+        setSelectDefaultRuleType(data?.defaultRuleType || 'ALL');
+        setEditAdImageUrl(data?.adImageUrl?.trim() ?? '');
+        setSelectRoomEnvironment(data?.roomEnvironment || 'DEV');
+      } catch (error) {
+        console.error('Error fetching:', error);
+        setErrorStatus(error.status);
+      } finally {
+        setIsPageLoading(false);
+      }
+    },
+    [clearForm, roomId]
+  );
 
   // Location 이동 시 실행
   useEffect(() => {
@@ -155,10 +159,49 @@ export default function RoomDetailForm({ onPressBack }) {
       return;
     }
     fetchRoom();
-  }, [roomId]);
+  }, [fetchRoom, roomId]);
+
+  useEffect(() => {
+    const imageUrl = editAdImageUrl.trim();
+    const requestId = adImagePreviewRequestIdRef.current + 1;
+    adImagePreviewRequestIdRef.current = requestId;
+
+    if (!imageUrl) {
+      setPreviewAdImageUrl('');
+      setAdImagePreviewStatus('empty');
+      return undefined;
+    }
+
+    setAdImagePreviewStatus('debouncing');
+    const debounceTimer = window.setTimeout(() => {
+      setPreviewAdImageUrl(imageUrl);
+      setPreviewAdImageRequestId(requestId);
+      setAdImagePreviewStatus('loading');
+    }, 500);
+
+    return () => window.clearTimeout(debounceTimer);
+  }, [editAdImageUrl]);
+
+  const handleAdImagePreviewLoad = useCallback((requestId) => {
+    if (requestId === adImagePreviewRequestIdRef.current) {
+      setAdImagePreviewStatus('loaded');
+    }
+  }, []);
+
+  const handleAdImagePreviewError = useCallback((requestId) => {
+    if (requestId === adImagePreviewRequestIdRef.current) {
+      setAdImagePreviewStatus('error');
+    }
+  }, []);
+
+  const handleAdImageUrlChange = (event) => {
+    adImagePreviewRequestIdRef.current += 1;
+    setEditAdImageUrl(event.target.value);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitLoading(true);
 
     const data = {
       name: editName,
@@ -208,7 +251,7 @@ export default function RoomDetailForm({ onPressBack }) {
       }
       state.setOpen(isOpen);
     },
-    [room]
+    [room, state]
   );
 
   const handleDeleteConfirmed = useCallback(async () => {
@@ -228,7 +271,7 @@ export default function RoomDetailForm({ onPressBack }) {
     } finally {
       setIsSubmitLoading(false);
     }
-  }, []);
+  }, [navigate, roomId, state]);
 
   const handleChangeRoomRule = (idx, field, value) => {
     const newRules = editRoomRules.map((rule, i) => (i === idx ? { ...rule, [field]: value } : rule));
@@ -352,17 +395,15 @@ export default function RoomDetailForm({ onPressBack }) {
                       <Radio
                         key={option.value}
                         value={option.value}
-                        className="flex-1 rounded-2xl data-[selected=true]:ring-2 ring ring-neutral-300 bg-surface px-5 py-4 transition-all data-[selected=true]:ring-accent"
+                        className="flex-1 items-stretch rounded-2xl data-[selected=true]:ring-2 ring ring-neutral-300 bg-surface px-5 py-4 transition-all data-[selected=true]:ring-accent"
                       >
-                        <Radio.Control>
-                          <Radio.Indicator />
-                        </Radio.Control>
-                        <Radio.Content>
-                          <div className="flex flex-col gap-1">
-                            <Label>{option.title}</Label>
-                            <Description>{option.description}</Description>
-                          </div>
+                        <Radio.Content className="flex w-full items-center gap-3">
+                          <Radio.Control>
+                            <Radio.Indicator />
+                          </Radio.Control>
+                          <span className="text-base">{option.title}</span>
                         </Radio.Content>
+                        <Description className="text-sm">{option.description}</Description>
                       </Radio>
                     ))}
                   </div>
@@ -388,24 +429,19 @@ export default function RoomDetailForm({ onPressBack }) {
                   <Switch
                     isSelected={editEnabled}
                     onChange={setEditEnabled}
-                    className={cn(
-                      'inline-flex flex-row-reverse w-full max-w-lg bg-white hover:bg-neutral-100 items-center',
-                      'justify-between cursor-pointer rounded-lg gap-2 p-4 border-2',
-                      'data-selected:border-accent'
-                    )}
+                    className="group w-full max-w-lg"
                     isRequired
                   >
-                    <Switch.Control className="h-5 w-10">
-                      <Switch.Thumb className={`size-4 bg-white ${editEnabled ? 'ms-5.5' : ''}`}>
-                        <Switch.Icon />
-                      </Switch.Thumb>
-                    </Switch.Control>
-
-                    <Switch.Content className="flex flex-col gap-1">
-                      <Label className="text-base cursor-pointer">{enabledMessage[editEnabled]?.title}</Label>
-                      <Description className="text-sm text-default-400">
-                        {enabledMessage[editEnabled]?.subtitle}
-                      </Description>
+                    <Switch.Content className="flex w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                      <Switch.Control>
+                        <Switch.Thumb>
+                          <Switch.Icon />
+                        </Switch.Thumb>
+                      </Switch.Control>
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <span className="text-base">{enabledMessage[editEnabled]?.title}</span>
+                        <span className="text-sm text-muted">{enabledMessage[editEnabled]?.subtitle}</span>
+                      </span>
                     </Switch.Content>
                   </Switch>
                 </div>
@@ -480,8 +516,8 @@ export default function RoomDetailForm({ onPressBack }) {
                 </TextField>
                 <div>
                   <Select isRequired value={selectDefaultRuleType} onChange={handleSelectDefaultRuleTypeChange}>
-                    <Label className="text-base">대기열 적용 규칙 유형</Label>
-                    <Select.Trigger className="max-w-40 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
+                    <Label className="text-base">대기열 적용 방식</Label>
+                    <Select.Trigger className="max-w-64 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
                       <Select.Value>{({ state }) => state.selectedItems[0]?.textValue}</Select.Value>
                       <Select.Indicator />
                     </Select.Trigger>
@@ -509,7 +545,10 @@ export default function RoomDetailForm({ onPressBack }) {
                 </div>
                 {(selectDefaultRuleType === 'INCLUDE' || selectDefaultRuleType === 'EXCLUDE') && (
                   <div id="room-rules" className="flex flex-col gap-2">
-                    <Label className="text-base">대기열 적용 규칙 목록</Label>
+                    <Label className="text-base">적용 조건</Label>
+                    <Description className="text-sm text-muted">
+                      요청 URL 또는 전달 값이 아래 조건과 일치하는지 비교합니다. 조건은 여러 개 등록할 수 있습니다.
+                    </Description>
                     <RoomRuleItemList
                       rules={editRoomRules}
                       onChange={handleChangeRoomRule}
@@ -529,7 +568,7 @@ export default function RoomDetailForm({ onPressBack }) {
                 <Skeleton className="rounded-lg w-full h-27" />
               </div>
             ) : (
-              <div id="flex flex-col gap-6">
+              <div className="flex flex-col gap-6">
                 <RadioGroup isRequired value={selectAdImageType} onChange={setSelectAdImageType} variant="secondary">
                   <Label className="text-base" isRequired>
                     광고 유형
@@ -539,17 +578,15 @@ export default function RoomDetailForm({ onPressBack }) {
                       <Radio
                         key={option.value}
                         value={option.value}
-                        className="flex-1 rounded-2xl data-[selected=true]:ring-2 ring ring-neutral-300 bg-surface px-5 py-4 transition-all data-[selected=true]:ring-accent"
+                        className="flex-1 items-stretch rounded-2xl data-[selected=true]:ring-2 ring ring-neutral-300 bg-surface px-5 py-4 transition-all data-[selected=true]:ring-accent"
                       >
-                        <Radio.Control>
-                          <Radio.Indicator />
-                        </Radio.Control>
-                        <Radio.Content>
-                          <div className="flex flex-col gap-1">
-                            <Label>{option.title}</Label>
-                            <Description>{option.description}</Description>
-                          </div>
+                        <Radio.Content className="flex w-full items-center gap-3">
+                          <Radio.Control>
+                            <Radio.Indicator />
+                          </Radio.Control>
+                          <span className="text-base">{option.title}</span>
                         </Radio.Content>
+                        <Description className="text-sm">{option.description}</Description>
                       </Radio>
                     ))}
                   </div>
@@ -563,7 +600,7 @@ export default function RoomDetailForm({ onPressBack }) {
                         className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
                         placeholder="https://example.com/image.jpg"
                         value={editAdImageUrl}
-                        onChange={(e) => setEditAdImageUrl(e.target.value)}
+                        onChange={handleAdImageUrlChange}
                       />
                       <Description className="flex flex-col text-sm">
                         <span>
@@ -576,6 +613,49 @@ export default function RoomDetailForm({ onPressBack }) {
                     </TextField>
                   ) : (
                     <div className="mt-4 flex"> 기능 추후 지원예정</div>
+                  )}
+                  {selectAdImageType === 'URL' && (
+                    <div className="mt-4 max-w-2xl">
+                      <Label className="mb-2 block text-base">이미지 미리보기</Label>
+                      <div className="flex h-72 items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                        {adImagePreviewStatus === 'empty' && (
+                          <p className="text-center text-sm text-neutral-500">
+                            이미지 URL을 입력하면 이 영역에서 미리볼 수 있습니다.
+                          </p>
+                        )}
+                        {adImagePreviewStatus === 'debouncing' && (
+                          <div className="flex flex-col items-center gap-2 text-center text-sm text-neutral-500">
+                            <Spinner color="current" size="sm" />
+                            <span>입력을 멈추면 새 이미지를 확인합니다.</span>
+                          </div>
+                        )}
+                        {adImagePreviewStatus === 'loading' && (
+                          <div className="flex flex-col items-center gap-2 text-center text-sm text-neutral-500">
+                            <Spinner color="current" size="sm" />
+                            <span>이미지를 불러오는 중입니다.</span>
+                          </div>
+                        )}
+                        {adImagePreviewStatus === 'error' && (
+                          <p className="text-center text-sm text-danger-600">
+                            이미지를 불러오지 못했습니다. URL과 이미지 접근 권한을 확인해 주세요.
+                          </p>
+                        )}
+                        {(adImagePreviewStatus === 'loading' || adImagePreviewStatus === 'loaded') &&
+                          previewAdImageUrl && (
+                            <img
+                              key={previewAdImageRequestId}
+                              src={previewAdImageUrl}
+                              alt="대기열 광고 이미지 미리보기"
+                              className={cn(
+                                'max-h-full max-w-full rounded-lg object-contain',
+                                adImagePreviewStatus === 'loading' && 'hidden'
+                              )}
+                              onLoad={() => handleAdImagePreviewLoad(previewAdImageRequestId)}
+                              onError={() => handleAdImagePreviewError(previewAdImageRequestId)}
+                            />
+                          )}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { Card, cn, Skeleton, Switch } from '@heroui/react';
+import { Card, Skeleton, Switch } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { SchedulerClient } from '../../api/scheduler/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
@@ -36,36 +36,25 @@ function SchedulerCard({ scheduler, updateStatus, isUpdateLoading }) {
           <Switch
             isDisabled={isUpdateLoading}
             isSelected={running}
-            onValueChange={(newValue) => {
+            onChange={(newValue) => {
               updateStatus(scheduler.schedulerType, newValue);
             }}
-            classNames={{
-              base: cn(
-                'inline-flex flex-row-reverse w-full max-w-md bg-content1 hover:bg-content2 items-center',
-                'justify-between cursor-pointer rounded-lg gap-2 p-4 border-2 border-default',
-                'data-[selected=true]:border-primary'
-              ),
-              wrapper: 'p-0 h-4 overflow-visible',
-              thumb: cn(
-                'w-6 h-6 border-2 shadow-lg',
-                'group-data-[hover=true]:border-primary',
-                //selected
-                'group-data-[selected=true]:ms-6',
-                // pressed
-                'group-data-[pressed=true]:w-7',
-                'group-data-selected:group-data-pressed:ms-4'
-              ),
-            }}
+            className="group w-full max-w-md"
           >
-            <div className="flex flex-col gap-1 min-w-44">
-              <div className="text-base flex gap-1">
-                <span>상태:</span>
-                <span className="font-semibold">{isRunning(scheduler.status) ? '실행 중' : '중단됨'}</span>
-              </div>
-              <p className="text-sm text-default-400">
-                {isRunning(scheduler.status) ? '스케쥴러가 실행중입니다.' : '스케쥴러가 중단되었습니다'}
-              </p>
-            </div>
+            <Switch.Content className="flex w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-content1 p-4 hover:bg-surface-hove group-data-[selected=true]:border-accent">
+              <Switch.Control>
+                <Switch.Thumb />
+              </Switch.Control>
+              <span className="flex min-w-44 flex-col gap-1">
+                <span className="flex gap-1 text-base">
+                  <span>상태:</span>
+                  <span className="font-semibold">{running ? '실행 중' : '중단됨'}</span>
+                </span>
+                <span className="text-sm text-muted">
+                  {running ? '스케줄러가 실행 중입니다.' : '스케줄러가 중단되었습니다.'}
+                </span>
+              </span>
+            </Switch.Content>
           </Switch>
         </div>
       </Card.Content>
@@ -113,20 +102,27 @@ export default function SchedulerList() {
   useEffect(() => {
     fetchSchedulers();
   }, []);
+
+  if (isPageLoading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Skeleton className="h-40 rounded-lg" />
+        <Skeleton className="h-40 rounded-lg" />
+        <Skeleton className="h-40 rounded-lg" />
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <Skeleton isLoaded={!isPageLoading} className="rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {schedulers.map((scheduler, index) => (
-            <SchedulerCard
-              scheduler={scheduler}
-              key={index}
-              updateStatus={updateStatus}
-              isUpdateLoading={isUpdateLoading}
-            />
-          ))}
-        </div>
-      </Skeleton>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {schedulers.map((scheduler) => (
+        <SchedulerCard
+          scheduler={scheduler}
+          key={scheduler.schedulerType}
+          updateStatus={updateStatus}
+          isUpdateLoading={isUpdateLoading}
+        />
+      ))}
     </div>
   );
 }

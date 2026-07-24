@@ -35,7 +35,7 @@ export default function LoginPage() {
     const response = await UserClient.login({ loginId, password, autoLogin: rememberUser });
 
     if (response.status === 401 || response.status === 404) {
-      ToastUtil.error('로그인 실패', '아이디 또는 비밀번호가 잘못되었습니다.');
+      ToastUtil.error('로그인 실패', response?.data?.detail || '아이디 또는 비밀번호가 잘못되었습니다.');
       return;
     } else if (!response?.data?.accessToken) {
       console.error('login failed', response);
@@ -57,6 +57,10 @@ export default function LoginPage() {
     }
 
     updateLoginPreference({ autoLogin: rememberUser });
+
+    if (loginResponse.data?.passwordResetRequired) {
+      return;
+    }
 
     const params = new URLSearchParams(search);
     const to = params.get('redirect') || '/'; // redirect가 있다면 해당 url로 없다면 /로 이동
@@ -84,6 +88,7 @@ export default function LoginPage() {
         <Card.Content className="w-[400px]">
           <Form onSubmit={handleLogin} validationErrors={errors} className="flex flex-col gap-2">
             <TextField name="username" type="text" variant="secondary">
+              <Label>사용자 ID</Label>
               <Input
                 placeholder="사용자 ID"
                 className="py-3"
@@ -94,6 +99,7 @@ export default function LoginPage() {
             </TextField>
 
             <TextField name="password" type="password" variant="secondary">
+              <Label>비밀번호</Label>
               <Input
                 placeholder="비밀번호"
                 className="py-3"
@@ -103,21 +109,15 @@ export default function LoginPage() {
               <FieldError>사용자 비밀번호는 필수값입니다.</FieldError>
             </TextField>
 
-            <Switch
-              className="mt-4 mb-8"
-              color="primary"
-              name="rememberUser"
-              isSelected={rememberUser}
-              onChange={setRememberUser}
-            >
-              <Switch.Control>
-                <Switch.Thumb />
-              </Switch.Control>
+            <Switch className="mt-4 mb-8" name="rememberUser" isSelected={rememberUser} onChange={setRememberUser}>
               <Switch.Content>
-                <Label className="text-neutral-500 cursor-pointer">로그인 유지</Label>
+                <Switch.Control>
+                  <Switch.Thumb />
+                </Switch.Control>
+                <span className="text-neutral-500">로그인 유지</span>
               </Switch.Content>
             </Switch>
-            <Button className="h-12" color="primary" type="submit" fullWidth isLoading={false}>
+            <Button className="h-12" type="submit" fullWidth>
               <span className="text-medium">로그인</span>
             </Button>
           </Form>
