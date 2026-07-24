@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { LoginUtil } from '../util/loginUtil.js';
+import { useUserStore } from '../store/user.jsx';
 
 const publicAxiosInstance = axios.create({
   baseURL: '/api',
@@ -30,6 +31,15 @@ commonAxiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    if (
+      error.response?.status === 403
+      && error.response?.data?.message === 'Password reset required.'
+    ) {
+      const currentUser = useUserStore.getState().user ?? {};
+      useUserStore.getState().setUser({ ...currentUser, passwordResetRequired: true });
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
