@@ -1,4 +1,4 @@
-import { Avatar, Button, Dropdown, Label } from '@heroui/react';
+import { Avatar, Button, Dropdown } from '@heroui/react';
 import logo from '/logo.png';
 import { useNavigate } from 'react-router';
 import { useUserStore } from '../store/user.jsx';
@@ -12,6 +12,8 @@ export default function NavBar() {
   const { clearUser } = useUserStore();
 
   const user = useUserStore((s) => s.user);
+  const siteLabel = user?.siteName || user?.siteId;
+  const showSiteId = user?.siteName && user?.siteId && user.siteName !== user.siteId;
 
   const goToHome = () => {
     navigate('/');
@@ -39,8 +41,8 @@ export default function NavBar() {
   return (
     <nav className="sticky top-0 z-40 w-full border-b border-separator bg-background/70 backdrop-blur-lg">
       <header className="flex h-16 items-center justify-between px-6">
-        <ul className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
+        <ul className="flex min-w-0 items-center gap-4">
+          <div className="flex min-w-0 items-center gap-3">
             <p className="block font-bold text-inherit">
               <img
                 src={logo}
@@ -49,40 +51,21 @@ export default function NavBar() {
                 onClick={goToHome}
               />
             </p>
+            {siteLabel && (
+              <div className="hidden min-w-0 items-center gap-3 sm:flex">
+                <div className="h-6 w-px bg-separator" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground" title={siteLabel}>
+                    {siteLabel}
+                  </p>
+                  {showSiteId && <p className="truncate text-xs text-muted">{user.siteId}</p>}
+                </div>
+              </div>
+            )}
           </div>
-          {/*<NavbarContent className="flex gap-3">*/}
-          {/*  <NavbarItem isActive>*/}
-          {/*    <Link aria-current="page" color="secondary" href="#">*/}
-          {/*      Navbar는*/}
-          {/*    </Link>*/}
-          {/*  </NavbarItem>*/}
-          {/*  <NavbarItem>*/}
-          {/*    <Link color="foreground" href="#">*/}
-          {/*      유지할지말지*/}
-          {/*    </Link>*/}
-          {/*  </NavbarItem>*/}
-          {/*  <NavbarItem>*/}
-          {/*    <Link href="#" color="foreground">*/}
-          {/*      미정*/}
-          {/*    </Link>*/}
-          {/*  </NavbarItem>*/}
-          {/*</NavbarContent>*/}
         </ul>
 
         <ul className="flex items-center gap-4">
-          {/*<Input*/}
-          {/*  classNames={{*/}
-          {/*    base: 'max-w-full sm:max-w-40 h-10',*/}
-          {/*    mainWrapper: 'h-full',*/}
-          {/*    input: 'text-small',*/}
-          {/*    inputWrapper: 'h-full font-normal text-default-500 bg-default-400/20 dark:bg-default-500/20',*/}
-          {/*  }}*/}
-          {/*  placeholder="Type to search..."*/}
-          {/*  size="sm"*/}
-          {/*  startContent={<SearchIcon size={18} />}*/}
-          {/*  type="search"*/}
-          {/*/>*/}
-          {/*TODO DROPDOWN 마우스 pointer 안되고, 포커스랑 위치 좀 이상함 */}
           <Dropdown>
             <Button isIconOnly>
               <div className="ring-2 ring-accent rounded-full">
@@ -92,7 +75,7 @@ export default function NavBar() {
               </div>
             </Button>
             <Dropdown.Popover>
-              <Dropdown.Menu aria-label="Custom item styles" className="p-3" disabledKeys={['profile']} variant="flat">
+              <Dropdown.Menu aria-label="계정 메뉴" className="p-3" disabledKeys={['profile']}>
                 <Dropdown.Section showDivider aria-label="Profile & Actions">
                   <Dropdown.Item id="profile" isReadOnly className="h-14 gap-2 opacity-100">
                     <div className="inline-flex items-center gap-2">
@@ -102,30 +85,18 @@ export default function NavBar() {
                         </Avatar>
                       </div>
                       <div className="flex flex-col items-start">
-                        <span className="text-sm text-default-600">{user?.username}</span>
-                        <span className="text-xs text-muted text-default-500">{user?.siteName}</span>
+                        <span className="text-sm text-foreground">{user?.username}</span>
+                        <span className="text-xs text-muted text-muted">{user?.siteName}</span>
                       </div>
                     </div>
                   </Dropdown.Item>
-                  <Dropdown.Item id="dashboard">
-                    <Label>계정관리</Label>
-                  </Dropdown.Item>
-                </Dropdown.Section>
-
-                <Dropdown.Section showDivider aria-label="Help & Feedback">
-                  <Dropdown.Item id="settings">
-                    <Label>설정</Label>
-                  </Dropdown.Item>
-                  <Dropdown.Item id="settings_2">
-                    <Label>작업</Label>
-                  </Dropdown.Item>
-                  <Dropdown.Item id="help_and_feedback">
-                    <Label>도움말</Label>
+                  <Dropdown.Item id="account" onPress={() => navigate('/account')}>
+                    계정관리
                   </Dropdown.Item>
                 </Dropdown.Section>
                 <Dropdown.Section aria-label="Logout">
                   <Dropdown.Item onPress={handleLogout} id="logout" variant="danger">
-                    <Label>로그아웃</Label>
+                    로그아웃
                   </Dropdown.Item>
                 </Dropdown.Section>
               </Dropdown.Menu>
