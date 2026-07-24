@@ -41,7 +41,7 @@ export const toDateHtml = (cellValue) => {
   return (
     <div className="flex flex-col">
       <p className="text-sm">{formatRelativeDate(cellValue)}</p>
-      <p className="text-xs text-default-400">{formatDate(cellValue)}</p>
+      <p className="text-xs text-muted">{formatDate(cellValue)}</p>
     </div>
   );
 };
