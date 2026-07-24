@@ -5,15 +5,19 @@ export default function ActionTypeRadio(props) {
   return (
     <Radio
       {...otherProps}
-      classNames={{
-        base: cn(
-          'm-0 bg-content1 hover:bg-content2',
-          'cursor-pointer rounded-lg gap-4 p-4 border-2 border-transparent',
-          'data-[selected=true]:border-primary ' + size
-        ),
-      }}
+      className={cn(
+        'm-0 bg-content1 hover:bg-surface-hover',
+        'cursor-pointer rounded-lg p-4 border-2 border-transparent',
+        'data-[selected=true]:border-accent',
+        size
+      )}
     >
-      {children}
+      <Radio.Content className="flex w-full items-center gap-4">
+        <Radio.Control>
+          <Radio.Indicator />
+        </Radio.Control>
+        {children}
+      </Radio.Content>
     </Radio>
   );
 }

@@ -237,7 +237,7 @@ export function DashboardFilterBar() {
 
       {/* 태그 필터 */}
       {/*<div className="flex items-center gap-1.5">*/}
-      {/*  <span className="text-sm text-default-500 font-medium">태그</span>*/}
+      {/*  <span className="text-sm text-muted font-medium">태그</span>*/}
       {/*  <Select*/}
       {/*    placeholder="태그 선택"*/}
       {/*    selectionMode="multiple"*/}

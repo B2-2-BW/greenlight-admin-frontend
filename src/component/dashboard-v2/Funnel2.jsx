@@ -65,21 +65,24 @@ export default function Funnel2({
     emitWidth,
     onDestroy,
   });
-  optionsRef.current = {
-    quantity,
-    duration,
-    delay,
-    straight,
-    angle,
-    size,
-    speed,
-    colors,
-    destroyYRatio,
-    emitterXRatio,
-    emitterY,
-    emitWidth,
-    onDestroy,
-  };
+
+  useEffect(() => {
+    optionsRef.current = {
+      quantity,
+      duration,
+      delay,
+      straight,
+      angle,
+      size,
+      speed,
+      colors,
+      destroyYRatio,
+      emitterXRatio,
+      emitterY,
+      emitWidth,
+      onDestroy,
+    };
+  });
 
   // 1) 부모 너비/높이 따라 캔버스 동적 리사이즈
   useLayoutEffect(() => {

@@ -128,16 +128,18 @@ export default function DashboardV2Page() {
 
   useEffect(() => {
     if (!user?.siteId) {
-      setIsPageLoading(true);
       return;
     }
 
     roomVersion.current = '-';
-    fetchRoomList().then();
+    const initialFetchId = setTimeout(fetchRoomList, 0);
 
     const intervalId = setInterval(fetchRoomList, 10_000); // 10초마다
 
-    return () => clearInterval(intervalId); // 언마운트 시 정리
+    return () => {
+      clearTimeout(initialFetchId);
+      clearInterval(intervalId);
+    };
   }, [user.siteId, dashboardFilter, fetchRoomList]);
 
   const fetchRoomById = useCallback(async (roomId) => {
@@ -192,7 +194,7 @@ export default function DashboardV2Page() {
     capacity: roomList.reduce((acc, cur) => acc + (cur.capacity || 0), 0),
   };
 
-  if (isPageLoading)
+  if (!user?.siteId || isPageLoading)
     return (
       <div style={layoutStyle.container}>
         <Skeleton className="h-full rounded-lg" />
