@@ -10,6 +10,10 @@ const getRoomById = async (roomId) => {
 const getRoomList = async (query) => {
   return commonAxiosInstance.get(`/rooms`, { params: query });
 };
+
+const getRoomPage = async ({ signal, ...params }) => {
+  return commonAxiosInstance.get('/rooms/page', { params, signal });
+};
 const createRoom = async (data) => {
   return commonAxiosInstance.post(`/rooms`, data);
 };
@@ -22,12 +26,18 @@ const deleteRoomById = async (roomId) => {
   return commonAxiosInstance.delete(`/rooms/${roomId}`);
 };
 
+const syncRoomData = async () => {
+  return commonAxiosInstance.post('/rooms/cache');
+};
+
 const RoomClient = {
   getRoomById,
   getRoomList,
+  getRoomPage,
   createRoom,
   updateRoomById,
   deleteRoomById,
+  syncRoomData,
 };
 
 export { RoomClient };
