@@ -1,7 +1,15 @@
 import SideBar from '../component/SideBar.jsx';
 import NavBar from '../component/NavBar.jsx';
 import { Outlet } from 'react-router';
-import { CalendarIcon, ExternalLinkIcon, HomeIcon, SettingsFilledIcon, UserFilledIcon } from '../icon/Icons.jsx';
+import {
+  CalendarIcon,
+  ClipboardFilledIcon,
+  ExternalLinkIcon,
+  HomeIcon,
+  SettingsFilledIcon,
+  SquareChartFilledIcon,
+  UserFilledIcon,
+} from '../icon/Icons.jsx';
 import { GRAFANA_EXTERNAL_URL, JENKINS_EXTERNAL_URL } from '../client/config.js';
 import { useUserStore } from '../store/user.jsx';
 
@@ -26,10 +34,16 @@ export default function MainLayout() {
     [
       { title: '대시보드', prependIcon: <HomeIcon color="#6b7280" />, path: '/dashboard', menuId: 2 },
       {
-        title: '대기열',
+        title: '대기열 목록',
         prependIcon: <CalendarIcon color="#6b7280" />,
         path: '/rooms',
         menuId: 3,
+      },
+      {
+        title: '대기열 통계',
+        prependIcon: <SquareChartFilledIcon color="#6b7280" />,
+        path: '/queue-statistics',
+        menuId: 18,
       },
     ],
     [
@@ -49,7 +63,7 @@ export default function MainLayout() {
             },
             {
               title: '사이트 관리',
-              prependIcon: <SettingsFilledIcon color="#6b7280" />,
+              prependIcon: <ClipboardFilledIcon color="#6b7280" />,
               path: '/sites',
               menuId: 17,
             },

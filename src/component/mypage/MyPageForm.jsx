@@ -157,7 +157,6 @@ export default function MyPageForm() {
   const statusContent = (
     <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between max-w-2xl">
       <div className="flex min-w-0 flex-col gap-2">
-        <Label className="text-base">현재 계정 상태</Label>
         <div className="flex flex-wrap items-center gap-3">
           <Chip color={status.color} variant="soft" size="lg">
             {status.label}
@@ -177,6 +176,18 @@ export default function MyPageForm() {
       <div className="relative w-full flex flex-col gap-4">
         <FormSection title="계정 상태">
           {isPageLoading ? <Skeleton className="h-18 w-full max-w-2xl rounded-lg" /> : statusContent}
+        </FormSection>
+
+        <FormSection title="비밀번호">
+          {isPageLoading ? (
+            <Skeleton className="h-10 w-36 rounded-lg" />
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Button variant="secondary" onPress={() => setIsPasswordDialogOpen(true)}>
+                비밀번호 변경
+              </Button>
+            </div>
+          )}
         </FormSection>
 
         <FormSection title="계정 정보">
@@ -227,18 +238,6 @@ export default function MyPageForm() {
                 />
               </TextField>
             </Form>
-          )}
-        </FormSection>
-
-        <FormSection title="비밀번호">
-          {isPageLoading ? (
-            <Skeleton className="h-10 w-36 rounded-lg" />
-          ) : (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <Button variant="secondary" onPress={() => setIsPasswordDialogOpen(true)}>
-                비밀번호 변경
-              </Button>
-            </div>
           )}
         </FormSection>
 

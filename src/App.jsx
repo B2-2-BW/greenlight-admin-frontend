@@ -1,4 +1,5 @@
 import './App.css';
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import MainLayout from './layout/MainLayout.jsx';
 import NotFoundPage from './page/NotFoundPage.jsx';
@@ -19,6 +20,9 @@ import AdminRoute from './router/AdminRoute.jsx';
 import ForcedPasswordChangeDialog from './component/mypage/ForcedPasswordChangeDialog.jsx';
 import SiteManagementPage from './page/SiteManagementPage.jsx';
 import SiteDetailPage from './page/SiteDetailPage.jsx';
+import QueueStatisticsSkeleton from './component/QueueStatisticsSkeleton.jsx';
+
+const QueueStatisticsPage = lazy(() => import('./page/QueueStatisticsPage.jsx'));
 
 function App() {
   return (
@@ -37,6 +41,14 @@ function App() {
           <Route path="/" element={<Navigate to="/dashboard" />} />
           {/*<Route path="/dashboard" element={<DashboardPage />} />*/}
           <Route path="/dashboard" element={<DashboardV2Page />} />
+          <Route
+            path="/queue-statistics"
+            element={(
+              <Suspense fallback={<QueueStatisticsSkeleton />}>
+                <QueueStatisticsPage />
+              </Suspense>
+            )}
+          />
           <Route path="/rooms" element={<RoomListPage />} />
           <Route path="/rooms/new" element={<RoomDetailPage />} />
           <Route path="/rooms/:roomId" element={<RoomDetailPage />} />
