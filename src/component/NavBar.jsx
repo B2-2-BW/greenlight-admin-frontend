@@ -1,10 +1,11 @@
-import { Avatar, Button, Dropdown } from '@heroui/react';
+import { Avatar, Button, Chip, Dropdown } from '@heroui/react';
 import logo from '/logo.png';
 import { useNavigate } from 'react-router';
 import { useUserStore } from '../store/user.jsx';
 import { LoginUtil } from '../util/loginUtil.js';
 import { UserClient } from '../api/user/index.js';
 import { ToastUtil } from '../util/toastUtil.js';
+import { ENVIRONMENT_LABEL } from '../client/config.js';
 
 export default function NavBar() {
   const navigate = useNavigate();
@@ -51,6 +52,11 @@ export default function NavBar() {
                 onClick={goToHome}
               />
             </p>
+            {ENVIRONMENT_LABEL && (
+              <Chip size="md" color="warning" variant="soft">
+                {ENVIRONMENT_LABEL}
+              </Chip>
+            )}
             {siteLabel && (
               <div className="hidden min-w-0 items-center gap-3 sm:flex">
                 <div className="h-6 w-px bg-separator" aria-hidden="true" />
