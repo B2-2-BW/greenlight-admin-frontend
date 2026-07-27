@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bar, Line } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 import {
-  BarElement,
   CategoryScale,
   Chart as ChartJS,
   Filler,
@@ -30,7 +29,7 @@ import { QueueStatisticsClient } from '../api/queue-statistics/index.js';
 import QueueStatisticsSkeleton from '../component/QueueStatisticsSkeleton.jsx';
 import { buildQueueWindows, summarizeQueueStatistics, summarizeRooms } from './queueStatisticsHelpers.js';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const LOCAL_TIME_ZONE = getLocalTimeZone();
 const MAX_RANGE_MILLISECONDS = 7 * 24 * 60 * 60 * 1000;
@@ -241,34 +240,26 @@ export default function QueueStatisticsPage() {
         {
           label: '대기 유입',
           data: windows.map((window) => ({ x: new Date(window.timestamp).getTime(), y: window.waitingCount })),
-          backgroundColor: '#1d4ed8',
-          borderColor: '#1e3a8a',
-          hoverBackgroundColor: '#1e40af',
-          borderWidth: 1,
+          borderColor: '#2563eb',
+          backgroundColor: '#2563eb',
         },
         {
           label: '입장',
           data: windows.map((window) => ({ x: new Date(window.timestamp).getTime(), y: window.enteredCount })),
-          backgroundColor: '#15803d',
-          borderColor: '#14532d',
-          hoverBackgroundColor: '#166534',
-          borderWidth: 1,
+          borderColor: '#16a34a',
+          backgroundColor: '#16a34a',
         },
         {
           label: '이탈',
           data: windows.map((window) => ({ x: new Date(window.timestamp).getTime(), y: window.exitedCount })),
-          backgroundColor: '#d97706',
-          borderColor: '#92400e',
-          hoverBackgroundColor: '#b45309',
-          borderWidth: 1,
+          borderColor: '#f59e0b',
+          backgroundColor: '#f59e0b',
         },
         {
           label: '취소',
           data: windows.map((window) => ({ x: new Date(window.timestamp).getTime(), y: window.cancelledCount })),
-          backgroundColor: '#b91c1c',
-          borderColor: '#7f1d1d',
-          hoverBackgroundColor: '#991b1b',
-          borderWidth: 1,
+          borderColor: '#dc2626',
+          backgroundColor: '#dc2626',
         },
       ],
     }),
@@ -415,7 +406,7 @@ export default function QueueStatisticsPage() {
                 <Line data={waitTimeData} options={chartOptions()} />
               </ChartCard>
               <ChartCard title="처리량 추이" chartClassName="h-64">
-                <Bar data={throughputData} options={chartOptions(false)} />
+                <Line data={throughputData} options={chartOptions(false)} />
               </ChartCard>
             </div>
           </section>
