@@ -54,6 +54,7 @@ const getRangeError = (range) => {
 };
 
 const numberFormat = new Intl.NumberFormat('ko-KR');
+const roomNameCollator = new Intl.Collator('ko-KR', { numeric: true, sensitivity: 'base' });
 const formatNumber = (value) => numberFormat.format(value ?? 0);
 const formatTimestamp = (timestamp) =>
   new Intl.DateTimeFormat('ko-KR', {
@@ -124,6 +125,10 @@ export default function QueueStatisticsPage() {
   const [availableRooms, setAvailableRooms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [roomSortDescriptor, setRoomSortDescriptor] = useState({
+    column: 'name',
+    direction: 'ascending',
+  });
   const hasInitialLoad = useRef(false);
   const activeRequest = useRef(null);
   const requestGeneration = useRef(0);
@@ -175,6 +180,17 @@ export default function QueueStatisticsPage() {
   const windows = useMemo(() => buildQueueWindows(resultSeries), [resultSeries]);
   const summary = useMemo(() => summarizeQueueStatistics(resultSeries), [resultSeries]);
   const roomSummary = useMemo(() => summarizeRooms(resultSeries), [resultSeries]);
+  const sortedRoomSummary = useMemo(() => {
+    const { column, direction } = roomSortDescriptor;
+    return [...roomSummary].sort((first, second) => {
+      const comparison = column === 'name'
+        ? roomNameCollator.compare(first.name, second.name)
+        : (first[column] ?? 0) - (second[column] ?? 0);
+
+      if (comparison !== 0) return direction === 'descending' ? -comparison : comparison;
+      return roomNameCollator.compare(first.name, second.name);
+    });
+  }, [roomSummary, roomSortDescriptor]);
   const hasSeriesData = windows.length > 0;
 
   const queueSizeData = useMemo(
@@ -225,22 +241,34 @@ export default function QueueStatisticsPage() {
         {
           label: '대기 유입',
           data: windows.map((window) => ({ x: new Date(window.timestamp).getTime(), y: window.waitingCount })),
-          backgroundColor: '#2563eb',
+          backgroundColor: '#1d4ed8',
+          borderColor: '#1e3a8a',
+          hoverBackgroundColor: '#1e40af',
+          borderWidth: 1,
         },
         {
           label: '입장',
           data: windows.map((window) => ({ x: new Date(window.timestamp).getTime(), y: window.enteredCount })),
-          backgroundColor: '#16a34a',
+          backgroundColor: '#15803d',
+          borderColor: '#14532d',
+          hoverBackgroundColor: '#166534',
+          borderWidth: 1,
         },
         {
-          label: '종료',
+          label: '이탈',
           data: windows.map((window) => ({ x: new Date(window.timestamp).getTime(), y: window.exitedCount })),
-          backgroundColor: '#f59e0b',
+          backgroundColor: '#d97706',
+          borderColor: '#92400e',
+          hoverBackgroundColor: '#b45309',
+          borderWidth: 1,
         },
         {
           label: '취소',
           data: windows.map((window) => ({ x: new Date(window.timestamp).getTime(), y: window.cancelledCount })),
-          backgroundColor: '#dc2626',
+          backgroundColor: '#b91c1c',
+          borderColor: '#7f1d1d',
+          hoverBackgroundColor: '#991b1b',
+          borderWidth: 1,
         },
       ],
     }),
@@ -396,19 +424,53 @@ export default function QueueStatisticsPage() {
               <h2 className="text-lg font-semibold">Room별 요약</h2>
             </Card.Header>
             <Card.Content className="overflow-x-auto p-4">
-              <Table aria-label="Room별 대기열 통계 요약">
-                <Table.Content>
+              <Table>
+                <Table.Content
+                  aria-label="Room별 대기열 통계 요약"
+                  sortDescriptor={roomSortDescriptor}
+                  onSortChange={setRoomSortDescriptor}
+                >
                   <Table.Header>
-                    <Table.Column isRowHeader>Room</Table.Column>
-                    <Table.Column>최대 동시 대기</Table.Column>
-                    <Table.Column>최대 활성</Table.Column>
-                    <Table.Column>대기 유입</Table.Column>
-                    <Table.Column>입장</Table.Column>
-                    <Table.Column>종료</Table.Column>
-                    <Table.Column>취소</Table.Column>
+                    <Table.Column id="name" allowsSorting isRowHeader>
+                      {({ sortDirection }) => (
+                        <Table.SortableColumnHeader sortDirection={sortDirection}>Room</Table.SortableColumnHeader>
+                      )}
+                    </Table.Column>
+                    <Table.Column id="maxWaiting" allowsSorting>
+                      {({ sortDirection }) => (
+                        <Table.SortableColumnHeader sortDirection={sortDirection}>
+                          최대 동시 대기
+                        </Table.SortableColumnHeader>
+                      )}
+                    </Table.Column>
+                    <Table.Column id="maxActive" allowsSorting>
+                      {({ sortDirection }) => (
+                        <Table.SortableColumnHeader sortDirection={sortDirection}>최대 활성</Table.SortableColumnHeader>
+                      )}
+                    </Table.Column>
+                    <Table.Column id="waitingCount" allowsSorting>
+                      {({ sortDirection }) => (
+                        <Table.SortableColumnHeader sortDirection={sortDirection}>대기 유입</Table.SortableColumnHeader>
+                      )}
+                    </Table.Column>
+                    <Table.Column id="enteredCount" allowsSorting>
+                      {({ sortDirection }) => (
+                        <Table.SortableColumnHeader sortDirection={sortDirection}>입장</Table.SortableColumnHeader>
+                      )}
+                    </Table.Column>
+                    <Table.Column id="exitedCount" allowsSorting>
+                      {({ sortDirection }) => (
+                        <Table.SortableColumnHeader sortDirection={sortDirection}>이탈</Table.SortableColumnHeader>
+                      )}
+                    </Table.Column>
+                    <Table.Column id="cancelledCount" allowsSorting>
+                      {({ sortDirection }) => (
+                        <Table.SortableColumnHeader sortDirection={sortDirection}>취소</Table.SortableColumnHeader>
+                      )}
+                    </Table.Column>
                   </Table.Header>
                   <Table.Body>
-                    <Table.Collection items={roomSummary}>
+                    <Table.Collection items={sortedRoomSummary}>
                       {(room) => (
                         <Table.Row id={room.roomId}>
                           <Table.Cell className="font-medium">{room.name}</Table.Cell>
