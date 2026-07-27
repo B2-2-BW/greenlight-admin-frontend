@@ -272,9 +272,8 @@ export default function UserDetailPage() {
   const canSaveManagedUser = ['ACTIVE', 'DISABLED'].includes(user?.accountStatus) && !isSuperUserReadOnly;
 
   const statusContent = (
-    <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between max-w-2xl">
+    <div className="flex max-w-2xl flex-col gap-5">
       <div className="flex min-w-0 flex-col gap-2">
-        <Label className="text-base">현재 계정 상태</Label>
         <div className="flex flex-wrap items-center gap-3">
           <Chip color={status.color} variant="soft" size="lg">
             {status.label}
@@ -288,7 +287,7 @@ export default function UserDetailPage() {
         {user?.userId === currentUserId && <p className="text-sm text-muted">본인 계정 상태는 변경할 수 없습니다.</p>}
       </div>
       {canManageTarget && user?.accountStatus && user?.accountStatus !== 'PENDING' && (
-        <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+        <div className="flex shrink-0 flex-wrap justify-start gap-2">
           {user.accountStatus === 'ACTIVE' && (
             <ConfirmAlertDialog
               title="계정을 비활성화할까요?"
@@ -359,19 +358,88 @@ export default function UserDetailPage() {
             <FormSection title="계정 상태">
               <SectionSkeleton rows={1} />
             </FormSection>
-            <FormSection title="계정 정보">
-              <SectionSkeleton rows={5} />
-            </FormSection>
             <FormSection title="비밀번호 초기화">
               <SectionSkeleton rows={2} />
+            </FormSection>
+            <FormSection title="계정 정보">
+              <SectionSkeleton rows={5} />
             </FormSection>
           </>
         ) : !user ? (
           <Surface className="rounded-3xl p-8 text-center">사용자 정보를 찾을 수 없습니다.</Surface>
         ) : (
           <div className="flex flex-col gap-4">
-            <p className="text-sm text-muted">계정 상태와 비밀번호 초기화를 관리합니다.</p>
+            <p className="text-sm text-muted">
+              {user.accountStatus === 'PENDING'
+                ? '계정 상태와 가입 정보를 관리합니다.'
+                : '계정 상태와 비밀번호 초기화를 관리합니다.'}
+            </p>
             {user.accountStatus !== 'PENDING' && <FormSection title="계정 상태">{statusContent}</FormSection>}
+
+            {canManageTarget && user.accountStatus !== 'PENDING' && (
+              <FormSection title="비밀번호 초기화">
+                <div className="flex flex-col gap-3">
+                  <p className="text-sm text-muted">
+                    새로운 비밀번호를 설정합니다. 사용자는 이 비밀번호로 로그인한 뒤 반드시 비밀번호를 변경해야 합니다.
+                  </p>
+                  <Button
+                    variant="secondary"
+                    className="w-fit"
+                    isDisabled={isActionLoading}
+                    onPress={() => setIsPasswordDialogOpen(true)}
+                  >
+                    비밀번호 초기화
+                  </Button>
+                  <Modal isOpen={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+                    <Modal.Backdrop className="z-49">
+                      <Modal.Container size="sm">
+                        <Modal.Dialog>
+                          <Modal.CloseTrigger />
+                          <Modal.Header>
+                            <Modal.Heading>비밀번호 초기화</Modal.Heading>
+                          </Modal.Header>
+                          <Form onSubmit={resetPassword} validationErrors={passwordErrors}>
+                            <Modal.Body className="flex flex-col gap-4">
+                              <p className="text-sm text-muted">기존 비밀번호는 즉시 사용할 수 없게 됩니다.</p>
+                              <TextField name="newPassword" isRequired className="w-full max-w-2xl" variant="default">
+                                <Label className="text-base">신규 비밀번호</Label>
+                                <Input
+                                  className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
+                                  type="password"
+                                  value={newPassword}
+                                  onChange={(event) => {
+                                    setPasswordErrors((current) => {
+                                      if (!current.newPassword) return current;
+                                      const next = { ...current };
+                                      delete next.newPassword;
+                                      return next;
+                                    });
+                                    setNewPassword(event.target.value);
+                                  }}
+                                  autoComplete="new-password"
+                                />
+                                <FieldError>
+                                  {passwordErrors.newPassword ?? '신규 비밀번호는 8자 이상이어야 합니다.'}
+                                </FieldError>
+                              </TextField>
+                            </Modal.Body>
+                            <Modal.Footer>
+                              <Button slot="close" variant="tertiary">
+                                취소
+                              </Button>
+                              <Button type="submit" isPending={isActionLoading}>
+                                비밀번호 설정
+                              </Button>
+                            </Modal.Footer>
+                          </Form>
+                        </Modal.Dialog>
+                      </Modal.Container>
+                    </Modal.Backdrop>
+                  </Modal>
+                </div>
+              </FormSection>
+            )}
+
             <FormSection title={user.accountStatus === 'PENDING' ? '가입 정보 검토' : '계정 정보'}>
               <div className="flex w-full flex-col gap-6">
                 {user.accountStatus === 'PENDING' && (
@@ -587,70 +655,6 @@ export default function UserDetailPage() {
                 )}
               </div>
             </FormSection>
-
-            {canManageTarget && (
-              <FormSection title="비밀번호 초기화">
-                <div className="flex flex-col gap-3">
-                  <p className="text-sm text-muted">
-                    새로운 비밀번호를 설정합니다. 사용자는 이 비밀번호로 로그인한 뒤 반드시 비밀번호를 변경해야 합니다.
-                  </p>
-                  <Button
-                    variant="secondary"
-                    className="w-fit"
-                    isDisabled={isActionLoading}
-                    onPress={() => setIsPasswordDialogOpen(true)}
-                  >
-                    비밀번호 초기화
-                  </Button>
-                  <Modal isOpen={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
-                    <Modal.Backdrop className="z-49">
-                      <Modal.Container size="sm">
-                        <Modal.Dialog>
-                          <Modal.CloseTrigger />
-                          <Modal.Header>
-                            <Modal.Heading>비밀번호 초기화</Modal.Heading>
-                          </Modal.Header>
-                          <Form onSubmit={resetPassword} validationErrors={passwordErrors}>
-                            <Modal.Body className="flex flex-col gap-4">
-                              <p className="text-sm text-muted">기존 비밀번호는 즉시 사용할 수 없게 됩니다.</p>
-                              <TextField name="newPassword" isRequired className="w-full max-w-2xl" variant="default">
-                                <Label className="text-base">신규 비밀번호</Label>
-                                <Input
-                                  className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                                  type="password"
-                                  value={newPassword}
-                                  onChange={(event) => {
-                                    setPasswordErrors((current) => {
-                                      if (!current.newPassword) return current;
-                                      const next = { ...current };
-                                      delete next.newPassword;
-                                      return next;
-                                    });
-                                    setNewPassword(event.target.value);
-                                  }}
-                                  autoComplete="new-password"
-                                />
-                                <FieldError>
-                                  {passwordErrors.newPassword ?? '신규 비밀번호는 8자 이상이어야 합니다.'}
-                                </FieldError>
-                              </TextField>
-                            </Modal.Body>
-                            <Modal.Footer>
-                              <Button slot="close" variant="tertiary">
-                                취소
-                              </Button>
-                              <Button type="submit" isPending={isActionLoading}>
-                                비밀번호 설정
-                              </Button>
-                            </Modal.Footer>
-                          </Form>
-                        </Modal.Dialog>
-                      </Modal.Container>
-                    </Modal.Backdrop>
-                  </Modal>
-                </div>
-              </FormSection>
-            )}
 
             {canSaveManagedUser && (
               <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">

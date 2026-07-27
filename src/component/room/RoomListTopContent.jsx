@@ -16,7 +16,7 @@ const statusOptions = [
 
 function FilterSelect({ label, value, onChange, options }) {
   return (
-    <Select aria-label={label} value={value} onChange={onChange} className="w-36">
+    <Select aria-label={label} value={value} onChange={onChange} className="w-36" variant="secondary">
       <Select.Trigger>
         <Select.Value>{({ state }) => state.selectedItems[0]?.textValue}</Select.Value>
         <Select.Indicator />
