@@ -131,7 +131,7 @@ export default function UserListTable() {
       case 'status': {
         const status = statusConfig[user.accountStatus] ?? { label: user.accountStatus, color: 'default' };
         return (
-          <Chip color={status.color} variant="soft" size="sm">
+          <Chip color={status.color} variant="soft" size="md">
             {status.label}
           </Chip>
         );
@@ -204,10 +204,16 @@ export default function UserListTable() {
             </Pagination.Item>
             {pageItems.map((item) =>
               typeof item === 'string' ? (
-                <Pagination.Item key={item}><Pagination.Ellipsis /></Pagination.Item>
+                <Pagination.Item key={item}>
+                  <Pagination.Ellipsis />
+                </Pagination.Item>
               ) : (
                 <Pagination.Item key={item}>
-                  <Pagination.Link isActive={item === pageData.page} isDisabled={isFetching} onPress={() => setPage(item)}>
+                  <Pagination.Link
+                    isActive={item === pageData.page}
+                    isDisabled={isFetching}
+                    onPress={() => setPage(item)}
+                  >
                     {item}
                   </Pagination.Link>
                 </Pagination.Item>
