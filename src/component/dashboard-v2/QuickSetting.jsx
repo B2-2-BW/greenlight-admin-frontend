@@ -3,29 +3,94 @@ import {
   AlertDialog,
   Button,
   ButtonGroup,
+  Description,
+  FieldError,
   Input,
   Label,
   Popover,
   Separator,
-  Spinner,
   TextField,
   useOverlayState,
 } from '@heroui/react';
 import { Gear, Power } from '@gravity-ui/icons';
-import { AnimatePresence, motion } from 'framer-motion';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { useDashboard } from '../../provider/DashboardProvider.jsx';
 import { RoomClient } from '../../api/room/index.js';
 
-/**
- * @param {number} value - 현재 설정된 최대 수용 인원
- * @param {function} onChange - 변경 시 콜백 (newValue) => void
- * @param {number} step - 버튼 클릭 시 증감 단위 (기본 100)
- */
+const settingFields = [
+  {
+    key: 'capacity',
+    label: '최대 수용 인원',
+    unit: '명',
+    description: '화면에 머무를 수 있는 최대 사용자 수',
+    steps: [-100, -10, 10, 100],
+  },
+  {
+    key: 'maxTrafficPerSecond',
+    label: '초당 유입량',
+    unit: '명/초',
+    description: '1초마다 화면에 입장시키는 사용자 수',
+    steps: [-10, -1, 1, 10],
+  },
+];
 
-const steps = [-100, -10, 10, 100];
+const getRoomSetting = (room, key) => {
+  const value = Number(room?.[key] ?? 0);
+  return Number.isSafeInteger(value) && value >= 0 ? value : 0;
+};
 
-function DisableAlert({ children, isOpen, onOpenChange, onConfirm }) {
+const createDraft = (room) =>
+  Object.fromEntries(settingFields.map(({ key }) => [key, String(getRoomSetting(room, key))]));
+
+const parseSettingValue = (value) => {
+  if (value.trim() === '') return null;
+
+  const numberValue = Number(value);
+  return Number.isSafeInteger(numberValue) && numberValue >= 0 ? numberValue : null;
+};
+
+function QuickNumberSetting({ label, unit, description, value, steps, error, isPending, onChange, onAdjust }) {
+  const numericValue = parseSettingValue(value);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <TextField type="number" inputMode="numeric" isInvalid={Boolean(error)}>
+        <div className="flex items-center justify-between gap-2">
+          <Label className="text-sm font-medium text-neutral-700">{label}</Label>
+          <span className="text-xs text-neutral-500">{unit}</span>
+        </div>
+        <Input
+          fullWidth
+          min={0}
+          step={1}
+          className="tabular-nums ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
+          value={value}
+          onChange={(event) => onChange(event.currentTarget.value)}
+          isDisabled={isPending}
+        />
+        {error ? (
+          <FieldError>{error}</FieldError>
+        ) : (
+          <Description className="text-xs text-neutral-500">{description}</Description>
+        )}
+      </TextField>
+      <ButtonGroup size="sm" fullWidth variant="tertiary" aria-label={`${label} 빠른 조정`}>
+        {steps.map((step) => (
+          <Button
+            className="min-w-12 tabular-nums"
+            onPress={() => onAdjust(step)}
+            key={step}
+            isDisabled={isPending || (step < 0 && numericValue === 0)}
+          >
+            {step > 0 ? `+${step}` : step}
+          </Button>
+        ))}
+      </ButtonGroup>
+    </div>
+  );
+}
+
+function DisableAlert({ children, isOpen, onOpenChange, onConfirm, isPending }) {
   return (
     <AlertDialog isOpen={isOpen} onOpenChange={onOpenChange}>
       {children}
@@ -44,8 +109,8 @@ function DisableAlert({ children, isOpen, onOpenChange, onConfirm }) {
               <Button slot="close" variant="tertiary">
                 취소하기
               </Button>
-              <Button slot="close" variant="danger" onPress={onConfirm}>
-                대기열 비활성화
+              <Button variant="danger" onPress={onConfirm} isPending={isPending}>
+                {isPending ? '비활성화 중' : '대기열 비활성화'}
               </Button>
             </AlertDialog.Footer>
           </AlertDialog.Dialog>
@@ -57,139 +122,163 @@ function DisableAlert({ children, isOpen, onOpenChange, onConfirm }) {
 
 const QuickSetting = ({ room }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [editCapacity, setEditCapacity] = useState(0);
-  const [isCapacitySubmitLoading, setIsCapacitySubmitLoading] = useState(false);
-  const [isCapacityUpdated, setIsCapacityUpdated] = useState(false);
+  const [draft, setDraft] = useState(() => createDraft(room));
+  const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+  const [isDisableLoading, setIsDisableLoading] = useState(false);
   const disableAlertState = useOverlayState();
   const { fetchRoomById, fetchRoomList } = useDashboard();
 
-  const handleCapacityChangeSubmit = async () => {
+  const originalValues = Object.fromEntries(settingFields.map(({ key }) => [key, getRoomSetting(room, key)]));
+  const parsedValues = Object.fromEntries(settingFields.map(({ key }) => [key, parseSettingValue(draft[key])]));
+  const errors = Object.fromEntries(
+    settingFields.map(({ key }) => [key, parsedValues[key] === null ? '0 이상의 정수를 입력해 주세요.' : ''])
+  );
+  const hasError = Object.values(errors).some(Boolean);
+  const isDirty = settingFields.some(({ key }) =>
+    errors[key] ? draft[key] !== String(originalValues[key]) : parsedValues[key] !== originalValues[key]
+  );
+  const changedFields = settingFields.filter(({ key }) => !errors[key] && parsedValues[key] !== originalValues[key]);
+  const hasZeroValue = settingFields.some(
+    ({ key }) => !errors[key] && parsedValues[key] === 0 && parsedValues[key] !== originalValues[key]
+  );
+
+  const handleSettingChangeSubmit = async () => {
     if (!room?.roomId) {
       ToastUtil.error('변경 실패', `비정상적인 roomId입니다. ${JSON.stringify(room)}`);
+      return;
     }
-    setIsCapacitySubmitLoading(true);
-    const finalCapacity = Math.max(0, Number(editCapacity)); // 음수 방지
-    setEditCapacity(finalCapacity);
-    await RoomClient.updateRoomById(room.roomId, { capacity: finalCapacity });
-    // API 호출
-    ToastUtil.success('변경 성공', `최대 수용 인원: ${room?.capacity} → ${finalCapacity}`);
-    await fetchRoomById(room.roomId);
-    setIsCapacitySubmitLoading(false);
-    setIsCapacityUpdated(false);
+
+    if (hasError || !isDirty) return;
+
+    setIsSubmitLoading(true);
+    try {
+      await RoomClient.updateRoomById(room.roomId, parsedValues);
+      await fetchRoomById(room.roomId);
+      setDraft(Object.fromEntries(settingFields.map(({ key }) => [key, String(parsedValues[key])])));
+      ToastUtil.success('변경 성공', '대기열 설정을 성공적으로 저장했습니다.');
+    } catch (error) {
+      console.error('Failed to update room settings:', error);
+      ToastUtil.error('변경 실패', error?.response?.data?.detail ?? '대기열 설정을 저장하지 못했습니다.');
+    } finally {
+      setIsSubmitLoading(false);
+    }
   };
 
   const handleQuickSettingOpen = (open) => {
     if (open) {
-      setEditCapacity(room?.capacity);
-      setIsCapacityUpdated(false);
-      setIsCapacitySubmitLoading(false);
+      setDraft(createDraft(room));
+      setIsSubmitLoading(false);
     }
     setIsOpen(open);
   };
 
-  // 변경 사항 적용 핸들러
-  const handleOnCapacityChange = (value) => {
-    setIsCapacityUpdated(value != room?.capacity);
-    setEditCapacity(value);
+  const handleSettingChange = (key, value) => {
+    setDraft((current) => ({ ...current, [key]: value }));
   };
 
-  // 빠른 증감 함수
-  const adjustCapacity = (amount) => {
-    handleOnCapacityChange(Math.max(0, Number(editCapacity) + amount));
+  const adjustSetting = (key, amount) => {
+    const currentValue = parseSettingValue(draft[key]) ?? 0;
+    handleSettingChange(key, String(Math.max(0, currentValue + amount)));
+  };
+
+  const resetDraft = () => {
+    setDraft(createDraft(room));
   };
 
   const disableRoom = async () => {
-    // disable 시키는 API 호출하고
-    // dashboard 재조회 (useProvider 써야할듯)
-    await RoomClient.updateRoomById(room.roomId, { enabled: false });
-    await fetchRoomList();
-    ToastUtil.success('비활성화 성공', `대기열 비활성화: ${room?.name} (${room.roomId})`);
-    setIsOpen(false);
+    if (!room?.roomId) {
+      ToastUtil.error('비활성화 실패', '대기열 정보를 확인할 수 없습니다.');
+      return;
+    }
+
+    setIsDisableLoading(true);
+    try {
+      await RoomClient.updateRoomById(room.roomId, { enabled: false });
+      await fetchRoomList();
+      ToastUtil.success('비활성화 성공', `대기열 비활성화: ${room?.name} (${room.roomId})`);
+      disableAlertState.setOpen(false);
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Failed to disable room:', error);
+      ToastUtil.error('비활성화 실패', error?.response?.data?.detail ?? '대기열을 비활성화하지 못했습니다.');
+    } finally {
+      setIsDisableLoading(false);
+    }
   };
 
   return (
     <>
-      {/*<DisableAlert*/}
-      {/*  isOpen={disableAlertState.isOpen}*/}
-      {/*  onOpenChange={disableAlertState.setOpen}*/}
-      {/*  onConfirm={disableRoom}*/}
-      {/*/>*/}
-
       <Popover isOpen={isOpen} onOpenChange={handleQuickSettingOpen}>
-        <Button isIconOnly variant="ghost">
+        <Button isIconOnly variant="ghost" aria-label={`${room?.name ?? '대기열'} 빠른 설정`} title="빠른 설정">
           <Gear />
         </Button>
 
         <Popover.Content placement="bottom left" className="border-black/20 border">
-          <Popover.Dialog className="flex flex-col gap-2">
-            <Popover.Heading className="font-semibold">
-              빠른설정 | <span className="font-normal">{room.name}</span>
-            </Popover.Heading>
-            <Separator />
-            <div className="w-50 flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <TextField type="number" inputMode="numeric">
-                  <Label className="text-sm text-neutral-600">최대 수용 인원</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      fullWidth
-                      className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                      value={editCapacity}
-                      onChange={(e) => handleOnCapacityChange(e.target.value)}
-                    />
-
-                    <AnimatePresence>
-                      {isCapacityUpdated && (
-                        <motion.div
-                          key="save-btn"
-                          initial={{ width: 0, opacity: 0 }}
-                          animate={{ width: 'auto', opacity: 1 }}
-                          exit={{ width: 0, opacity: 0 }}
-                          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                          style={{ overflow: 'hidden', flexShrink: 0 }}
-                        >
-                          <Button onPress={handleCapacityChangeSubmit} isPending={isCapacitySubmitLoading}>
-                            {isCapacitySubmitLoading ? (
-                              <Spinner color="current" size="sm" />
-                            ) : (
-                              <span>
-                                {editCapacity - room?.capacity !== 0 ? '+' : '-'}{' '}
-                                {Math.abs(editCapacity - room?.capacity)}
-                              </span>
-                            )}
-                          </Button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </TextField>
-                <ButtonGroup size="sm" fullWidth variant="tertiary">
-                  {steps.map((step, i) => (
-                    <Button
-                      className="min-w-10"
-                      onPress={() => adjustCapacity(step)}
-                      key={i}
-                      isDisabled={step < 0 ? editCapacity === 0 : false}
-                    >
-                      <span> {step < 0 ? step : `+${step}`}</span>
-                    </Button>
-                  ))}
-                </ButtonGroup>
-              </div>
-              <Separator />
-              <div className="flex flex-col gap-2">
-                <DisableAlert
-                  isOpen={disableAlertState.isOpen}
-                  onOpenChange={disableAlertState.setOpen}
-                  onConfirm={disableRoom}
-                >
-                  <Button variant="danger-soft" fullWidth isDisabled={room?.enabled === false}>
-                    <Power />
-                    대기열 비활성화
-                  </Button>
-                </DisableAlert>
-              </div>
+          <Popover.Dialog className="flex w-[340px] max-w-[calc(100vw-2rem)] flex-col gap-4">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <Popover.Heading className="font-semibold">빠른 설정</Popover.Heading>
+              <p className="truncate text-sm text-neutral-500">{room?.name}</p>
             </div>
+            <Separator />
+            <div className="flex flex-col gap-5">
+              {settingFields.map((field) => (
+                <QuickNumberSetting
+                  key={field.key}
+                  {...field}
+                  value={draft[field.key]}
+                  error={errors[field.key]}
+                  isPending={isSubmitLoading}
+                  onChange={(value) => handleSettingChange(field.key, value)}
+                  onAdjust={(amount) => adjustSetting(field.key, amount)}
+                />
+              ))}
+            </div>
+
+            {changedFields.length > 0 && (
+              <div className="rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-600" aria-live="polite">
+                <p className="mb-1 font-medium text-neutral-700">변경 예정</p>
+                {changedFields.map(({ key, label, unit }) => (
+                  <p key={key} className="flex items-center justify-between gap-3 tabular-nums">
+                    <span>{label}</span>
+                    <span>
+                      {originalValues[key].toLocaleString()} → {parsedValues[key].toLocaleString()} {unit}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {hasZeroValue && (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                0으로 설정하면 해당 대기열의 사용자 진입이 제한됩니다.
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="tertiary" onPress={resetDraft} isDisabled={!isDirty || isSubmitLoading}>
+                되돌리기
+              </Button>
+              <Button
+                onPress={handleSettingChangeSubmit}
+                isPending={isSubmitLoading}
+                isDisabled={!isDirty || hasError || isSubmitLoading}
+              >
+                {isSubmitLoading ? '저장 중' : '변경사항 적용'}
+              </Button>
+            </div>
+
+            <Separator />
+            <DisableAlert
+              isOpen={disableAlertState.isOpen}
+              onOpenChange={disableAlertState.setOpen}
+              onConfirm={disableRoom}
+              isPending={isDisableLoading}
+            >
+              <Button variant="danger-soft" fullWidth isDisabled={room?.enabled === false || isSubmitLoading}>
+                <Power />
+                대기열 비활성화
+              </Button>
+            </DisableAlert>
           </Popover.Dialog>
         </Popover.Content>
       </Popover>
