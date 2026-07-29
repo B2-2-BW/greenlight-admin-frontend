@@ -1,4 +1,15 @@
-import { Button, Description, Form, Input, Label, Modal, Skeleton, Switch, TextField } from '@heroui/react';
+import {
+  Button,
+  Description,
+  FieldError,
+  Form,
+  Input,
+  Label,
+  Modal,
+  Skeleton,
+  Switch,
+  TextField,
+} from '@heroui/react';
 import { ArrowLeft } from '@gravity-ui/icons';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
@@ -9,6 +20,17 @@ import { useUserStore } from '../store/user.jsx';
 import { ToastUtil } from '../util/toastUtil.js';
 
 const fieldClass = 'ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent';
+const enabledMessage = {
+  true: {
+    title: '사이트 활성화',
+    subtitle: '사이트 관리자가 어드민에 로그인하고 대기열을 제어할 수 있습니다.',
+  },
+  false: {
+    title: '사이트 비활성화',
+    subtitle: '사이트 관리자가 어드민에 로그인하거나 대기열을 제어할 수 없습니다.',
+  },
+};
+
 function FieldsSkeleton() {
   return (
     <div className="flex flex-col gap-6">
@@ -120,16 +142,17 @@ export default function SiteDetailPage() {
           <p className="py-10 text-center text-sm text-muted">사이트 정보를 찾을 수 없습니다.</p>
         ) : (
           <>
-            <Form className="flex flex-col gap-4" onSubmit={submit}>
+            <Form className="flex flex-col gap-4" validationBehavior="native" onSubmit={submit}>
               <FormSection title="사이트 정보">
                 <div className="flex w-full flex-col gap-6">
                   <TextField className="w-full max-w-2xl" isReadOnly>
                     <Label className="text-base">사이트 ID</Label>
                     <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={site.siteId} />
                   </TextField>
-                  <TextField className="w-full max-w-2xl">
+                  <TextField name="siteName" className="w-full max-w-2xl" isRequired>
                     <Label className="text-base">사이트명</Label>
                     <Input className={fieldClass} value={name} onChange={(event) => setName(event.target.value)} />
+                    <FieldError>사이트명을 입력해 주세요.</FieldError>
                   </TextField>
                   <TextField className="w-full max-w-2xl">
                     <Label className="text-base">사이트 설명</Label>
@@ -150,21 +173,19 @@ export default function SiteDetailPage() {
                     isSelected={enabled}
                     onChange={setEnabled}
                     className="group w-full max-w-lg"
-                    isRequired
-                    validationBehavior="aria"
                   >
-                    <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                    <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                       <Switch.Control>
                         <Switch.Thumb>
                           <Switch.Icon />
                         </Switch.Thumb>
                       </Switch.Control>
-                      <span className="text-base">{enabled ? '사이트 활성화' : '사이트 비활성화'}</span>
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <span className="text-base">{enabledMessage[enabled].title}</span>
+                        <span className="text-sm text-muted">{enabledMessage[enabled].subtitle}</span>
+                      </span>
                     </Switch.Content>
                   </Switch>
-                  <Description className="text-sm text-muted">
-                    비활성화하면 이 사이트의 대기열 시스템을 사용할 수 없습니다.
-                  </Description>
                 </div>
               </FormSection>
               {role === 'SUPER' && (
