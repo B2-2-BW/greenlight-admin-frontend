@@ -459,6 +459,8 @@ export default function UserDetailPage() {
                     <TextField
                       name="username"
                       isRequired
+                      value={approval.username}
+                      onChange={(username) => setApproval((current) => ({ ...current, username }))}
                       validate={(value) => (value.trim() ? null : '이름을 입력해 주세요.')}
                       className="w-full max-w-2xl"
                       variant="default"
@@ -466,8 +468,6 @@ export default function UserDetailPage() {
                       <Label className="text-base">이름</Label>
                       <Input
                         className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                        value={approval.username}
-                        onChange={(event) => setApproval((current) => ({ ...current, username: event.target.value }))}
                       />
                       <FieldError>이름을 입력해 주세요.</FieldError>
                     </TextField>
@@ -593,6 +593,8 @@ export default function UserDetailPage() {
                       <TextField
                         name="username"
                         isRequired
+                        value={management.username}
+                        onChange={(username) => setManagement((current) => ({ ...current, username }))}
                         validate={(value) => (value.trim() ? null : '이름을 입력해 주세요.')}
                         className="w-full max-w-2xl"
                         variant="default"
@@ -600,10 +602,6 @@ export default function UserDetailPage() {
                         <Label className="text-base">이름</Label>
                         <Input
                           className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                          value={management.username}
-                          onChange={(event) =>
-                            setManagement((current) => ({ ...current, username: event.target.value }))
-                          }
                         />
                         <FieldError>이름을 입력해 주세요.</FieldError>
                       </TextField>
