@@ -34,7 +34,7 @@ export default function LoginPage() {
 
     const response = await UserClient.login({ loginId, password, autoLogin: rememberUser });
 
-    if (response.status === 401 || response.status === 404) {
+    if (response.status === 401 || response.status === 403 || response.status === 404) {
       ToastUtil.error('로그인 실패', response?.data?.detail || '아이디 또는 비밀번호가 잘못되었습니다.');
       return;
     } else if (!response?.data?.accessToken) {
