@@ -72,14 +72,17 @@ export default function SigninPage() {
     const normalizedSiteId = siteId.trim();
     SiteClient.findSite(normalizedSiteId)
       .then((response) => {
-        if (response?.status === 200 && response?.data?.siteId === normalizedSiteId) {
+        if (
+          response?.status === 200 &&
+          response?.data?.siteId === normalizedSiteId &&
+          response?.data?.siteEnabled === true
+        ) {
           setVerifiedSiteId(normalizedSiteId);
           setErrors((previous) => ({ ...previous, siteId: null }));
         } else {
           setVerifiedSiteId('');
           setErrors((previous) => ({ ...previous, siteId: true }));
-          if (response?.status !== 404) {
-            // 404인 경우 딱히 검증할 필요가 없음
+          if (response?.status !== 200 && response?.status !== 404) {
             ToastUtil.error('사이트 검증 실패', '사이트 검증에 실패하였습니다. 관리자에게 문의해주시기 바랍니다.');
             console.error('failed to verify siteId', JSON.stringify(response));
           }
@@ -135,7 +138,7 @@ export default function SigninPage() {
                 </Button>
               </div>
               <Description className="text-sm">관리자에게 발급받은 소속코드를 확인해 주세요.</Description>
-              <FieldError>유효하지 않거나 검증되지 않은 소속코드입니다.</FieldError>
+              <FieldError>유효하지 않거나 사용할 수 없는 소속코드입니다.</FieldError>
             </TextField>
 
             <TextField name="userId" type="text" isRequired className="w-full max-w-2xl" variant="default">
@@ -158,7 +161,9 @@ export default function SigninPage() {
                 onChange={(e) => setPassword(e.currentTarget.value)}
                 placeholder="안전한 비밀번호를 입력하세요."
               />
-              <Description className="text-sm">8자 이상으로, 다른 서비스와 겹치지 않는 비밀번호를 권장합니다.</Description>
+              <Description className="text-sm">
+                8자 이상으로, 다른 서비스와 겹치지 않는 비밀번호를 권장합니다.
+              </Description>
               <FieldError>비밀번호는 8자 이상 입력해 주세요.</FieldError>
             </TextField>
 
