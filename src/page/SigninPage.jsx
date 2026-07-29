@@ -6,10 +6,21 @@ import { SiteClient } from '../api/site/index.js';
 import { UserClient } from '../api/user/index.js';
 import { ToastUtil } from '../util/toastUtil.js';
 
+const USER_ID_PATTERN = /^[A-Za-z0-9]+$/;
+const USERNAME_PATTERN = /^[A-Za-z가-힣]+(?: [A-Za-z가-힣]+)*$/;
+
+const clearValidationError = (previousErrors, fieldName) => {
+  if (!(fieldName in previousErrors)) return previousErrors;
+  const nextErrors = { ...previousErrors };
+  delete nextErrors[fieldName];
+  return nextErrors;
+};
+
 export default function SigninPage() {
   const navigate = useNavigate();
   const [siteId, setSiteId] = useState('');
   const [verifiedSiteId, setVerifiedSiteId] = useState('');
+  const [verifiedSiteName, setVerifiedSiteName] = useState('');
   const [userId, setUserId] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -19,6 +30,7 @@ export default function SigninPage() {
 
   const [isSiteVerificationLoading, setIsSiteVerificationLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSiteVerified = verifiedSiteId !== '' && verifiedSiteId === siteId.trim();
 
   const handleSignin = async (e) => {
     e.preventDefault();
@@ -28,14 +40,14 @@ export default function SigninPage() {
     }
 
     const validationErrors = {};
-    if (verifiedSiteId !== siteId.trim()) validationErrors.siteId = true;
-    if (!userId.trim()) validationErrors.userId = true;
+    if (!isSiteVerified) validationErrors.siteId = true;
+    const userIdError = !USER_ID_PATTERN.test(userId.trim());
     if (!password || password.length < 8) validationErrors.password = true;
     if (password !== passwordConfirm) validationErrors.passwordConfirm = true;
-    if (!username.trim()) validationErrors.username = true;
+    const usernameError = !USERNAME_PATTERN.test(username.trim());
     if (!email.trim()) validationErrors.email = true;
 
-    if (Object.keys(validationErrors).length > 0) {
+    if (Object.keys(validationErrors).length > 0 || userIdError || usernameError) {
       setErrors(validationErrors);
       if (validationErrors.siteId) {
         ToastUtil.error('사이트 코드 확인 필요', '사이트 코드를 입력한 뒤 검증을 완료해 주세요.');
@@ -78,9 +90,11 @@ export default function SigninPage() {
           response?.data?.siteEnabled === true
         ) {
           setVerifiedSiteId(normalizedSiteId);
-          setErrors((previous) => ({ ...previous, siteId: null }));
+          setVerifiedSiteName(response.data.siteName ?? '');
+          setErrors((previous) => clearValidationError(previous, 'siteId'));
         } else {
           setVerifiedSiteId('');
+          setVerifiedSiteName('');
           setErrors((previous) => ({ ...previous, siteId: true }));
           if (response?.status !== 200 && response?.status !== 404) {
             ToastUtil.error('사이트 검증 실패', '사이트 검증에 실패하였습니다. 관리자에게 문의해주시기 바랍니다.');
@@ -95,6 +109,7 @@ export default function SigninPage() {
     if (verifiedSiteId.trim().length > 0) {
       // siteId가 바뀌면 verified는 무조건 초기화
       setVerifiedSiteId('');
+      setVerifiedSiteName('');
     }
     setSiteId(e.target.value);
   };
@@ -132,25 +147,36 @@ export default function SigninPage() {
                   className="w-full shrink-0 focus-visible:ring-2 focus-visible:ring-accent sm:w-auto"
                   isPending={isSiteVerificationLoading}
                   onPress={handleSiteIdVerification}
-                  isDisabled={siteId.trim().length === 0 || verifiedSiteId.trim().length > 0}
+                  isDisabled={siteId.trim().length === 0 || isSiteVerified}
                 >
-                  {isSiteVerificationLoading ? '' : siteId === verifiedSiteId ? '검증완료' : '검증하기'}
+                  {isSiteVerificationLoading ? '' : isSiteVerified ? '검증완료' : '검증하기'}
                 </Button>
               </div>
-              <Description className="text-sm">관리자에게 발급받은 사이트 코드를 확인해 주세요.</Description>
+              <Description className="text-sm">
+                {isSiteVerified
+                  ? `사이트 코드 검증완료${verifiedSiteName ? ` · ${verifiedSiteName}` : ''}`
+                  : '관리자에게 발급받은 사이트 코드를 확인해 주세요.'}
+              </Description>
               <FieldError>유효하지 않거나 사용할 수 없는 사이트 코드입니다.</FieldError>
             </TextField>
 
-            <TextField name="userId" type="text" isRequired className="w-full max-w-2xl" variant="default">
+            <TextField
+              name="userId"
+              type="text"
+              isRequired
+              value={userId}
+              onChange={setUserId}
+              pattern={USER_ID_PATTERN.source}
+              className="w-full max-w-2xl"
+              variant="default"
+            >
               <Label className="text-base">아이디</Label>
               <Input
                 className="ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
-                value={userId}
-                onChange={(e) => setUserId(e.currentTarget.value)}
                 placeholder="로그인에 사용할 아이디를 입력하세요."
               />
-              <Description className="text-sm">관리자 승인 후 로그인할 때 사용합니다.</Description>
-              <FieldError>아이디는 필수 입력값입니다.</FieldError>
+              <Description className="text-sm">영문과 숫자만 사용할 수 있습니다.</Description>
+              <FieldError>아이디는 필수이며 영문과 숫자만 사용할 수 있습니다.</FieldError>
             </TextField>
 
             <TextField name="password" type="password" isRequired className="w-full max-w-2xl" variant="default">
@@ -183,16 +209,23 @@ export default function SigninPage() {
             </TextField>
 
             <div className="flex w-full max-w-2xl flex-col gap-4 sm:flex-row">
-              <TextField className="w-full sm:w-60" name="username" type="text" isRequired variant="default">
+              <TextField
+                className="w-full sm:w-60"
+                name="username"
+                type="text"
+                isRequired
+                value={username}
+                onChange={setUsername}
+                pattern={USERNAME_PATTERN.source}
+                variant="default"
+              >
                 <Label className="text-base">이름</Label>
                 <Input
                   className="ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
-                  value={username}
-                  onChange={(e) => setUsername(e.currentTarget.value)}
                   placeholder="홍길동"
                 />
-                <Description className="text-sm">관리자가 가입 신청자를 확인하는 데 사용합니다.</Description>
-                <FieldError>이름은 필수 입력값입니다.</FieldError>
+                <Description className="text-sm">영문, 한글과 띄어쓰기만 사용할 수 있습니다.</Description>
+                <FieldError>이름은 필수이며 영문, 한글과 띄어쓰기만 사용할 수 있습니다.</FieldError>
               </TextField>
 
               <TextField className="w-full flex-1" name="email" type="email" isRequired variant="default">
