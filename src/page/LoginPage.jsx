@@ -73,19 +73,19 @@ export default function LoginPage() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen">
-      <Card className="px-8 py-8 shadow-[0_0_24px_0_rgba(0,0,0,0.15)]">
+    <main className="flex min-h-dvh w-full items-center justify-center overflow-y-auto p-4 sm:p-6">
+      <Card className="my-auto w-full max-w-md px-5 py-6 shadow-[0_0_24px_0_rgba(0,0,0,0.15)] sm:px-8 sm:py-8">
         <Card.Header className="flex flex-col items-start">
           <img className="w-28" src={logo} alt="GreenLight Logo" />
-          <span className="text-3xl font-bold mt-8 mb-4">로그인</span>
-          <div className="flex text-sm gap-4 mb-4">
+          <h1 className="mb-4 mt-8 text-2xl font-bold sm:text-3xl">로그인</h1>
+          <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <span className="text-neutral-500">신규 사용자이신가요?</span>
             <span className="text-green-700">
               <Link to="/signin">계정 신청하기</Link>
             </span>
           </div>
         </Card.Header>
-        <Card.Content className="w-[400px]">
+        <Card.Content className="w-full min-w-0">
           <Form onSubmit={handleLogin} validationErrors={errors} className="flex flex-col gap-2">
             <TextField name="username" type="text" variant="secondary">
               <Label>사용자 ID</Label>
@@ -125,6 +125,6 @@ export default function LoginPage() {
 
         <Card.Footer></Card.Footer>
       </Card>
-    </div>
+    </main>
   );
 }

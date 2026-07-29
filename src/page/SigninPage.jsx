@@ -101,17 +101,24 @@ export default function SigninPage() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen">
-      <Card className="px-8 py-8 shadow-[0_0_24px_0_rgba(0,0,0,0.15)]">
+    <main className="flex min-h-dvh w-full items-start justify-center overflow-y-auto p-4 sm:items-center sm:p-6">
+      <Card className="my-auto w-full max-w-2xl px-5 py-6 shadow-[0_0_24px_0_rgba(0,0,0,0.15)] sm:px-8 sm:py-8">
         <Card.Header className="flex flex-col items-start">
-          <img className="w-28 cursor-pointer" src={logo} alt="GreenLight Logo" onClick={() => navigate('/')} />
-          <span className="text-3xl font-bold mt-8 mb-4">회원가입</span>
+          <button
+            type="button"
+            className="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            aria-label="홈으로 이동"
+            onClick={() => navigate('/')}
+          >
+            <img className="w-28" src={logo} alt="GreenLight Logo" />
+          </button>
+          <h1 className="mb-4 mt-8 text-2xl font-bold sm:text-3xl">회원가입</h1>
         </Card.Header>
-        <Card.Content className="w-[600px]">
+        <Card.Content className="w-full min-w-0">
           <Form onSubmit={handleSignin} validationErrors={errors} className="flex flex-col gap-4">
             <TextField name="siteId" type="text" isRequired className="w-full max-w-2xl" variant="default">
               <Label className="text-base">소속코드</Label>
-              <div className="flex w-full items-center gap-2">
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
                 <Input
                   className="min-w-0 flex-1 ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
                   value={siteId}
@@ -119,7 +126,7 @@ export default function SigninPage() {
                   placeholder="발급받은 소속코드를 입력하세요."
                 />
                 <Button
-                  className="shrink-0 focus-visible:ring-2 focus-visible:ring-accent"
+                  className="w-full shrink-0 focus-visible:ring-2 focus-visible:ring-accent sm:w-auto"
                   isPending={isSiteVerificationLoading}
                   onPress={handleSiteIdVerification}
                   isDisabled={siteId.trim().length === 0 || verifiedSiteId.trim().length > 0}
@@ -203,6 +210,6 @@ export default function SigninPage() {
           </Form>
         </Card.Content>
       </Card>
-    </div>
+    </main>
   );
 }
