@@ -94,10 +94,16 @@ export default function SiteDetailPage() {
   };
   return (
     <div className="w-full bg-neutral-50">
-      <div className="p-4 max-w-[1080px]">
-        <header className="mt-8 mb-4 flex items-center justify-between gap-4">
-          <h1 className="text-3xl font-bold">사이트 상세</h1>
-          <Button isIconOnly variant="ghost" onPress={() => navigate('/sites')} aria-label="사이트 목록으로 돌아가기">
+      <div className="max-w-[1080px] p-4 sm:p-6">
+        <header className="mb-4 mt-4 flex items-center justify-between gap-4 sm:mt-8">
+          <h1 className="text-2xl font-bold sm:text-3xl">사이트 상세</h1>
+          <Button
+            size="lg"
+            isIconOnly
+            variant="ghost"
+            onPress={() => navigate('/sites')}
+            aria-label="사이트 목록으로 돌아가기"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </header>
@@ -137,8 +143,17 @@ export default function SiteDetailPage() {
               </FormSection>
               <FormSection title="운영 상태">
                 <div className="flex flex-col gap-2">
-                  <Switch isSelected={enabled} onChange={setEnabled} className="group w-full max-w-lg">
-                    <Switch.Content className="flex w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                  <Label className="text-base" isRequired>
+                    사이트 활성/비활성화
+                  </Label>
+                  <Switch
+                    isSelected={enabled}
+                    onChange={setEnabled}
+                    className="group w-full max-w-lg"
+                    isRequired
+                    validationBehavior="aria"
+                  >
+                    <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                       <Switch.Control>
                         <Switch.Thumb>
                           <Switch.Icon />
@@ -166,15 +181,20 @@ export default function SiteDetailPage() {
                       onOpenChange={setIsKeyRotationConfirmOpen}
                       onConfirm={rotateApiKey}
                     >
-                      <Button type="button" isPending={isKeyRotationPending} isDisabled={isKeyRotationPending}>
+                      <Button
+                        type="button"
+                        isPending={isKeyRotationPending}
+                        isDisabled={isKeyRotationPending}
+                        className="min-h-11"
+                      >
                         새 API Key 발급
                       </Button>
                     </ConfirmAlertDialog>
                   </div>
                 </FormSection>
               )}
-              <div className="sticky bottom-2 mt-4 w-full rounded-xl bg-white">
-                <Button type="submit" size="lg" isPending={saving} fullWidth>
+              <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+                <Button type="submit" size="lg" isPending={saving} fullWidth className="min-h-11">
                   저장하기
                 </Button>
               </div>
@@ -185,7 +205,7 @@ export default function SiteDetailPage() {
       <Modal isOpen={newApiKey !== null} onOpenChange={closeNewApiKey}>
         <Modal.Backdrop className="z-49">
           <Modal.Container size="sm">
-            <Modal.Dialog>
+            <Modal.Dialog className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-md">
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Heading>새 API Key</Modal.Heading>
@@ -194,9 +214,11 @@ export default function SiteDetailPage() {
                 <p className="text-sm text-danger">이 화면을 닫으면 다시 확인할 수 없습니다.</p>
                 <Input isReadOnly value={newApiKey ?? ''} className="font-mono text-sm" />
               </Modal.Body>
-              <Modal.Footer>
-                <Button onPress={copyNewApiKey}>복사하기</Button>
-                <Button slot="close" variant="tertiary">
+              <Modal.Footer className="flex-col-reverse gap-2 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
+                <Button onPress={copyNewApiKey} className="min-h-11 w-full sm:w-auto">
+                  복사하기
+                </Button>
+                <Button slot="close" variant="tertiary" className="min-h-11 w-full sm:w-auto">
                   닫기
                 </Button>
               </Modal.Footer>

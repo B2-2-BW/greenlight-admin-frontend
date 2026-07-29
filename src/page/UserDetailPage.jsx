@@ -297,7 +297,7 @@ export default function UserDetailPage() {
               onOpenChange={(open) => setDialogAction(open ? 'disable' : null)}
               onConfirm={() => changeStatus('DISABLED')}
             >
-              <Button variant="danger-soft" isDisabled={isActionLoading}>
+              <Button variant="danger-soft" isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">
                 계정 비활성화
               </Button>
             </ConfirmAlertDialog>
@@ -311,7 +311,7 @@ export default function UserDetailPage() {
               onOpenChange={(open) => setDialogAction(open ? 'activate' : null)}
               onConfirm={() => changeStatus('ACTIVE')}
             >
-              <Button isDisabled={isActionLoading}>계정 활성화</Button>
+              <Button isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">계정 활성화</Button>
             </ConfirmAlertDialog>
           )}
           {user.accountStatus === 'REJECTED' && (
@@ -323,7 +323,7 @@ export default function UserDetailPage() {
               onOpenChange={(open) => setDialogAction(open ? 'review' : null)}
               onConfirm={() => changeStatus('PENDING')}
             >
-              <Button isDisabled={isActionLoading}>승인 재검토</Button>
+              <Button isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">승인 재검토</Button>
             </ConfirmAlertDialog>
           )}
         </div>
@@ -333,17 +333,17 @@ export default function UserDetailPage() {
 
   return (
     <div className="w-full bg-neutral-50">
-      <div className="p-4 max-w-[1080px]">
-        <header className="mt-8 mb-4 flex items-center justify-between gap-4">
+      <div className="max-w-[1080px] p-4 sm:p-6">
+        <header className="mb-4 mt-4 flex items-center justify-between gap-4 sm:mt-8">
           {isPageLoading ? (
             <Skeleton className="h-10 w-64 rounded-lg" />
           ) : (
             <div className="flex items-baseline gap-2">
-              <h1 className="text-3xl font-bold">사용자 상세</h1>
+              <h1 className="text-2xl font-bold sm:text-3xl">사용자 상세</h1>
             </div>
           )}
           <Button
-            size="md"
+            size="lg"
             isIconOnly
             variant="ghost"
             onPress={() => navigate('/users')}
@@ -384,7 +384,7 @@ export default function UserDetailPage() {
                   </p>
                   <Button
                     variant="secondary"
-                    className="w-fit"
+                    className="min-h-11 w-full sm:w-fit"
                     isDisabled={isActionLoading}
                     onPress={() => setIsPasswordDialogOpen(true)}
                   >
@@ -393,7 +393,7 @@ export default function UserDetailPage() {
                   <Modal isOpen={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
                     <Modal.Backdrop className="z-49">
                       <Modal.Container size="sm">
-                        <Modal.Dialog>
+                        <Modal.Dialog className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-md">
                           <Modal.CloseTrigger />
                           <Modal.Header>
                             <Modal.Heading>비밀번호 초기화</Modal.Heading>
@@ -423,11 +423,11 @@ export default function UserDetailPage() {
                                 </FieldError>
                               </TextField>
                             </Modal.Body>
-                            <Modal.Footer>
-                              <Button slot="close" variant="tertiary">
+                            <Modal.Footer className="flex-col-reverse gap-2 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
+                              <Button slot="close" variant="tertiary" className="min-h-11 w-full sm:w-auto">
                                 취소
                               </Button>
-                              <Button type="submit" isPending={isActionLoading}>
+                              <Button type="submit" isPending={isActionLoading} className="min-h-11 w-full sm:w-auto">
                                 비밀번호 설정
                               </Button>
                             </Modal.Footer>
@@ -473,7 +473,7 @@ export default function UserDetailPage() {
                         onChange={(siteId) => setApproval((current) => ({ ...current, siteId }))}
                         isDisabled={isSitesLoading || currentUser?.userRole === 'SITE_ADMIN'}
                       >
-                        <Select.Trigger className="max-w-64 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
+                        <Select.Trigger className="min-h-11 w-full ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:max-w-64">
                           <Select.Value>
                             {({ state }) =>
                               isSitesLoading
@@ -483,7 +483,7 @@ export default function UserDetailPage() {
                           </Select.Value>
                           <Select.Indicator />
                         </Select.Trigger>
-                        <Select.Popover className="w-64" placement="bottom start">
+                        <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                           <ListBox>
                             {sites.map((site) => (
                               <ListBox.Item
@@ -506,11 +506,11 @@ export default function UserDetailPage() {
                         value={approval.userRole}
                         onChange={(userRole) => setApproval((current) => ({ ...current, userRole }))}
                       >
-                        <Select.Trigger className="max-w-64 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
+                        <Select.Trigger className="min-h-11 w-full ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:max-w-64">
                           <Select.Value>{({ state }) => state.selectedItems[0]?.textValue ?? '역할 선택'}</Select.Value>
                           <Select.Indicator />
                         </Select.Trigger>
-                        <Select.Popover className="w-64" placement="bottom start">
+                        <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                           <ListBox>
                             {(currentUser?.userRole === 'SUPER'
                               ? ['USER', 'SITE_ADMIN', 'SUPER']
@@ -527,7 +527,7 @@ export default function UserDetailPage() {
                     </div>
                     {approvalError && <p className="text-sm text-danger">{approvalError}</p>}
                     {canManageTarget && (
-                      <div className="flex flex-wrap gap-2 pt-2">
+                      <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap">
                         <ConfirmAlertDialog
                           title="가입을 승인할까요?"
                           message={`사이트: ${sites.find((site) => site.siteId === approval.siteId)?.siteName ?? approval.siteId} (${approval.siteId}) · 역할: ${roleLabels[approval.userRole] ?? approval.userRole}`}
@@ -536,7 +536,7 @@ export default function UserDetailPage() {
                           onOpenChange={(open) => setDialogAction(open ? 'approve' : null)}
                           onConfirm={approveUser}
                         >
-                          <Button isDisabled={isActionLoading}>가입 승인</Button>
+                          <Button isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">가입 승인</Button>
                         </ConfirmAlertDialog>
                         <ConfirmAlertDialog
                           title="가입 신청을 반려할까요?"
@@ -546,7 +546,7 @@ export default function UserDetailPage() {
                           onOpenChange={(open) => setDialogAction(open ? 'reject' : null)}
                           onConfirm={() => changeStatus('REJECTED')}
                         >
-                          <Button variant="danger-soft" isDisabled={isActionLoading}>
+                          <Button variant="danger-soft" isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">
                             가입 반려
                           </Button>
                         </ConfirmAlertDialog>
@@ -587,7 +587,7 @@ export default function UserDetailPage() {
                             isSitesLoading || user.userId === currentUserId || currentUser?.userRole === 'SITE_ADMIN'
                           }
                         >
-                          <Select.Trigger className="w-64 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
+                          <Select.Trigger className="min-h-11 w-full ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:w-64">
                             <Select.Value>
                               {({ state }) =>
                                 isSitesLoading
@@ -597,7 +597,7 @@ export default function UserDetailPage() {
                             </Select.Value>
                             <Select.Indicator />
                           </Select.Trigger>
-                          <Select.Popover className="w-64" placement="bottom start">
+                          <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                             <ListBox>
                               {sites.map((site) => (
                                 <ListBox.Item
@@ -621,13 +621,13 @@ export default function UserDetailPage() {
                           onChange={(userRole) => setManagement((current) => ({ ...current, userRole }))}
                           isDisabled={user.userId === currentUserId}
                         >
-                          <Select.Trigger className="max-w-64 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
+                          <Select.Trigger className="min-h-11 w-full ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:max-w-64">
                             <Select.Value>
                               {({ state }) => state.selectedItems[0]?.textValue ?? '역할 선택'}
                             </Select.Value>
                             <Select.Indicator />
                           </Select.Trigger>
-                          <Select.Popover className="w-64" placement="bottom start">
+                          <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                             <ListBox>
                               {(currentUser?.userRole === 'SUPER'
                                 ? ['USER', 'SITE_ADMIN', 'SUPER']
@@ -657,10 +657,10 @@ export default function UserDetailPage() {
             </FormSection>
 
             {canSaveManagedUser && (
-              <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
+              <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
                 <Button
                   size="lg"
-                  className="h-10 rounded-2xl"
+                  className="min-h-11 rounded-2xl"
                   type="submit"
                   form="managed-user-form"
                   isPending={isActionLoading}

@@ -41,7 +41,7 @@ export default function SiteSettingsForm() {
       const res = await SiteClient.findSite(me.siteId);
       const data = res.data;
       setSiteInfo(data);
-      setEditSiteEnabled(data?.siteEnabled);
+      setEditSiteEnabled(Boolean(data?.siteEnabled));
     } catch (error) {
       console.error('Error fetching siteInfo:', error);
     } finally {
@@ -55,7 +55,7 @@ export default function SiteSettingsForm() {
   }, []);
 
   const reloadForm = () => {
-    setEditSiteEnabled(siteInfo?.siteEnabled);
+    setEditSiteEnabled(Boolean(siteInfo?.siteEnabled));
   };
 
   const handleSubmit = async (e) => {
@@ -170,8 +170,9 @@ export default function SiteSettingsForm() {
                     onChange={setEditSiteEnabled}
                     className="group w-full max-w-lg"
                     isRequired
+                    validationBehavior="aria"
                   >
-                    <Switch.Content className="flex w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                    <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                       <Switch.Control>
                         <Switch.Thumb>
                           <Switch.Icon />
@@ -203,8 +204,8 @@ export default function SiteSettingsForm() {
                     onConfirm={handleSyncRoomData}
                     onOpenChange={setIsRoomSyncDialogOpen}
                   >
-                    <Button variant="secondary" isPending={syncTarget === 'room'}>
-                      대기열 설정 동기화
+                    <Button variant="secondary" isPending={syncTarget === 'room'} className="min-h-11">
+                      전체 대기열 설정 동기화
                     </Button>
                   </ConfirmAlertDialog>
 
@@ -220,7 +221,7 @@ export default function SiteSettingsForm() {
                     onConfirm={handleSyncAllSiteData}
                     onOpenChange={setIsSiteSyncDialogOpen}
                   >
-                    <Button variant="secondary" isPending={syncTarget === 'site'}>
+                    <Button variant="secondary" isPending={syncTarget === 'site'} className="min-h-11">
                       {isSuperUser ? '전체 사이트 설정 동기화' : '사이트 설정 동기화'}
                     </Button>
                   </ConfirmAlertDialog>
@@ -241,8 +242,8 @@ export default function SiteSettingsForm() {
           {/*  </Skeleton>*/}
           {/*</SectionTitle>*/}
         </div>
-        <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
-          <Button size="lg" className="h-10 rounded-2xl" type="submit" isPending={isSubmitLoading} fullWidth>
+        <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+          <Button size="lg" className="min-h-11 rounded-2xl" type="submit" isPending={isSubmitLoading} fullWidth>
             저장하기
           </Button>
         </div>
