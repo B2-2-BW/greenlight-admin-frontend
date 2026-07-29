@@ -2,7 +2,7 @@
 layer(base);
 
 @import 'tailwindcss';
-@import "@heroui/styles";
+@import '@heroui/styles';
 
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
@@ -13,8 +13,8 @@ layer(base);
   color utility to any element that depends on these defaults.
 */
 :root {
-  --accent: #20814C;
-  --focus: #20814C;
+  --accent: #20814c;
+  --focus: #20814c;
   /*--color-primary-foreground: #FFFFFF;*/
   /*--color-primary-tertiary: #FB0000;*/
   /*--color-primary-focus: #20814C;*/
@@ -46,5 +46,35 @@ layer(base);
 }
 
 * {
-    font-family: 'Pretendard', sans-serif;
+  box-sizing: border-box;
+  font-family: 'Pretendard', sans-serif;
+}
+
+html {
+  min-width: 320px;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+@media (max-width: 1023px) {
+  .admin-toast-region.toast-region--top-end {
+    top: calc(4rem + 1rem);
+  }
+}
+
+@media (max-width: 767px) {
+  .profile-dropdown-popover.dropdown__popover {
+    width: min(18rem, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+  }
+}
+
+@media (min-width: 768px) {
+  .profile-dropdown-popover.dropdown__popover {
+    width: 13.75rem;
+  }
 }
