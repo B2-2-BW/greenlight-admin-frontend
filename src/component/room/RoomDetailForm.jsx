@@ -408,9 +408,9 @@ export default function RoomDetailForm({ onPressBack }) {
                       <Radio
                         key={option.value}
                         value={option.value}
-                        className="min-h-20 flex-1 items-stretch rounded-2xl bg-surface px-4 py-3 ring ring-neutral-300 transition-all data-[selected=true]:ring-2 data-[selected=true]:ring-accent sm:px-5 sm:py-4"
+                        className="relative min-h-20 flex-1 items-stretch rounded-2xl bg-surface px-4 py-3 ring ring-neutral-300 transition-all data-[selected=true]:ring-2 data-[selected=true]:ring-accent sm:px-5 sm:py-4"
                       >
-                        <Radio.Content className="flex w-full items-center gap-3">
+                        <Radio.Content className="static flex w-full items-center gap-3 after:absolute after:inset-0 after:content-['']">
                           <Radio.Control>
                             <Radio.Indicator />
                           </Radio.Control>
@@ -479,6 +479,7 @@ export default function RoomDetailForm({ onPressBack }) {
                       <span>0으로 설정하면 화면으로 진입할 수 없게 됩니다.</span>
                     </div>
                   </Description>
+                  <FieldError>필수 입력값입니다.</FieldError>
                 </NumberField>
 
                 <NumberField
@@ -499,6 +500,7 @@ export default function RoomDetailForm({ onPressBack }) {
                       <span>0으로 설정하면 진입이 멈춥니다.</span>
                     </div>
                   </Description>
+                  <FieldError>필수 입력값입니다.</FieldError>
                 </NumberField>
               </div>
             )}
@@ -592,9 +594,9 @@ export default function RoomDetailForm({ onPressBack }) {
                       <Radio
                         key={option.value}
                         value={option.value}
-                        className="min-h-20 flex-1 items-stretch rounded-2xl bg-surface px-4 py-3 ring ring-neutral-300 transition-all data-[selected=true]:ring-2 data-[selected=true]:ring-accent sm:px-5 sm:py-4"
+                        className="relative min-h-20 flex-1 items-stretch rounded-2xl bg-surface px-4 py-3 ring ring-neutral-300 transition-all data-[selected=true]:ring-2 data-[selected=true]:ring-accent sm:px-5 sm:py-4"
                       >
-                        <Radio.Content className="flex w-full items-center gap-3">
+                        <Radio.Content className="static flex w-full items-center gap-3 after:absolute after:inset-0 after:content-['']">
                           <Radio.Control>
                             <Radio.Indicator />
                           </Radio.Control>
