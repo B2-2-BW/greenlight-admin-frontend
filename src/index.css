@@ -45,6 +45,29 @@ layer(base);
   }
 }
 
+@layer utilities {
+  /*
+   * Keep HeroUI's danger ring on invalid fields when local focus:ring-accent
+   * utilities are present. Ring width and shadow remain owned by HeroUI.
+   */
+  [data-slot='input']:is([data-invalid='true'], [aria-invalid='true']):is(
+      :focus,
+      :focus-visible,
+      [data-focused='true'],
+      [data-focus-visible='true']
+    ),
+  [data-slot='select']:is([data-invalid='true'], [aria-invalid='true'])
+    [data-slot='select-trigger']:is(:focus, :focus-visible, [data-focused='true'], [data-focus-visible='true']),
+  [data-slot='number-field']:is([data-invalid='true'], [aria-invalid='true'])
+    [data-slot='number-field-group']:is(:focus-within, [data-focus-within='true']),
+  [data-slot='number-field-group']:is([data-invalid='true'], [aria-invalid='true']):is(
+      :focus-within,
+      [data-focus-within='true']
+    ) {
+    --tw-ring-color: var(--danger);
+  }
+}
+
 * {
   box-sizing: border-box;
   font-family: 'Pretendard', sans-serif;
