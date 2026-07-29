@@ -40,7 +40,7 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
                           <Select.Indicator />
                         </Select.Trigger>
 
-                        <Select.Popover placement="bottom start">
+                        <Select.Popover isNonModal placement="bottom start">
                           <ListBox>
                             {MATCH_OPERATORS.map((operator) => (
                               <ListBox.Item id={operator.value} key={operator.value} textValue={operator.name}>

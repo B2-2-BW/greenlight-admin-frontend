@@ -342,7 +342,7 @@ export default function QueueStatisticsPage() {
                 </Select.Value>
                 <Select.Indicator />
               </Select.Trigger>
-              <Select.Popover>
+              <Select.Popover isNonModal>
                 <ListBox selectionMode="multiple">
                   {availableRooms.map((room) => (
                     <ListBox.Item key={room.roomId} id={room.roomId} textValue={room.name}>
