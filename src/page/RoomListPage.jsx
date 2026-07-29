@@ -24,7 +24,7 @@ export default function RoomListPage() {
     SiteClient.findSite(me?.siteId)
       .then((res) => {
         if (res.status === 200) {
-          setQueueEnabled(Boolean(res.data?.queueEnabled ?? res.data?.siteEnabled));
+          setQueueEnabled(Boolean(res.data?.queueEnabled));
         } else {
           console.error('failed to reload site', res);
         }

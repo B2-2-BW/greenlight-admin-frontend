@@ -1,15 +1,4 @@
-import {
-  Button,
-  Description,
-  FieldError,
-  Form,
-  Input,
-  Label,
-  Modal,
-  Skeleton,
-  Switch,
-  TextField,
-} from '@heroui/react';
+import { Button, Description, FieldError, Form, Input, Label, Modal, Skeleton, Switch, TextField } from '@heroui/react';
 import { ArrowLeft } from '@gravity-ui/icons';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
@@ -28,6 +17,16 @@ const enabledMessage = {
   false: {
     title: '사이트 비활성화',
     subtitle: '사이트와 소속 계정의 서비스 이용이 제한됩니다.',
+  },
+};
+const queueEnabledMessage = {
+  true: {
+    title: '대기열 시스템 활성화',
+    subtitle: '대기열이 적용되어 활성사용자 수를 제어합니다.',
+  },
+  false: {
+    title: '대기열 시스템 비활성화',
+    subtitle: '사이트 전체에 대기열이 적용되지 않고, 즉시 진입이 가능한 상태가 됩니다',
   },
 };
 
@@ -52,6 +51,7 @@ export default function SiteDetailPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [enabled, setEnabled] = useState(false);
+  const [queueEnabled, setQueueEnabled] = useState(false);
   const [isKeyRotationPending, setIsKeyRotationPending] = useState(false);
   const [isKeyRotationConfirmOpen, setIsKeyRotationConfirmOpen] = useState(false);
   const [newApiKey, setNewApiKey] = useState(null);
@@ -62,6 +62,7 @@ export default function SiteDetailPage() {
       setName(data.siteName ?? '');
       setDescription(data.siteDescription ?? '');
       setEnabled(Boolean(data.siteEnabled));
+      setQueueEnabled(Boolean(data.queueEnabled));
     } catch (error) {
       console.error(error);
       ToastUtil.error('사이트 상세', '사이트 정보를 불러오지 못했습니다.');
@@ -81,12 +82,18 @@ export default function SiteDetailPage() {
     }
     setSaving(true);
     try {
-      const payload = { siteName: name, siteDescription: description, siteEnabled: enabled };
+      const payload = {
+        siteName: name,
+        siteDescription: description,
+        siteEnabled: enabled,
+        queueEnabled,
+      };
       const { data } = await SiteClient.updateSiteInfo(siteId, payload);
       setSite(data);
       setName(data.siteName ?? '');
       setDescription(data.siteDescription ?? '');
       setEnabled(Boolean(data.siteEnabled));
+      setQueueEnabled(Boolean(data.queueEnabled));
       ToastUtil.success('사이트 관리', '사이트 정보를 저장했습니다.');
     } catch (error) {
       console.error(error);
@@ -154,12 +161,7 @@ export default function SiteDetailPage() {
                     <Label className="text-base">사이트 ID</Label>
                     <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={site.siteId} />
                   </TextField>
-                  <TextField
-                    name="siteName"
-                    className="w-full max-w-2xl"
-                    isRequired
-                    isReadOnly={!canManageSite}
-                  >
+                  <TextField name="siteName" className="w-full max-w-2xl" isRequired isReadOnly={!canManageSite}>
                     <Label className="text-base">사이트명</Label>
                     <Input className={fieldClass} value={name} onChange={(event) => setName(event.target.value)} />
                     <FieldError>사이트명을 입력해 주세요.</FieldError>
@@ -175,33 +177,61 @@ export default function SiteDetailPage() {
                 </div>
               </FormSection>
               <FormSection title="운영 상태">
-                <div className="flex flex-col gap-2">
-                  <Label className="text-base" isRequired>
-                    사이트 활성/비활성화
-                  </Label>
-                  <Switch
-                    isSelected={enabled}
-                    onChange={setEnabled}
-                    className="group w-full max-w-lg"
-                    isDisabled={!canManageSite}
-                  >
-                    <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
-                      <Switch.Control>
-                        <Switch.Thumb>
-                          <Switch.Icon />
-                        </Switch.Thumb>
-                      </Switch.Control>
-                      <span className="flex min-w-0 flex-col gap-1">
-                        <span className="text-base">{enabledMessage[enabled].title}</span>
-                        <span className="text-sm text-muted">{enabledMessage[enabled].subtitle}</span>
-                      </span>
-                    </Switch.Content>
-                  </Switch>
-                  {!canManageSite && (
-                    <Description className="text-sm text-muted">
-                      사이트 관리자는 사이트 정보를 조회할 수 있지만 변경할 수 없습니다.
-                    </Description>
-                  )}
+                <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-base" isRequired>
+                      사이트 활성/비활성화
+                    </Label>
+                    <Switch
+                      isSelected={enabled}
+                      onChange={setEnabled}
+                      className="group w-full max-w-lg"
+                      isDisabled={!canManageSite}
+                    >
+                      <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                        <Switch.Control>
+                          <Switch.Thumb>
+                            <Switch.Icon />
+                          </Switch.Thumb>
+                        </Switch.Control>
+                        <span className="flex min-w-0 flex-col gap-1">
+                          <span className="text-base">{enabledMessage[enabled].title}</span>
+                          <span className="text-sm text-muted">{enabledMessage[enabled].subtitle}</span>
+                        </span>
+                      </Switch.Content>
+                    </Switch>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-base" isRequired>
+                      대기열 시스템 활성/비활성화
+                    </Label>
+                    <Switch
+                      isSelected={queueEnabled}
+                      onChange={setQueueEnabled}
+                      className="group w-full max-w-lg"
+                      isRequired
+                      validationBehavior="aria"
+                      isDisabled={!canManageSite}
+                    >
+                      <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                        <Switch.Control>
+                          <Switch.Thumb>
+                            <Switch.Icon />
+                          </Switch.Thumb>
+                        </Switch.Control>
+                        <span className="flex min-w-0 flex-col gap-1">
+                          <span className="text-base">{queueEnabledMessage[queueEnabled]?.title}</span>
+                          <span className="text-sm text-muted">{queueEnabledMessage[queueEnabled]?.subtitle}</span>
+                        </span>
+                      </Switch.Content>
+                    </Switch>
+                    {!canManageSite && (
+                      <Description className="text-sm text-muted">
+                        대기열 운영 상태는 시스템 설정에서 변경할 수 있습니다.
+                      </Description>
+                    )}
+                  </div>
                 </div>
               </FormSection>
               {role === 'SUPER' && (

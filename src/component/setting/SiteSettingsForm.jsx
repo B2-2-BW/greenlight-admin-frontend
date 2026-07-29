@@ -10,11 +10,11 @@ import { ToastUtil } from '../../util/toastUtil.js';
 const enabledMessage = {
   true: {
     title: '대기열 시스템 활성화',
-    subtitle: '대기열 시스템이 활성화되어 활성사용자 수를 제어합니다.',
+    subtitle: '대기열이 적용되어 활성사용자 수를 제어합니다.',
   },
   false: {
     title: '대기열 시스템 비활성화',
-    subtitle: '신규 티켓 발급 요청은 대기 없이 통과하며, 이미 발급된 티켓에는 즉시 적용되지 않습니다.',
+    subtitle: '사이트 전체에 대기열이 적용되지 않고, 즉시 진입이 가능한 상태가 됩니다',
   },
 };
 
@@ -42,7 +42,7 @@ export default function SiteSettingsForm() {
       const res = await SiteClient.findSite(me.siteId);
       const data = res.data;
       setSiteInfo(data);
-      setEditQueueEnabled(Boolean(data?.queueEnabled ?? data?.siteEnabled));
+      setEditQueueEnabled(Boolean(data?.queueEnabled));
     } catch (error) {
       console.error('Error fetching siteInfo:', error);
     } finally {
@@ -56,7 +56,7 @@ export default function SiteSettingsForm() {
   }, []);
 
   const reloadForm = () => {
-    setEditQueueEnabled(Boolean(siteInfo?.queueEnabled ?? siteInfo?.siteEnabled));
+    setEditQueueEnabled(Boolean(siteInfo?.queueEnabled));
   };
 
   const handleSubmit = async (e) => {
@@ -73,7 +73,7 @@ export default function SiteSettingsForm() {
         throw new Error('failed to create room ' + JSON.stringify(response));
       }
       setSiteInfo(response.data);
-      setEditQueueEnabled(Boolean(response.data?.queueEnabled ?? response.data?.siteEnabled));
+      setEditQueueEnabled(Boolean(response.data?.queueEnabled));
       ToastUtil.success('시스템 설정', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error.response);
@@ -96,10 +96,7 @@ export default function SiteSettingsForm() {
       setIsRoomSyncDialogOpen(false);
     } catch (error) {
       console.error(error);
-      ToastUtil.error(
-        '운영 데이터 동기화',
-        error.response?.data?.detail ?? '대기열 설정 반영에 실패했습니다.'
-      );
+      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '대기열 설정 반영에 실패했습니다.');
     } finally {
       setSyncTarget(null);
     }
@@ -120,10 +117,7 @@ export default function SiteSettingsForm() {
       setIsSiteSyncDialogOpen(false);
     } catch (error) {
       console.error(error);
-      ToastUtil.error(
-        '운영 데이터 동기화',
-        error.response?.data?.detail ?? '사이트 설정 반영에 실패했습니다.'
-      );
+      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '사이트 설정 반영에 실패했습니다.');
     } finally {
       setSyncTarget(null);
     }
