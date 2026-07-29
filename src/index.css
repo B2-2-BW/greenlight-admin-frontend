@@ -89,6 +89,17 @@ body {
   }
 }
 
+@media (min-width: 1024px) {
+  .admin-toast-region.toast-region--top-end {
+    top: calc(4rem + 1rem);
+  }
+}
+
+[data-slot='modal-backdrop'],
+[data-slot='alert-dialog-backdrop'] {
+  z-index: 70;
+}
+
 @media (max-width: 767px) {
   .profile-dropdown-popover.dropdown__popover {
     width: min(18rem, calc(100vw - 2rem));
