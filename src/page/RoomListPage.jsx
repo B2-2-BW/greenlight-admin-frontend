@@ -41,15 +41,15 @@ export default function RoomListPage() {
 
   return (
     <>
-      <div className="p-4 max-w-[1080px]">
-        <div className="flex items-baseline gap-2">
-          <div className="font-bold text-3xl mt-8 mb-4">대기열 목록</div>
+      <div className="w-full max-w-[1080px] p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-6">
+        <div className="mb-4 mt-5 flex flex-wrap items-center gap-2 sm:mt-8">
+          <h1 className="text-2xl font-bold sm:text-3xl">대기열 목록</h1>
           {!siteEnabled && (
             <Chip
-              className="select-none cursor-pointer"
+              className="max-w-full cursor-pointer select-none"
               color="warning"
               variant="primary"
-              size="lg"
+              size="md"
               onClick={() => navigate('/settings')}
             >
               <TriangleExclamation className="mr-1" />
@@ -58,7 +58,11 @@ export default function RoomListPage() {
           )}
         </div>
         <RoomListTopContent filters={filters} onFiltersChange={setFilters} />
-        <RoomListTable key={`${filters.search}-${filters.environment}-${filters.status}`} filters={filters} onPress={onPress} />
+        <RoomListTable
+          key={`${filters.search}-${filters.environment}-${filters.status}`}
+          filters={filters}
+          onPress={onPress}
+        />
       </div>
     </>
   );

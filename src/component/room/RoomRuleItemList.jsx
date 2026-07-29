@@ -26,16 +26,16 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
                 <div className="flex items-center text-sm mb-1 pl-1">
                   <Label>적용 조건 {index + 1}</Label>
                 </div>
-                <Surface variant="default" className="rounded-lg p-2 bg-neutral-50 max-w-2xl">
-                  <div className="flex justify-between items-start">
-                    <div className="flex gap-2 mb-2 items-start">
+                <Surface variant="default" className="w-full max-w-2xl rounded-xl bg-neutral-50 p-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 md:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)] md:items-start">
                       <Select
                         isRequired
                         value={rule.matchOperator}
                         onChange={(value) => onChange(index, 'matchOperator', value)}
                       >
                         <Label className="text-sm font-normal">일치 방식</Label>
-                        <Select.Trigger className="w-40 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
+                        <Select.Trigger className="w-full ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
                           <Select.Value>{({ state }) => state.selectedItems[0]?.textValue}</Select.Value>
                           <Select.Indicator />
                         </Select.Trigger>
@@ -66,7 +66,7 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
                         <FieldError>필수 항목을 입력해 주세요.</FieldError>
                       </TextField>
 
-                      <TextField name="description" type="text" className="grow">
+                      <TextField name="description" type="text" className="min-w-0">
                         <Label className="text-sm font-normal">비고</Label>
                         <Input
                           className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent text-sm"
@@ -76,7 +76,11 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
                       </TextField>
                     </div>
 
-                    <Button onPress={() => onDelete(index)} variant="outline" className="h-6">
+                    <Button
+                      onPress={() => onDelete(index)}
+                      variant="outline"
+                      className="min-h-11 w-full shrink-0 sm:min-h-8 sm:w-auto"
+                    >
                       제거
                     </Button>
                   </div>
@@ -87,7 +91,7 @@ export default function RoomRuleItemList({ rules, onAdd, onChange, onDelete }) {
           {rules?.length === 0 && <div className="text-xs text-foreground">아직 적용 조건이 없습니다.</div>}
         </div>
 
-        <Button onPress={onAdd} size="sm" variant="outline" className="mt-4 h-6 rounded-full border-1">
+        <Button onPress={onAdd} size="sm" variant="outline" className="mt-4 min-h-11 rounded-full border-1 sm:min-h-8">
           적용 조건 추가
         </Button>
       </div>
