@@ -153,7 +153,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
 
   return (
     <div
-      className={`rounded-xl bg-white flex flex-col shadow-background-secondary shadow-lg relative transition-transform ${isMain ? 'border-accent h-full min-h-[656px] border-2' : 'border-neutral-200 h-[400px] min-w-[260px] border'}`}
+      className={`rounded-xl bg-white flex flex-col shadow-background-secondary shadow-lg relative transition-transform ${isMain ? 'border-accent h-[400px] min-h-[400px] md:h-full md:min-h-[656px] border-2' : 'border-neutral-200 h-[400px] min-w-0 w-full border'}`}
     >
       <div className="p-2 flex justify-between items-center gap-2 border-b w-full">
         {/* 좌측 영역: 이름 + 상태 칩 */}
@@ -190,7 +190,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
 
       <div className={styles.pipeBody}>
         {/* 2. 초당 진입 파이프 */}
-        <div className={`w-full flex justify-center relative ${isMain ? 'h-[120px]' : 'h-[60px]'}`}>
+        <div className={`w-full flex justify-center relative ${isMain ? 'h-[60px] md:h-[120px]' : 'h-[60px]'}`}>
           {/* 진입 속도 (Simple Label) */}
           <div className={styles.flowRateLabel} style={{ top: -10 }}>
             <span className={styles.icon}>⬇</span> {trafficData?.waitingRate.toFixed(1)}/s
@@ -238,7 +238,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
         </div>
 
         {/* 3. Middle Section (Tank/Wave) */}
-        <div className={`w-full flex justify-center relative ${isMain ? 'h-[80px]' : 'h-[40px]'}`}>
+        <div className={`w-full flex justify-center relative ${isMain ? 'h-[40px] md:h-[80px]' : 'h-[40px]'}`}>
           <div className={styles.emitterPipe}>
             <Funnel2
               className="absolute inset-0 z-20 block w-full h-full"
@@ -291,7 +291,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
         </div>
 
         {/* 6. Bottom Section (Outflow) */}
-        <div className={`w-full flex justify-center relative ${isMain ? 'h-[120px]' : 'h-[80px]'}`}>
+        <div className={`w-full flex justify-center relative ${isMain ? 'h-[80px] md:h-[120px]' : 'h-[80px]'}`}>
           <div className={styles.emitterPipe}>
             <Funnel2
               className="absolute inset-0 z-20 block w-full h-full"

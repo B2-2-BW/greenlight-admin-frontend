@@ -180,7 +180,7 @@ export function DashboardFilterBar() {
   };
 
   return (
-    <div className="flex grow justify-between items-center">
+    <div className="flex w-full flex-wrap items-center justify-between gap-2">
       <div className="flex items-center gap-2">
         {/*<Popover>*/}
         {/*  <Button className="text-base">*/}
