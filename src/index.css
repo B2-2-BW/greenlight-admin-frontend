@@ -83,16 +83,8 @@ body {
   overflow-x: hidden;
 }
 
-@media (max-width: 1023px) {
-  .admin-toast-region.toast-region--top-end {
-    top: calc(4rem + 1rem);
-  }
-}
-
-@media (min-width: 1024px) {
-  .admin-toast-region.toast-region--top-end {
-    top: calc(4rem + 1rem);
-  }
+body:has(.MainLayout) .admin-toast-region.toast-region--top-end {
+  top: calc(4rem + 1rem);
 }
 
 [data-slot='modal-backdrop'],
