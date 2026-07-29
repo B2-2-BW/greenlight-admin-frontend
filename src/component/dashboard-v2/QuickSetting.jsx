@@ -16,6 +16,7 @@ import { Gear, Power } from '@gravity-ui/icons';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { useDashboard } from '../../provider/DashboardProvider.jsx';
 import { RoomClient } from '../../api/room/index.js';
+import { useUserStore } from '../../store/user.jsx';
 
 const settingFields = [
   {
@@ -120,6 +121,8 @@ function DisableAlert({ isOpen, onOpenChange, onConfirm, isPending }) {
 }
 
 const QuickSetting = ({ room }) => {
+  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const canManageRooms = role === 'SITE_ADMIN' || role === 'SUPER';
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState(() => createDraft(room));
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
@@ -208,6 +211,8 @@ const QuickSetting = ({ room }) => {
       setIsDisableLoading(false);
     }
   };
+
+  if (!canManageRooms) return null;
 
   const quickSettingButton = (
     <Button isIconOnly variant="ghost" aria-label={`${room?.name ?? '대기열'} 빠른 설정`} title="빠른 설정">

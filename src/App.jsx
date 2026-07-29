@@ -50,7 +50,14 @@ function App() {
             )}
           />
           <Route path="/rooms" element={<RoomListPage />} />
-          <Route path="/rooms/new" element={<RoomDetailPage />} />
+          <Route
+            path="/rooms/new"
+            element={
+              <AdminRoute>
+                <RoomDetailPage />
+              </AdminRoute>
+            }
+          />
           <Route path="/rooms/:roomId" element={<RoomDetailPage />} />
           <Route path="/schedulers" element={<SchedulerPage />} />
           <Route path="/settings" element={<SiteSettingsPage />} />

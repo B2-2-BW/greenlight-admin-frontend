@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { AlertDialog, Button, Dropdown, Label, ListBox, Select, Tabs, useOverlayState } from '@heroui/react';
 import { Funnel, Gear, Power } from '@gravity-ui/icons';
 import { SiteClient } from '../../api/site/index.js';
@@ -86,7 +86,7 @@ function EnabledFilterSelect({ value, onChange }) {
   );
 }
 
-function DisableSiteAlert({ isOpen, onOpenChange, onConfirm }) {
+function DisableQueueAlert({ isOpen, onOpenChange, onConfirm }) {
   return (
     <AlertDialog isOpen={isOpen} onOpenChange={onOpenChange}>
       <AlertDialog.Backdrop>
@@ -98,7 +98,9 @@ function DisableSiteAlert({ isOpen, onOpenChange, onConfirm }) {
               <AlertDialog.Heading>정말로 전체 대기열을 비활성화 하시겠습니까?</AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body>
-              <p>전체 대기열이 비활성화되고 현재 대기중인 고객은 즉시 입장하게 됩니다.</p>
+              <p>
+                이후 신규 티켓 발급 요청은 대기 없이 통과합니다. 이미 발급된 티켓에는 즉시 적용되지 않습니다.
+              </p>
             </AlertDialog.Body>
             <AlertDialog.Footer>
               <Button slot="close" variant="tertiary">
@@ -117,7 +119,7 @@ function DisableSiteAlert({ isOpen, onOpenChange, onConfirm }) {
 
 const dashboardSettings = [
   {
-    key: 'disable-site',
+    key: 'disable-queue',
     textValue: '전체 대기열 비활성화',
     variant: 'danger',
     icon: Power,
@@ -125,34 +127,30 @@ const dashboardSettings = [
 ];
 
 export function DashboardFilterBar() {
-  const [selectedTags, setSelectedTags] = useState([]);
-  const disableSiteAlertState = useOverlayState();
+  const disableQueueAlertState = useOverlayState();
 
   const { fetchRoomList } = useDashboard();
 
   const { dashboardFilter, updateDashboardFilter } = usePreferenceStore();
+  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const canManageQueue = role === 'SITE_ADMIN' || role === 'SUPER';
 
   const onRoomEnvironmentChange = useCallback((env) => {
     updateDashboardFilter({ roomEnvironment: env });
-  }, []);
+  }, [updateDashboardFilter]);
 
   // const onTagChange = (tagList) => {
   //   console.log('onTagChange', tagList);
   // };
 
-  const handleDisableSite = async () => {
-    const data = {
-      siteEnabled: false,
-    };
-
+  const handleDisableQueue = async () => {
     try {
-      // 없는 경우 생성 화면
       const me = useUserStore.getState().user;
-      if (me?.siteId == null) {
+      if (!canManageQueue || me?.siteId == null) {
         ToastUtil.error('저장 실패', '권한이 없습니다.');
         return;
       }
-      const response = await SiteClient.updateSiteInfo(me.siteId, data);
+      const response = await SiteClient.updateQueueEnabled(me.siteId, false);
       if (response.status !== 200) {
         throw new Error('failed to create room ' + JSON.stringify(response));
       }
@@ -160,7 +158,7 @@ export function DashboardFilterBar() {
       ToastUtil.success('시스템 설정', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error.response);
-      ToastUtil.error('시스템 설정', '저장에 실패했습니다.');
+      ToastUtil.error('시스템 설정', error.response?.data?.detail ?? '저장에 실패했습니다.');
     } finally {
       // TODO loading..?
     }
@@ -174,8 +172,8 @@ export function DashboardFilterBar() {
   // };
 
   const handleDashboardSetting = (action) => {
-    if (action === 'disable-site') {
-      disableSiteAlertState.setOpen(true);
+    if (action === 'disable-queue') {
+      disableQueueAlertState.setOpen(true);
     }
   };
 
@@ -202,28 +200,30 @@ export function DashboardFilterBar() {
         <EnabledFilterSelect value={dashboardFilter?.enabled} onChange={updateDashboardFilter} />
       </div>
 
-      <Dropdown>
-        <Button aria-label="dashboard-bar-settings" slot="trigger" variant="tertiary" className="text-base">
-          <Gear />
-          대시보드 설정
-        </Button>
+      {canManageQueue && (
+        <Dropdown>
+          <Button aria-label="dashboard-bar-settings" slot="trigger" variant="tertiary" className="text-base">
+            <Gear />
+            대시보드 설정
+          </Button>
 
-        <Dropdown.Popover>
-          <Dropdown.Menu onAction={handleDashboardSetting}>
-            {dashboardSettings.map((setting) => (
-              <Dropdown.Item
-                id={setting.key}
-                key={setting.key}
-                textValue={setting.textValue}
-                variant={setting.variant || 'primary'}
-              >
-                {setting.icon && <setting.icon className={setting.variant ? `text-${setting.variant}` : ''} />}
-                <Label className="text-base">{setting.textValue}</Label>
-              </Dropdown.Item>
-            ))}
-          </Dropdown.Menu>
-        </Dropdown.Popover>
-      </Dropdown>
+          <Dropdown.Popover>
+            <Dropdown.Menu onAction={handleDashboardSetting}>
+              {dashboardSettings.map((setting) => (
+                <Dropdown.Item
+                  id={setting.key}
+                  key={setting.key}
+                  textValue={setting.textValue}
+                  variant={setting.variant || 'primary'}
+                >
+                  {setting.icon && <setting.icon className={setting.variant ? `text-${setting.variant}` : ''} />}
+                  <Label className="text-base">{setting.textValue}</Label>
+                </Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown>
+      )}
 
       {/* 구분선 */}
       {/*<ToggleButton isSelected={isSelected} onChange={setIsSelected}>*/}
@@ -264,11 +264,13 @@ export function DashboardFilterBar() {
       {/*  </Select>*/}
       {/*</div>*/}
 
-      <DisableSiteAlert
-        isOpen={disableSiteAlertState.isOpen}
-        onOpenChange={disableSiteAlertState.setOpen}
-        onConfirm={handleDisableSite}
-      />
+      {canManageQueue && (
+        <DisableQueueAlert
+          isOpen={disableQueueAlertState.isOpen}
+          onOpenChange={disableQueueAlertState.setOpen}
+          onConfirm={handleDisableQueue}
+        />
+      )}
     </div>
   );
 }

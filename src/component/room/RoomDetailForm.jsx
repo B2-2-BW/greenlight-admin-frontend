@@ -29,6 +29,7 @@ import { ToastUtil } from '../../util/toastUtil.js';
 import { RoomClient } from '../../api/room/index.js';
 import RoomRuleItemList from './RoomRuleItemList.jsx';
 import { ArrowLeft, TrashBin } from '@gravity-ui/icons';
+import { useUserStore } from '../../store/user.jsx';
 
 const enabledMessage = {
   true: {
@@ -99,6 +100,8 @@ export default function RoomDetailForm({ onPressBack }) {
   const adImagePreviewRequestIdRef = useRef(0);
 
   const navigate = useNavigate();
+  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const canManageRooms = role === 'SITE_ADMIN' || role === 'SUPER';
 
   const state = useOverlayState();
 
@@ -201,6 +204,10 @@ export default function RoomDetailForm({ onPressBack }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canManageRooms) {
+      ToastUtil.error('대기열 상세', '대기열 설정을 변경할 권한이 없습니다.');
+      return;
+    }
     setIsSubmitLoading(true);
 
     const data = {
@@ -234,7 +241,7 @@ export default function RoomDetailForm({ onPressBack }) {
       ToastUtil.success('대기열 상세', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error.response);
-      ToastUtil.error('대기열 상세', '저장에 실패했습니다.');
+      ToastUtil.error('대기열 상세', error.response?.data?.detail ?? '저장에 실패했습니다.');
     } finally {
       setIsSubmitLoading(false);
     }
@@ -255,23 +262,27 @@ export default function RoomDetailForm({ onPressBack }) {
   );
 
   const handleDeleteConfirmed = useCallback(async () => {
+    if (!canManageRooms) {
+      ToastUtil.error('대기열 삭제', '대기열을 삭제할 권한이 없습니다.');
+      return;
+    }
     setIsSubmitLoading(true);
     try {
       await RoomClient.deleteRoomById(roomId);
       ToastUtil.success('대기열 삭제', '대기열이 성공적으로 삭제되었습니다.');
       navigate('/rooms');
     } catch (error) {
-      if (error.status === 409) {
+      if (error.response?.status === 409) {
         ToastUtil.error('대기열을 삭제할 수 없습니다,', error.response?.data?.detail);
         state.setOpen(false);
       } else {
         console.error('삭제 실패:', error);
-        ToastUtil.error('대기열 삭제', '삭제에 실패했습니다.');
+        ToastUtil.error('대기열 삭제', error.response?.data?.detail ?? '삭제에 실패했습니다.');
       }
     } finally {
       setIsSubmitLoading(false);
     }
-  }, [navigate, roomId, state]);
+  }, [canManageRooms, navigate, roomId, state]);
 
   const handleChangeRoomRule = (idx, field, value) => {
     const newRules = editRoomRules.map((rule, i) => (i === idx ? { ...rule, [field]: value } : rule));
@@ -313,7 +324,7 @@ export default function RoomDetailForm({ onPressBack }) {
                 </div>
               )}
               <div className="flex shrink-0 flex-row gap-1 sm:gap-2">
-                {roomId && (
+                {roomId && canManageRooms && (
                   <ConfirmAlertDialog
                     title="정말로 이 대기열을 삭제하시겠습니까?"
                     message="대기열이 즉시 삭제되며 이 작업은 복구할 수 없습니다."
@@ -356,6 +367,12 @@ export default function RoomDetailForm({ onPressBack }) {
               </div>
             </div>
           </div>
+          {!canManageRooms && (
+            <Description className="text-sm text-muted">
+              일반 사용자는 대기열 설정을 조회할 수 있지만 변경할 수 없습니다.
+            </Description>
+          )}
+          <fieldset disabled={!canManageRooms} className="contents">
           <FormSection title="기본 설정">
             {isPageLoading ? (
               <div className="flex flex-col gap-6">
@@ -677,13 +694,16 @@ export default function RoomDetailForm({ onPressBack }) {
               </div>
             )}
           </FormSection>
+          </fieldset>
         </div>
-        <div className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)] border-t border-neutral-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:bottom-2 sm:mx-0 sm:w-full sm:rounded-xl sm:border-0 sm:p-0">
-          <Button type="submit" className="min-h-12 rounded-2xl sm:min-h-10" isPending={isSubmitLoading} fullWidth>
-            {isSubmitLoading ? <Spinner color="current" size="sm" /> : null}
-            저장하기
-          </Button>
-        </div>
+        {canManageRooms && (
+          <div className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)] border-t border-neutral-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:bottom-2 sm:mx-0 sm:w-full sm:rounded-xl sm:border-0 sm:p-0">
+            <Button type="submit" className="min-h-12 rounded-2xl sm:min-h-10" isPending={isSubmitLoading} fullWidth>
+              {isSubmitLoading ? <Spinner color="current" size="sm" /> : null}
+              저장하기
+            </Button>
+          </div>
+        )}
       </Form>
     </>
   );

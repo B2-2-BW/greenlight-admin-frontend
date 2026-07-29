@@ -49,7 +49,7 @@ export default function DashboardV2Page() {
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   const [roomList, setRoomList] = useState([]);
-  const [siteEnabled, setSiteEnabled] = useState(false);
+  const [queueEnabled, setQueueEnabled] = useState(false);
 
   const { dashboardFilter, updateDashboardFilter } = usePreferenceStore();
 
@@ -72,8 +72,9 @@ export default function DashboardV2Page() {
 
     const res = await SiteClient.findSite(user.siteId);
     const siteInfo = res.data;
-    setSiteEnabled(siteInfo.siteEnabled);
-    if (!siteInfo.siteEnabled || dashboardFilter?.enabled.length === 0) {
+    const isQueueEnabled = Boolean(siteInfo.queueEnabled ?? siteInfo.siteEnabled);
+    setQueueEnabled(isQueueEnabled);
+    if (!isQueueEnabled || dashboardFilter?.enabled.length === 0) {
       setRoomList([]);
       setIsPageLoading(false);
       return;
@@ -196,7 +197,7 @@ export default function DashboardV2Page() {
         }}
       >
         <div className="relative min-w-0">
-          {!siteEnabled && (
+          {!queueEnabled && (
             <div className="absolute h-[calc(100vh-68px)] w-full z-12 top-0 left-0 flex items-center justify-center bg-white/40 dark:bg-neutral-950/60 backdrop-blur-xs">
               <Surface className="flex flex-col items-center gap-5 px-8 py-8 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xl max-w-sm w-[calc(100%-2rem)]">
                 {/* Icon container */}

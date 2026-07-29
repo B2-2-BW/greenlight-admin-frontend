@@ -14,7 +14,7 @@ const enabledMessage = {
   },
   false: {
     title: '대기열 시스템 비활성화',
-    subtitle: '대기열 시스템이 비활성화되어, 즉시 진입이 가능한 상태가 됩니다',
+    subtitle: '신규 티켓 발급 요청은 대기 없이 통과하며, 이미 발급된 티켓에는 즉시 적용되지 않습니다.',
   },
 };
 
@@ -23,7 +23,7 @@ export default function SiteSettingsForm() {
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
   const [siteInfo, setSiteInfo] = useState({});
 
-  const [editSiteEnabled, setEditSiteEnabled] = useState(true);
+  const [editQueueEnabled, setEditQueueEnabled] = useState(true);
   const [isRoomSyncDialogOpen, setIsRoomSyncDialogOpen] = useState(false);
   const [isSiteSyncDialogOpen, setIsSiteSyncDialogOpen] = useState(false);
   const [syncTarget, setSyncTarget] = useState(null);
@@ -31,6 +31,7 @@ export default function SiteSettingsForm() {
   const user = useUserStore((state) => state.user);
   const userRole = user?.role ?? user?.userRole;
   const canSyncRoomData = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
+  const canManageQueue = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
   const isSuperUser = userRole === 'SUPER';
 
   const fetchSiteInfo = async () => {
@@ -41,7 +42,7 @@ export default function SiteSettingsForm() {
       const res = await SiteClient.findSite(me.siteId);
       const data = res.data;
       setSiteInfo(data);
-      setEditSiteEnabled(Boolean(data?.siteEnabled));
+      setEditQueueEnabled(Boolean(data?.queueEnabled ?? data?.siteEnabled));
     } catch (error) {
       console.error('Error fetching siteInfo:', error);
     } finally {
@@ -55,26 +56,28 @@ export default function SiteSettingsForm() {
   }, []);
 
   const reloadForm = () => {
-    setEditSiteEnabled(Boolean(siteInfo?.siteEnabled));
+    setEditQueueEnabled(Boolean(siteInfo?.queueEnabled ?? siteInfo?.siteEnabled));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canManageQueue) {
+      ToastUtil.error('시스템 설정', '대기열 설정을 변경할 권한이 없습니다.');
+      return;
+    }
     setIsSubmitLoading(true);
-    const data = {
-      siteEnabled: editSiteEnabled,
-    };
 
     try {
-      // 없는 경우 생성 화면
-      const response = await SiteClient.updateSiteInfo(siteInfo.siteId, data);
+      const response = await SiteClient.updateQueueEnabled(siteInfo.siteId, editQueueEnabled);
       if (response.status !== 200) {
         throw new Error('failed to create room ' + JSON.stringify(response));
       }
+      setSiteInfo(response.data);
+      setEditQueueEnabled(Boolean(response.data?.queueEnabled ?? response.data?.siteEnabled));
       ToastUtil.success('시스템 설정', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error.response);
-      ToastUtil.error('시스템 설정', '저장에 실패했습니다.');
+      ToastUtil.error('시스템 설정', error.response?.data?.detail ?? '저장에 실패했습니다.');
       reloadForm();
     } finally {
       setIsSubmitLoading(false);
@@ -82,6 +85,10 @@ export default function SiteSettingsForm() {
   };
 
   const handleSyncRoomData = async () => {
+    if (!canSyncRoomData) {
+      ToastUtil.error('운영 데이터 동기화', '대기열 설정을 동기화할 권한이 없습니다.');
+      return;
+    }
     setSyncTarget('room');
     try {
       await RoomClient.syncRoomData();
@@ -89,13 +96,20 @@ export default function SiteSettingsForm() {
       setIsRoomSyncDialogOpen(false);
     } catch (error) {
       console.error(error);
-      ToastUtil.error('운영 데이터 동기화', '대기열 설정 반영에 실패했습니다.');
+      ToastUtil.error(
+        '운영 데이터 동기화',
+        error.response?.data?.detail ?? '대기열 설정 반영에 실패했습니다.'
+      );
     } finally {
       setSyncTarget(null);
     }
   };
 
   const handleSyncAllSiteData = async () => {
+    if (!canSyncRoomData) {
+      ToastUtil.error('운영 데이터 동기화', '사이트 설정을 동기화할 권한이 없습니다.');
+      return;
+    }
     setSyncTarget('site');
     try {
       await SiteClient.syncAllSiteData();
@@ -106,7 +120,10 @@ export default function SiteSettingsForm() {
       setIsSiteSyncDialogOpen(false);
     } catch (error) {
       console.error(error);
-      ToastUtil.error('운영 데이터 동기화', '사이트 설정 반영에 실패했습니다.');
+      ToastUtil.error(
+        '운영 데이터 동기화',
+        error.response?.data?.detail ?? '사이트 설정 반영에 실패했습니다.'
+      );
     } finally {
       setSyncTarget(null);
     }
@@ -166,11 +183,12 @@ export default function SiteSettingsForm() {
                   </Label>
 
                   <Switch
-                    isSelected={editSiteEnabled}
-                    onChange={setEditSiteEnabled}
+                    isSelected={editQueueEnabled}
+                    onChange={setEditQueueEnabled}
                     className="group w-full max-w-lg"
                     isRequired
                     validationBehavior="aria"
+                    isDisabled={!canManageQueue}
                   >
                     <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                       <Switch.Control>
@@ -179,11 +197,16 @@ export default function SiteSettingsForm() {
                         </Switch.Thumb>
                       </Switch.Control>
                       <span className="flex min-w-0 flex-col gap-1">
-                        <span className="text-base">{enabledMessage[editSiteEnabled]?.title}</span>
-                        <span className="text-sm text-muted">{enabledMessage[editSiteEnabled]?.subtitle}</span>
+                        <span className="text-base">{enabledMessage[editQueueEnabled]?.title}</span>
+                        <span className="text-sm text-muted">{enabledMessage[editQueueEnabled]?.subtitle}</span>
                       </span>
                     </Switch.Content>
                   </Switch>
+                  {!canManageQueue && (
+                    <Description className="text-sm text-muted">
+                      일반 사용자는 대기열 운영 상태를 조회할 수 있지만 변경할 수 없습니다.
+                    </Description>
+                  )}
                 </div>
               </div>
             )}
@@ -242,11 +265,13 @@ export default function SiteSettingsForm() {
           {/*  </Skeleton>*/}
           {/*</SectionTitle>*/}
         </div>
-        <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
-          <Button size="lg" className="min-h-11 rounded-2xl" type="submit" isPending={isSubmitLoading} fullWidth>
-            저장하기
-          </Button>
-        </div>
+        {canManageQueue && (
+          <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+            <Button size="lg" className="min-h-11 rounded-2xl" type="submit" isPending={isSubmitLoading} fullWidth>
+              저장하기
+            </Button>
+          </div>
+        )}
       </Form>
 
       {/*<ConfirmModal*/}

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router';
 import { Button, ListBox, SearchField, Select } from '@heroui/react';
 import { useCallback, useEffect, useState } from 'react';
+import { useUserStore } from '../../store/user.jsx';
 
 const environmentOptions = [
   { id: 'ALL', label: '전체 환경' },
@@ -37,6 +38,8 @@ function FilterSelect({ label, value, onChange, options }) {
 
 export default function RoomListTopContent({ filters, onFiltersChange }) {
   const navigate = useNavigate();
+  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const canManageRooms = role === 'SITE_ADMIN' || role === 'SUPER';
   const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
 
   const updateFilter = useCallback(
@@ -78,9 +81,11 @@ export default function RoomListTopContent({ filters, onFiltersChange }) {
             onChange={(value) => updateFilter('status', value)}
             options={statusOptions}
           />
-          <Button className="col-span-2 min-h-11 w-full sm:w-auto" onPress={() => navigate('/rooms/new')}>
-            대기열 추가
-          </Button>
+          {canManageRooms && (
+            <Button className="col-span-2 min-h-11 w-full sm:w-auto" onPress={() => navigate('/rooms/new')}>
+              대기열 추가
+            </Button>
+          )}
         </div>
       </div>
     </div>

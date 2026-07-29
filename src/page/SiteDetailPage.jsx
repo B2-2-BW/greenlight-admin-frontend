@@ -23,11 +23,11 @@ const fieldClass = 'ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent';
 const enabledMessage = {
   true: {
     title: '사이트 활성화',
-    subtitle: '사이트 관리자가 어드민에 로그인하고 대기열을 제어할 수 있습니다.',
+    subtitle: '사이트와 소속 계정이 서비스를 사용할 수 있습니다.',
   },
   false: {
     title: '사이트 비활성화',
-    subtitle: '사이트 관리자가 어드민에 로그인하거나 대기열을 제어할 수 없습니다.',
+    subtitle: '사이트와 소속 계정의 서비스 이용이 제한됩니다.',
   },
 };
 
@@ -45,6 +45,7 @@ export default function SiteDetailPage() {
   const { siteId } = useParams();
   const navigate = useNavigate();
   const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const canManageSite = role === 'SUPER';
   const [site, setSite] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -74,6 +75,10 @@ export default function SiteDetailPage() {
   }, [load]);
   const submit = async (event) => {
     event.preventDefault();
+    if (!canManageSite) {
+      ToastUtil.error('사이트 관리', '사이트 정보를 변경할 권한이 없습니다.');
+      return;
+    }
     setSaving(true);
     try {
       const payload = { siteName: name, siteDescription: description, siteEnabled: enabled };
@@ -149,12 +154,17 @@ export default function SiteDetailPage() {
                     <Label className="text-base">사이트 ID</Label>
                     <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={site.siteId} />
                   </TextField>
-                  <TextField name="siteName" className="w-full max-w-2xl" isRequired>
+                  <TextField
+                    name="siteName"
+                    className="w-full max-w-2xl"
+                    isRequired
+                    isReadOnly={!canManageSite}
+                  >
                     <Label className="text-base">사이트명</Label>
                     <Input className={fieldClass} value={name} onChange={(event) => setName(event.target.value)} />
                     <FieldError>사이트명을 입력해 주세요.</FieldError>
                   </TextField>
-                  <TextField className="w-full max-w-2xl">
+                  <TextField className="w-full max-w-2xl" isReadOnly={!canManageSite}>
                     <Label className="text-base">사이트 설명</Label>
                     <Input
                       className={fieldClass}
@@ -173,6 +183,7 @@ export default function SiteDetailPage() {
                     isSelected={enabled}
                     onChange={setEnabled}
                     className="group w-full max-w-lg"
+                    isDisabled={!canManageSite}
                   >
                     <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                       <Switch.Control>
@@ -186,6 +197,11 @@ export default function SiteDetailPage() {
                       </span>
                     </Switch.Content>
                   </Switch>
+                  {!canManageSite && (
+                    <Description className="text-sm text-muted">
+                      사이트 관리자는 사이트 정보를 조회할 수 있지만 변경할 수 없습니다.
+                    </Description>
+                  )}
                 </div>
               </FormSection>
               {role === 'SUPER' && (
@@ -214,11 +230,13 @@ export default function SiteDetailPage() {
                   </div>
                 </FormSection>
               )}
-              <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
-                <Button type="submit" size="lg" isPending={saving} fullWidth className="min-h-11">
-                  저장하기
-                </Button>
-              </div>
+              {canManageSite && (
+                <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+                  <Button type="submit" size="lg" isPending={saving} fullWidth className="min-h-11">
+                    저장하기
+                  </Button>
+                </div>
+              )}
             </Form>
           </>
         )}

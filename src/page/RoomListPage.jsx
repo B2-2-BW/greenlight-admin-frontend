@@ -9,7 +9,7 @@ import { SiteClient } from '../api/site/index.js';
 
 export default function RoomListPage() {
   const navigate = useNavigate();
-  const [siteEnabled, setSiteEnabled] = useState(true);
+  const [queueEnabled, setQueueEnabled] = useState(true);
   const [filters, setFilters] = useState({ search: '', environment: 'ALL', status: 'ALL' });
 
   const onPress = (roomId) => {
@@ -24,7 +24,7 @@ export default function RoomListPage() {
     SiteClient.findSite(me?.siteId)
       .then((res) => {
         if (res.status === 200) {
-          setSiteEnabled(res.data?.siteEnabled || false);
+          setQueueEnabled(Boolean(res.data?.queueEnabled ?? res.data?.siteEnabled));
         } else {
           console.error('failed to reload site', res);
         }
@@ -44,7 +44,7 @@ export default function RoomListPage() {
       <div className="w-full max-w-[1080px] p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-6">
         <div className="mb-4 mt-5 flex flex-wrap items-center gap-2 sm:mt-8">
           <h1 className="text-2xl font-bold sm:text-3xl">대기열 목록</h1>
-          {!siteEnabled && (
+          {!queueEnabled && (
             <Chip
               className="max-w-full cursor-pointer select-none"
               color="warning"
