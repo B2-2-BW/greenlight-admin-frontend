@@ -72,7 +72,7 @@ export default function DashboardV2Page() {
 
     const res = await SiteClient.findSite(user.siteId);
     const siteInfo = res.data;
-    const isQueueEnabled = Boolean(siteInfo.queueEnabled ?? siteInfo.siteEnabled);
+    const isQueueEnabled = Boolean(siteInfo.queueEnabled);
     setQueueEnabled(isQueueEnabled);
     if (!isQueueEnabled || dashboardFilter?.enabled.length === 0) {
       setRoomList([]);
