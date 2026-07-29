@@ -38,7 +38,7 @@ export default function SigninPage() {
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       if (validationErrors.siteId) {
-        ToastUtil.error('소속코드 확인 필요', '소속코드를 입력한 뒤 검증을 완료해 주세요.');
+        ToastUtil.error('사이트 코드 확인 필요', '사이트 코드를 입력한 뒤 검증을 완료해 주세요.');
       } else if (validationErrors.passwordConfirm) {
         ToastUtil.error('비밀번호 확인', '비밀번호와 비밀번호 확인이 일치하지 않습니다.');
       }
@@ -109,7 +109,7 @@ export default function SigninPage() {
         <Card.Header className="flex flex-col items-start">
           <button
             type="button"
-            className="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="rounded-lg cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             aria-label="홈으로 이동"
             onClick={() => navigate('/')}
           >
@@ -120,13 +120,13 @@ export default function SigninPage() {
         <Card.Content className="w-full min-w-0">
           <Form onSubmit={handleSignin} validationErrors={errors} className="flex flex-col gap-4">
             <TextField name="siteId" type="text" isRequired className="w-full max-w-2xl" variant="default">
-              <Label className="text-base">소속코드</Label>
+              <Label className="text-base">사이트 코드</Label>
               <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
                 <Input
                   className="min-w-0 flex-1 ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
                   value={siteId}
                   onChange={onSiteIdInputChange}
-                  placeholder="발급받은 소속코드를 입력하세요."
+                  placeholder="발급받은 사이트 코드를 입력하세요."
                 />
                 <Button
                   className="w-full shrink-0 focus-visible:ring-2 focus-visible:ring-accent sm:w-auto"
@@ -137,8 +137,8 @@ export default function SigninPage() {
                   {isSiteVerificationLoading ? '' : siteId === verifiedSiteId ? '검증완료' : '검증하기'}
                 </Button>
               </div>
-              <Description className="text-sm">관리자에게 발급받은 소속코드를 확인해 주세요.</Description>
-              <FieldError>유효하지 않거나 사용할 수 없는 소속코드입니다.</FieldError>
+              <Description className="text-sm">관리자에게 발급받은 사이트 코드를 확인해 주세요.</Description>
+              <FieldError>유효하지 않거나 사용할 수 없는 사이트 코드입니다.</FieldError>
             </TextField>
 
             <TextField name="userId" type="text" isRequired className="w-full max-w-2xl" variant="default">
@@ -159,7 +159,7 @@ export default function SigninPage() {
                 className="ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
                 value={password}
                 onChange={(e) => setPassword(e.currentTarget.value)}
-                placeholder="안전한 비밀번호를 입력하세요."
+                placeholder="비밀번호를 입력해주세요."
               />
               <Description className="text-sm">
                 8자 이상으로, 다른 서비스와 겹치지 않는 비밀번호를 권장합니다.
@@ -176,7 +176,7 @@ export default function SigninPage() {
                   setPasswordConfirm(e.currentTarget.value);
                   setErrors((previous) => ({ ...previous, passwordConfirm: null }));
                 }}
-                placeholder="비밀번호를 한 번 더 입력하세요."
+                placeholder="비밀번호를 한 번 더 입력해주세요."
               />
               <Description className="text-sm">위에 입력한 비밀번호와 동일하게 입력해 주세요.</Description>
               <FieldError>비밀번호 확인은 필수 입력값입니다.</FieldError>
@@ -189,7 +189,7 @@ export default function SigninPage() {
                   className="ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
                   value={username}
                   onChange={(e) => setUsername(e.currentTarget.value)}
-                  placeholder="실명을 입력하세요."
+                  placeholder="홍길동"
                 />
                 <Description className="text-sm">관리자가 가입 신청자를 확인하는 데 사용합니다.</Description>
                 <FieldError>이름은 필수 입력값입니다.</FieldError>
