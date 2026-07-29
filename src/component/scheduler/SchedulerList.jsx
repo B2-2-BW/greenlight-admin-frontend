@@ -32,7 +32,7 @@ function SchedulerCard({ scheduler, updateStatus, isUpdateLoading }) {
         <h4 className="font-semibold text-lg">{schedulerDescription[scheduler.schedulerType].name}</h4>
       </Card.Header>
       <Card.Content className="overflow-visible p-4">
-        <div className="min-w-44">
+        <div className="min-w-0">
           <Switch
             isDisabled={isUpdateLoading}
             isSelected={running}
@@ -41,11 +41,11 @@ function SchedulerCard({ scheduler, updateStatus, isUpdateLoading }) {
             }}
             className="group w-full max-w-md"
           >
-            <Switch.Content className="flex w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-content1 p-4 hover:bg-surface-hove group-data-[selected=true]:border-accent">
+            <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-content1 p-4 hover:bg-surface-hove group-data-[selected=true]:border-accent">
               <Switch.Control>
                 <Switch.Thumb />
               </Switch.Control>
-              <span className="flex min-w-44 flex-col gap-1">
+              <span className="flex min-w-0 flex-col gap-1">
                 <span className="flex gap-1 text-base">
                   <span>상태:</span>
                   <span className="font-semibold">{running ? '실행 중' : '중단됨'}</span>

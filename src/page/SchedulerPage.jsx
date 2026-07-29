@@ -2,8 +2,8 @@ import SchedulerList from '../component/scheduler/SchedulerList.jsx';
 
 export default function SchedulerPage() {
   return (
-    <div className="p-4 max-w-[1080px]">
-      <div className="font-bold text-3xl mt-8 mb-4">스케쥴러 목록</div>
+    <div className="max-w-[1080px] p-4 sm:p-6">
+      <div className="mb-4 mt-4 text-2xl font-bold sm:mt-8 sm:text-3xl">스케쥴러 목록</div>
       <SchedulerList />
     </div>
   );
