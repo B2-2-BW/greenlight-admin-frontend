@@ -36,6 +36,9 @@ const statusConfig = {
   DISABLED: { label: '비활성', color: 'default' },
 };
 
+const getSiteLabel = (site) =>
+  `${site.siteEnabled ? '' : '(비활성) '}${site.siteName} (${site.siteId})`;
+
 function ReadonlyField({ label, value }) {
   return (
     <TextField className="w-full max-w-2xl" isReadOnly variant="default">
@@ -68,7 +71,6 @@ export default function UserDetailPage() {
   const approvalFormRef = useRef(null);
   const currentUser = useUserStore((state) => state.user);
   const currentUserId = currentUser?.userId;
-  const currentSiteId = currentUser?.siteId ?? currentUser?.userSiteId;
   const [approval, setApproval] = useState({ username: '', userEmail: '', siteId: '', userRole: 'USER' });
   const [sites, setSites] = useState([]);
   const [isSitesLoading, setIsSitesLoading] = useState(false);
@@ -108,23 +110,18 @@ export default function UserDetailPage() {
 
   useEffect(() => {
     if (!user || !['PENDING', 'ACTIVE', 'DISABLED'].includes(user.accountStatus)) return;
-    if (currentUser?.userRole === 'SITE_ADMIN') {
-      setSites([{ siteId: currentSiteId, siteName: currentUser.siteName ?? currentSiteId }]);
-      if (user.accountStatus === 'PENDING') {
-        setApproval((current) => ({ ...current, siteId: currentSiteId }));
-      } else {
-        setManagement((current) => ({ ...current, siteId: currentSiteId }));
-      }
-      return;
-    }
-    if (currentUser?.userRole !== 'SUPER') return;
+    if (!['SITE_ADMIN', 'SUPER'].includes(currentUser?.userRole)) return;
 
     const controller = new AbortController();
     let cancelled = false;
     const loadSites = async () => {
       setIsSitesLoading(true);
       try {
-        const firstResponse = await SiteClient.getSites({ page: 1, size: 100, signal: controller.signal });
+        const firstResponse = await SiteClient.getSites({
+          page: 1,
+          size: 100,
+          signal: controller.signal,
+        });
         const firstPage = firstResponse.data ?? {};
         const remainingResponses = await Promise.all(
           Array.from({ length: Math.max(0, (firstPage.totalPages ?? 1) - 1) }, (_, index) =>
@@ -150,7 +147,7 @@ export default function UserDetailPage() {
       cancelled = true;
       controller.abort();
     };
-  }, [currentSiteId, currentUser?.siteName, currentUser?.userRole, user]);
+  }, [currentUser?.userRole, user]);
 
   const changeStatus = async (accountStatus) => {
     setIsActionLoading(true);
@@ -501,11 +498,17 @@ export default function UserDetailPage() {
                       <Label className="text-base">사이트</Label>
                       <Select.Trigger className="min-h-11 w-full items-center ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:max-w-64">
                         <Select.Value>
-                          {({ state }) =>
-                            isSitesLoading
-                              ? '사이트를 불러오는 중...'
-                              : (state.selectedItems[0]?.textValue ?? '사이트 선택')
-                          }
+                          {() => {
+                            if (isSitesLoading) return '사이트를 불러오는 중...';
+                            const selectedSite = sites.find((site) => site.siteId === approval.siteId);
+                            return selectedSite ? (
+                              <span className={selectedSite.siteEnabled ? undefined : 'text-neutral-400'}>
+                                {getSiteLabel(selectedSite)}
+                              </span>
+                            ) : (
+                              '사이트 선택'
+                            );
+                          }}
                         </Select.Value>
                         <Select.Indicator />
                       </Select.Trigger>
@@ -515,10 +518,12 @@ export default function UserDetailPage() {
                             <ListBox.Item
                               key={site.siteId}
                               id={site.siteId}
-                              textValue={`${site.siteName} (${site.siteId})`}
+                              textValue={getSiteLabel(site)}
                             >
                               <ListBox.ItemIndicator />
-                              {site.siteName} ({site.siteId})
+                              <span className={site.siteEnabled ? undefined : 'text-neutral-400'}>
+                                {getSiteLabel(site)}
+                              </span>
                             </ListBox.Item>
                           ))}
                         </ListBox>
@@ -633,11 +638,17 @@ export default function UserDetailPage() {
                         <Label className="text-base">사이트</Label>
                         <Select.Trigger className="min-h-11 w-full items-center ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:w-64">
                           <Select.Value>
-                            {({ state }) =>
-                              isSitesLoading
-                                ? '사이트를 불러오는 중...'
-                                : (state.selectedItems[0]?.textValue ?? '사이트 선택')
-                            }
+                            {() => {
+                              if (isSitesLoading) return '사이트를 불러오는 중...';
+                              const selectedSite = sites.find((site) => site.siteId === management.siteId);
+                              return selectedSite ? (
+                                <span className={selectedSite.siteEnabled ? undefined : 'text-neutral-400'}>
+                                  {getSiteLabel(selectedSite)}
+                                </span>
+                              ) : (
+                                '사이트 선택'
+                              );
+                            }}
                           </Select.Value>
                           <Select.Indicator />
                         </Select.Trigger>
@@ -647,10 +658,12 @@ export default function UserDetailPage() {
                               <ListBox.Item
                                 key={site.siteId}
                                 id={site.siteId}
-                                textValue={`${site.siteName} (${site.siteId})`}
+                                textValue={getSiteLabel(site)}
                               >
                                 <ListBox.ItemIndicator />
-                                {site.siteName} ({site.siteId})
+                                <span className={site.siteEnabled ? undefined : 'text-neutral-400'}>
+                                  {getSiteLabel(site)}
+                                </span>
                               </ListBox.Item>
                             ))}
                           </ListBox>
