@@ -6,8 +6,8 @@ import { ToastUtil } from '../../util/toastUtil.js';
 
 const columns = [
   { name: '사용자', uid: 'user' },
-  { name: '사이트', uid: 'site' },
-  { name: '역할', uid: 'role' },
+  { name: '사이트', uid: 'site', className: 'hidden sm:table-cell' },
+  { name: '역할', uid: 'role', className: 'hidden md:table-cell' },
   { name: '계정 상태', uid: 'status' },
 ];
 
@@ -29,7 +29,7 @@ const PAGE_SIZE = 10;
 function Summary({ statusCounts, status, label }) {
   const count = statusCounts[status] ?? 0;
   return (
-    <Surface className="min-w-36 rounded-xl border border-separator px-4 py-3">
+    <Surface className="min-w-0 rounded-xl border border-separator px-4 py-3">
       <p className="text-sm text-muted">{label}</p>
       <p className="mt-1 text-2xl font-semibold">{count}</p>
     </Surface>
@@ -114,8 +114,11 @@ export default function UserListTable() {
         return (
           <div className="flex flex-col">
             <span className="font-medium">{user.username}</span>
-            <span className="text-xs text-muted">
+            <span className="text-xs text-muted break-all">
               {user.userId} · {user.userEmail}
+            </span>
+            <span className="mt-1 text-xs text-muted sm:hidden">
+              {user.siteName || user.siteId} · {roleLabels[user.userRole] ?? user.userRole}
             </span>
           </div>
         );
@@ -147,34 +150,34 @@ export default function UserListTable() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
         <Summary statusCounts={pageData.statusCounts} status="PENDING" label="승인 대기" />
         <Summary statusCounts={pageData.statusCounts} status="ACTIVE" label="활성 계정" />
         <Summary statusCounts={pageData.statusCounts} status="DISABLED" label="비활성 계정" />
       </div>
 
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
         <SearchField name="user-search" value={inputQuery} onChange={setInputQuery} variant="secondary">
           <SearchField.Group>
             <SearchField.SearchIcon />
-            <SearchField.Input className="w-[280px]" placeholder="이름, ID, 이메일, 사이트로 검색" />
+            <SearchField.Input className="w-full sm:w-[280px]" placeholder="이름, ID, 이메일, 사이트로 검색" />
             <SearchField.ClearButton />
           </SearchField.Group>
         </SearchField>
-        <p className="text-sm text-muted">{isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}명`}</p>
+        <p className="text-sm text-muted sm:text-right">{isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}명`}</p>
       </div>
 
       <Table>
         <Table.Content aria-label="사용자 목록" onRowAction={(key) => navigate(`/users/${key}`)}>
           <Table.Header columns={columns}>
-            {(column) => <Table.Column id={column.uid}>{column.name}</Table.Column>}
+            {(column) => <Table.Column id={column.uid} className={column.className}>{column.name}</Table.Column>}
           </Table.Header>
           <Table.Body>
             <Table.Collection items={users}>
               {(user) => (
                 <Table.Row id={user.userId} className="cursor-pointer">
                   {columns.map((column) => (
-                    <Table.Cell key={column.uid}>{renderCell(user, column.uid)}</Table.Cell>
+                    <Table.Cell key={column.uid} className={column.className}>{renderCell(user, column.uid)}</Table.Cell>
                   ))}
                 </Table.Row>
               )}
@@ -188,18 +191,18 @@ export default function UserListTable() {
       )}
       {pageData.totalPages > 1 && (
         <Pagination className="justify-center" aria-label="사용자 목록 페이지">
-          <Pagination.Summary>
+          <Pagination.Summary className="hidden sm:block">
             {pageData.totalElements === 0
               ? '0명'
               : `${(pageData.page - 1) * pageData.size + 1}-${Math.min(pageData.page * pageData.size, pageData.totalElements)} / ${pageData.totalElements}명`}
           </Pagination.Summary>
           <Pagination.Content>
             <Pagination.Item>
-              <Pagination.Previous
+              <Pagination.Previous aria-label="이전 페이지"
                 isDisabled={isFetching || pageData.page === 1}
                 onPress={() => setPage((value) => Math.max(1, value - 1))}
               >
-                <Pagination.PreviousIcon /> 이전
+                <Pagination.PreviousIcon /> <span className="hidden sm:inline">이전</span>
               </Pagination.Previous>
             </Pagination.Item>
             {pageItems.map((item) =>
@@ -220,11 +223,11 @@ export default function UserListTable() {
               )
             )}
             <Pagination.Item>
-              <Pagination.Next
+              <Pagination.Next aria-label="다음 페이지"
                 isDisabled={isFetching || pageData.page === pageData.totalPages}
                 onPress={() => setPage((value) => Math.min(pageData.totalPages, value + 1))}
               >
-                다음 <Pagination.NextIcon />
+                <span className="hidden sm:inline">다음 </span><Pagination.NextIcon />
               </Pagination.Next>
             </Pagination.Item>
           </Pagination.Content>

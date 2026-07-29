@@ -2,6 +2,7 @@ import { Card, Skeleton, Switch } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { SchedulerClient } from '../../api/scheduler/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
+import { useUserStore } from '../../store/user.jsx';
 
 const schedulerDescription = {
   relocation: { title: 'relocation', name: '입장 스케쥴러', description: '실시간 고객 입장처리' },
@@ -19,7 +20,7 @@ function isRunning(status) {
   return status === 'RUNNING';
 }
 
-function SchedulerCard({ scheduler, updateStatus, isUpdateLoading }) {
+function SchedulerCard({ scheduler, updateStatus, isUpdateLoading, canManageSchedulers }) {
   const [running, setRunning] = useState(false);
   useEffect(() => {
     setRunning(isRunning(scheduler.status));
@@ -32,20 +33,20 @@ function SchedulerCard({ scheduler, updateStatus, isUpdateLoading }) {
         <h4 className="font-semibold text-lg">{schedulerDescription[scheduler.schedulerType].name}</h4>
       </Card.Header>
       <Card.Content className="overflow-visible p-4">
-        <div className="min-w-44">
+        <div className="min-w-0">
           <Switch
-            isDisabled={isUpdateLoading}
+            isDisabled={isUpdateLoading || !canManageSchedulers}
             isSelected={running}
             onChange={(newValue) => {
               updateStatus(scheduler.schedulerType, newValue);
             }}
             className="group w-full max-w-md"
           >
-            <Switch.Content className="flex w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-content1 p-4 hover:bg-surface-hove group-data-[selected=true]:border-accent">
+            <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-content1 p-4 hover:bg-surface-hove group-data-[selected=true]:border-accent">
               <Switch.Control>
                 <Switch.Thumb />
               </Switch.Control>
-              <span className="flex min-w-44 flex-col gap-1">
+              <span className="flex min-w-0 flex-col gap-1">
                 <span className="flex gap-1 text-base">
                   <span>상태:</span>
                   <span className="font-semibold">{running ? '실행 중' : '중단됨'}</span>
@@ -66,6 +67,8 @@ export default function SchedulerList() {
   const [schedulers, setSchedulers] = useState([]);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [isUpdateLoading, setIsUpdateLoading] = useState(false);
+  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const canManageSchedulers = role === 'SITE_ADMIN' || role === 'SUPER';
   const fetchSchedulers = async () => {
     try {
       const res = await SchedulerClient.getSchedulerStatusList();
@@ -79,6 +82,10 @@ export default function SchedulerList() {
   };
 
   const updateStatus = async (schedulerType, newValue) => {
+    if (!canManageSchedulers) {
+      ToastUtil.error('스케쥴러 상태 변경 실패', '스케쥴러 상태를 변경할 권한이 없습니다.');
+      return;
+    }
     setIsUpdateLoading(true);
     let msg;
     try {
@@ -92,7 +99,10 @@ export default function SchedulerList() {
       ToastUtil.success('스케쥴러 상태 변경', msg);
     } catch (e) {
       console.error(e);
-      ToastUtil.error('스케쥴러 상태 변경 실패', '스케쥴러 상태를 변경에 실패했습니다. ' + e.message);
+      ToastUtil.error(
+        '스케쥴러 상태 변경 실패',
+        e.response?.data?.detail ?? '스케쥴러 상태 변경에 실패했습니다.'
+      );
     } finally {
       await fetchSchedulers();
       setIsUpdateLoading(false);
@@ -121,6 +131,7 @@ export default function SchedulerList() {
           key={scheduler.schedulerType}
           updateStatus={updateStatus}
           isUpdateLoading={isUpdateLoading}
+          canManageSchedulers={canManageSchedulers}
         />
       ))}
     </div>

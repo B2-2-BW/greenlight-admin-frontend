@@ -11,28 +11,6 @@ import { useNavigate } from 'react-router';
 import { FaceSurprise, Magnifier } from '@gravity-ui/icons';
 import { usePreferenceStore } from '../store/preference.jsx';
 
-const layoutStyle = {
-  container: {
-    display: 'grid',
-    gridTemplateColumns: '280px 1fr', // [Main Pipe] [Grid Area]
-    gap: '16px',
-    padding: '16px',
-    height: 'calc(100vh - 128px)',
-    // background: '#f8fafc',
-    minWidth: '720px',
-    overflow: 'hidden',
-  },
-  gridArea: {
-    display: 'grid',
-    // 반응형 그리드: 최소 260px 확보, 화면 꽉 채우기
-    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-    gridAutoRows: '400px', // PipeCard Compact Height와 일치
-    gap: '16px',
-    overflowY: 'auto',
-    paddingRight: '10px', // 스크롤바 여백
-  },
-};
-
 const calculateSummary = (result) => {
   if (result?.detail == null) {
     return {};
@@ -71,7 +49,7 @@ export default function DashboardV2Page() {
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   const [roomList, setRoomList] = useState([]);
-  const [siteEnabled, setSiteEnabled] = useState(false);
+  const [queueEnabled, setQueueEnabled] = useState(false);
 
   const { dashboardFilter, updateDashboardFilter } = usePreferenceStore();
 
@@ -94,8 +72,9 @@ export default function DashboardV2Page() {
 
     const res = await SiteClient.findSite(user.siteId);
     const siteInfo = res.data;
-    setSiteEnabled(siteInfo.siteEnabled);
-    if (!siteInfo.siteEnabled || dashboardFilter?.enabled.length === 0) {
+    const isQueueEnabled = Boolean(siteInfo.queueEnabled ?? siteInfo.siteEnabled);
+    setQueueEnabled(isQueueEnabled);
+    if (!isQueueEnabled || dashboardFilter?.enabled.length === 0) {
       setRoomList([]);
       setIsPageLoading(false);
       return;
@@ -196,10 +175,10 @@ export default function DashboardV2Page() {
 
   if (!user?.siteId || isPageLoading)
     return (
-      <div style={layoutStyle.container}>
+      <div className="grid grid-cols-1 gap-4 p-4 md:h-[calc(100vh-128px)] md:grid-cols-[280px_minmax(0,1fr)] md:overflow-hidden">
         <Skeleton className="h-full rounded-lg" />
 
-        <section style={layoutStyle.gridArea}>
+        <section className="grid auto-rows-[400px] gap-4 md:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] md:overflow-y-auto md:pr-2.5">
           <Skeleton className="h-[400px] rounded-lg" />
           <Skeleton className="h-[400px] rounded-lg" />
           <Skeleton className="h-[400px] rounded-lg" />
@@ -217,8 +196,8 @@ export default function DashboardV2Page() {
           updateDashboardFilter,
         }}
       >
-        <div className="relative min-w-xl">
-          {!siteEnabled && (
+        <div className="relative min-w-0">
+          {!queueEnabled && (
             <div className="absolute h-[calc(100vh-68px)] w-full z-12 top-0 left-0 flex items-center justify-center bg-white/40 dark:bg-neutral-950/60 backdrop-blur-xs">
               <Surface className="flex flex-col items-center gap-5 px-8 py-8 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xl max-w-sm w-[calc(100%-2rem)]">
                 {/* Icon container */}
@@ -244,9 +223,11 @@ export default function DashboardV2Page() {
             </div>
           )}
 
-          <div className="pt-4 px-4 flex items-baseline gap-4">
-            <div className="font-bold text-3xl">대시보드</div>
-            <DashboardFilterBar />
+          <div className="flex flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-baseline sm:gap-4">
+            <div className="shrink-0 whitespace-nowrap text-3xl font-bold">대시보드</div>
+            <div className="min-w-0 flex-1">
+              <DashboardFilterBar />
+            </div>
           </div>
           {roomList.length === 0 ? (
             <div className="flex flex-col items-center justify-center mt-10">
@@ -259,9 +240,9 @@ export default function DashboardV2Page() {
               </p>
             </div>
           ) : (
-            <div style={layoutStyle.container}>
+            <div className="grid grid-cols-1 gap-4 p-4 md:h-[calc(100vh-128px)] md:grid-cols-[280px_minmax(0,1fr)] md:overflow-hidden">
               {/* 1. Main Pipe (Left Sidebar Area) */}
-              <section style={{ height: '100%' }}>
+              <section className="md:h-full">
                 <PipeCard
                   mode="main"
                   trafficData={dashboardTraffic?.summary}
@@ -270,7 +251,7 @@ export default function DashboardV2Page() {
                 />
               </section>
 
-              <section style={layoutStyle.gridArea}>
+              <section className="grid auto-rows-[400px] gap-4 md:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] md:overflow-y-auto md:pr-2.5">
                 {roomList.map((room) => (
                   <PipeCard
                     key={room.roomId}

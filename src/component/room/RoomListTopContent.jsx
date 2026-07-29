@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router';
 import { Button, ListBox, SearchField, Select } from '@heroui/react';
 import { useCallback, useEffect, useState } from 'react';
+import { useUserStore } from '../../store/user.jsx';
 
 const environmentOptions = [
   { id: 'ALL', label: '전체 환경' },
@@ -16,12 +17,12 @@ const statusOptions = [
 
 function FilterSelect({ label, value, onChange, options }) {
   return (
-    <Select aria-label={label} value={value} onChange={onChange} className="w-36" variant="secondary">
+    <Select aria-label={label} value={value} onChange={onChange} className="w-full sm:w-36" variant="secondary">
       <Select.Trigger>
         <Select.Value>{({ state }) => state.selectedItems[0]?.textValue}</Select.Value>
         <Select.Indicator />
       </Select.Trigger>
-      <Select.Popover>
+      <Select.Popover isNonModal>
         <ListBox>
           {options.map((option) => (
             <ListBox.Item key={option.id} id={option.id} textValue={option.label}>
@@ -37,6 +38,8 @@ function FilterSelect({ label, value, onChange, options }) {
 
 export default function RoomListTopContent({ filters, onFiltersChange }) {
   const navigate = useNavigate();
+  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const canManageRooms = role === 'SITE_ADMIN' || role === 'SUPER';
   const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
 
   const updateFilter = useCallback(
@@ -65,7 +68,7 @@ export default function RoomListTopContent({ filters, onFiltersChange }) {
             <SearchField.ClearButton />
           </SearchField.Group>
         </SearchField>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
           <FilterSelect
             label="대기열 환경 필터"
             value={filters.environment}
@@ -78,7 +81,11 @@ export default function RoomListTopContent({ filters, onFiltersChange }) {
             onChange={(value) => updateFilter('status', value)}
             options={statusOptions}
           />
-          <Button onPress={() => navigate('/rooms/new')}>대기열 추가</Button>
+          {canManageRooms && (
+            <Button className="col-span-2 min-h-11 w-full sm:w-auto" onPress={() => navigate('/rooms/new')}>
+              대기열 추가
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -29,6 +29,7 @@ import { ToastUtil } from '../../util/toastUtil.js';
 import { RoomClient } from '../../api/room/index.js';
 import RoomRuleItemList from './RoomRuleItemList.jsx';
 import { ArrowLeft, TrashBin } from '@gravity-ui/icons';
+import { useUserStore } from '../../store/user.jsx';
 
 const enabledMessage = {
   true: {
@@ -99,6 +100,8 @@ export default function RoomDetailForm({ onPressBack }) {
   const adImagePreviewRequestIdRef = useRef(0);
 
   const navigate = useNavigate();
+  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const canManageRooms = role === 'SITE_ADMIN' || role === 'SUPER';
 
   const state = useOverlayState();
 
@@ -201,6 +204,10 @@ export default function RoomDetailForm({ onPressBack }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canManageRooms) {
+      ToastUtil.error('대기열 상세', '대기열 설정을 변경할 권한이 없습니다.');
+      return;
+    }
     setIsSubmitLoading(true);
 
     const data = {
@@ -234,7 +241,7 @@ export default function RoomDetailForm({ onPressBack }) {
       ToastUtil.success('대기열 상세', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error.response);
-      ToastUtil.error('대기열 상세', '저장에 실패했습니다.');
+      ToastUtil.error('대기열 상세', error.response?.data?.detail ?? '저장에 실패했습니다.');
     } finally {
       setIsSubmitLoading(false);
     }
@@ -255,23 +262,27 @@ export default function RoomDetailForm({ onPressBack }) {
   );
 
   const handleDeleteConfirmed = useCallback(async () => {
+    if (!canManageRooms) {
+      ToastUtil.error('대기열 삭제', '대기열을 삭제할 권한이 없습니다.');
+      return;
+    }
     setIsSubmitLoading(true);
     try {
       await RoomClient.deleteRoomById(roomId);
       ToastUtil.success('대기열 삭제', '대기열이 성공적으로 삭제되었습니다.');
       navigate('/rooms');
     } catch (error) {
-      if (error.status === 409) {
+      if (error.response?.status === 409) {
         ToastUtil.error('대기열을 삭제할 수 없습니다,', error.response?.data?.detail);
         state.setOpen(false);
       } else {
         console.error('삭제 실패:', error);
-        ToastUtil.error('대기열 삭제', '삭제에 실패했습니다.');
+        ToastUtil.error('대기열 삭제', error.response?.data?.detail ?? '삭제에 실패했습니다.');
       }
     } finally {
       setIsSubmitLoading(false);
     }
-  }, [navigate, roomId, state]);
+  }, [canManageRooms, navigate, roomId, state]);
 
   const handleChangeRoomRule = (idx, field, value) => {
     const newRules = editRoomRules.map((rule, i) => (i === idx ? { ...rule, [field]: value } : rule));
@@ -300,20 +311,20 @@ export default function RoomDetailForm({ onPressBack }) {
 
   return (
     <>
-      <Form className="w-full flex flex-col" onSubmit={handleSubmit}>
-        <div className="relative w-full flex flex-col gap-4 min-w-2xl">
+      <Form className="flex min-w-0 w-full flex-col" onSubmit={handleSubmit}>
+        <div className="relative flex min-w-0 w-full flex-col gap-4">
           <div className="w-full">
-            <div className="flex justify-between items-center">
+            <div className="flex min-w-0 items-center justify-between gap-2">
               {isPageLoading ? (
                 <Skeleton className="rounded-lg w-full h-10"></Skeleton>
               ) : (
-                <div className="flex items-baseline gap-2">
-                  <div className="font-bold text-3xl">대기열 {roomId == null ? '생성' : '상세'}</div>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-bold sm:text-3xl">대기열 {roomId == null ? '생성' : '상세'}</h1>
                   {<RoomStatusChip enabled={room?.enabled} />}
                 </div>
               )}
-              <div className="flex flex-row gap-4">
-                {roomId && (
+              <div className="flex shrink-0 flex-row gap-1 sm:gap-2">
+                {roomId && canManageRooms && (
                   <ConfirmAlertDialog
                     title="정말로 이 대기열을 삭제하시겠습니까?"
                     message="대기열이 즉시 삭제되며 이 작업은 복구할 수 없습니다."
@@ -323,7 +334,13 @@ export default function RoomDetailForm({ onPressBack }) {
                     onOpenChange={handleDeleteRoomPress}
                   >
                     <Tooltip shouldCloseOnPress={false}>
-                      <Button size="md" isIconOnly variant="ghost">
+                      <Button
+                        size="md"
+                        isIconOnly
+                        variant="ghost"
+                        aria-label="대기열 삭제"
+                        className="min-h-11 min-w-11"
+                      >
                         <TrashBin className="h-5 w-5" />
                       </Button>
                       <Tooltip.Content showArrow placement="left">
@@ -333,7 +350,14 @@ export default function RoomDetailForm({ onPressBack }) {
                   </ConfirmAlertDialog>
                 )}
                 <Tooltip>
-                  <Button size="md" isIconOnly variant="ghost" onPress={onPressBack}>
+                  <Button
+                    size="md"
+                    isIconOnly
+                    variant="ghost"
+                    aria-label="대기열 목록으로 돌아가기"
+                    className="min-h-11 min-w-11"
+                    onPress={onPressBack}
+                  >
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
                   <Tooltip.Content showArrow placement="top">
@@ -343,6 +367,12 @@ export default function RoomDetailForm({ onPressBack }) {
               </div>
             </div>
           </div>
+          {!canManageRooms && (
+            <Description className="text-sm text-muted">
+              일반 사용자는 대기열 설정을 조회할 수 있지만 변경할 수 없습니다.
+            </Description>
+          )}
+          <fieldset disabled={!canManageRooms} className="contents">
           <FormSection title="기본 설정">
             {isPageLoading ? (
               <div className="flex flex-col gap-6">
@@ -390,14 +420,14 @@ export default function RoomDetailForm({ onPressBack }) {
                   <Label className="text-base" isRequired>
                     대기열 환경 태그
                   </Label>
-                  <div className="flex gap-2 items-center max-w-2xl">
+                  <div className="flex max-w-2xl flex-col gap-2 sm:flex-row sm:items-stretch">
                     {ROOM_ENVIRONMENT_RADIO_OPTIONS.map((option) => (
                       <Radio
                         key={option.value}
                         value={option.value}
-                        className="flex-1 items-stretch rounded-2xl data-[selected=true]:ring-2 ring ring-neutral-300 bg-surface px-5 py-4 transition-all data-[selected=true]:ring-accent"
+                        className="relative min-h-20 flex-1 items-stretch rounded-2xl bg-surface px-4 py-3 ring ring-neutral-300 transition-all data-[selected=true]:ring-2 data-[selected=true]:ring-accent sm:px-5 sm:py-4"
                       >
-                        <Radio.Content className="flex w-full items-center gap-3">
+                        <Radio.Content className="static flex w-full items-center gap-3 after:absolute after:inset-0 after:content-['']">
                           <Radio.Control>
                             <Radio.Indicator />
                           </Radio.Control>
@@ -431,8 +461,9 @@ export default function RoomDetailForm({ onPressBack }) {
                     onChange={setEditEnabled}
                     className="group w-full max-w-lg"
                     isRequired
+                    validationBehavior="aria"
                   >
-                    <Switch.Content className="flex w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                    <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                       <Switch.Control>
                         <Switch.Thumb>
                           <Switch.Icon />
@@ -454,7 +485,7 @@ export default function RoomDetailForm({ onPressBack }) {
                   isRequired
                 >
                   <Label className="text-base">최대 사용자수</Label>
-                  <NumberField.Group className="w-40 ring-1 focus-within:ring-2 ring-neutral-200 focus-within:ring-accent">
+                  <NumberField.Group className="w-full max-w-48 ring-1 focus-within:ring-2 ring-neutral-200 focus-within:ring-accent sm:w-40">
                     <NumberField.DecrementButton />
                     <NumberField.Input />
                     <NumberField.IncrementButton />
@@ -465,6 +496,7 @@ export default function RoomDetailForm({ onPressBack }) {
                       <span>0으로 설정하면 화면으로 진입할 수 없게 됩니다.</span>
                     </div>
                   </Description>
+                  <FieldError>필수 입력값입니다.</FieldError>
                 </NumberField>
 
                 <NumberField
@@ -474,7 +506,7 @@ export default function RoomDetailForm({ onPressBack }) {
                   isRequired
                 >
                   <Label className="text-base">초당 유입량</Label>
-                  <NumberField.Group className="w-40 ring-1 focus-within:ring-2 ring-neutral-200 focus-within:ring-accent">
+                  <NumberField.Group className="w-full max-w-48 ring-1 focus-within:ring-2 ring-neutral-200 focus-within:ring-accent sm:w-40">
                     <NumberField.DecrementButton />
                     <NumberField.Input />
                     <NumberField.IncrementButton />
@@ -485,6 +517,7 @@ export default function RoomDetailForm({ onPressBack }) {
                       <span>0으로 설정하면 진입이 멈춥니다.</span>
                     </div>
                   </Description>
+                  <FieldError>필수 입력값입니다.</FieldError>
                 </NumberField>
               </div>
             )}
@@ -517,12 +550,12 @@ export default function RoomDetailForm({ onPressBack }) {
                 <div>
                   <Select isRequired value={selectDefaultRuleType} onChange={handleSelectDefaultRuleTypeChange}>
                     <Label className="text-base">대기열 적용 방식</Label>
-                    <Select.Trigger className="max-w-64 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
+                    <Select.Trigger className="w-full max-w-64 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
                       <Select.Value>{({ state }) => state.selectedItems[0]?.textValue}</Select.Value>
                       <Select.Indicator />
                     </Select.Trigger>
 
-                    <Select.Popover placement="bottom start">
+                    <Select.Popover isNonModal placement="bottom start">
                       <ListBox>
                         {DEFAULT_RULE_TYPES.map((defaultType) => (
                           <ListBox.Item key={defaultType.value} id={defaultType.value} textValue={defaultType.name}>
@@ -573,14 +606,14 @@ export default function RoomDetailForm({ onPressBack }) {
                   <Label className="text-base" isRequired>
                     광고 유형
                   </Label>
-                  <div className="flex gap-2 items-center max-w-2xl">
+                  <div className="flex max-w-2xl flex-col gap-2 sm:flex-row sm:items-stretch">
                     {IMAGE_AD_RADIO_OPTIONS.map((option) => (
                       <Radio
                         key={option.value}
                         value={option.value}
-                        className="flex-1 items-stretch rounded-2xl data-[selected=true]:ring-2 ring ring-neutral-300 bg-surface px-5 py-4 transition-all data-[selected=true]:ring-accent"
+                        className="relative min-h-20 flex-1 items-stretch rounded-2xl bg-surface px-4 py-3 ring ring-neutral-300 transition-all data-[selected=true]:ring-2 data-[selected=true]:ring-accent sm:px-5 sm:py-4"
                       >
-                        <Radio.Content className="flex w-full items-center gap-3">
+                        <Radio.Content className="static flex w-full items-center gap-3 after:absolute after:inset-0 after:content-['']">
                           <Radio.Control>
                             <Radio.Indicator />
                           </Radio.Control>
@@ -612,12 +645,12 @@ export default function RoomDetailForm({ onPressBack }) {
                       <FieldError>필수 항목을 입력해 주세요.</FieldError>
                     </TextField>
                   ) : (
-                    <div className="mt-4 flex"> 기능 추후 지원예정</div>
+                    <div className="mt-4 flex">기능 추후 지원예정</div>
                   )}
                   {selectAdImageType === 'URL' && (
                     <div className="mt-4 max-w-2xl">
                       <Label className="mb-2 block text-base">이미지 미리보기</Label>
-                      <div className="flex h-72 items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                      <div className="flex h-56 items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 p-3 sm:h-72 sm:p-4">
                         {adImagePreviewStatus === 'empty' && (
                           <p className="text-center text-sm text-neutral-500">
                             이미지 URL을 입력하면 이 영역에서 미리볼 수 있습니다.
@@ -661,13 +694,16 @@ export default function RoomDetailForm({ onPressBack }) {
               </div>
             )}
           </FormSection>
+          </fieldset>
         </div>
-        <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
-          <Button type="submit" className="h-10 rounded-2xl" isPending={isSubmitLoading} fullWidth>
-            {isSubmitLoading ? <Spinner color="current" size="sm" /> : null}
-            저장하기
-          </Button>
-        </div>
+        {canManageRooms && (
+          <div className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)] border-t border-neutral-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:bottom-2 sm:mx-0 sm:w-full sm:rounded-xl sm:border-0 sm:p-0">
+            <Button type="submit" className="min-h-12 rounded-2xl sm:min-h-10" isPending={isSubmitLoading} fullWidth>
+              {isSubmitLoading ? <Spinner color="current" size="sm" /> : null}
+              저장하기
+            </Button>
+          </div>
+        )}
       </Form>
     </>
   );

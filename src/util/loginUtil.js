@@ -45,21 +45,21 @@ async function issueAndSetAccessToken() {
   try {
     const preference = usePreferenceStore.getState().loginPreference;
     const res = await UserClient.issueAccessToken({ autoLogin: preference?.autoLogin || false });
+    const accessToken = res?.data?.accessToken;
 
-    if (res?.status === 200) {
-      const data = res.data;
-      LoginUtil.setAccessToken(data?.accessToken);
-    } else if (res?.status === 401) {
-      console.warn('Unauthorized', res?.data);
-    } else {
-      console.error('Failed to issue access token', res?.data);
+    if (!accessToken) {
+      throw new Error('Access token was not issued.');
     }
+
+    LoginUtil.setAccessToken(accessToken);
   } catch (err) {
-    if (err?.status === 401) {
+    LoginUtil.clearAccessToken();
+    if (err?.response?.status === 401 || err?.response?.status === 403) {
       console.warn('Unauthorized', err);
     } else {
       console.error('Failed to issue access token', err);
     }
+    throw err;
   }
 }
 

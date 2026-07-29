@@ -1,20 +1,32 @@
 import SideBarMenuList from './SideBarMenuList.jsx';
 import SideBarMenuListItem from './SideBarMenuListItem.jsx';
-import SideBarMenuDivider from './SideBarMenuDivider.jsx';
 import { useLocation } from 'react-router';
 import { Separator } from '@heroui/react';
 
-export default function SideBar({ menuLists, currentMenuId, externalMenuList }) {
+export default function SideBar({ menuLists, currentMenuId, externalMenuList, isOpen = false, onClose }) {
   const { pathname } = useLocation();
 
   return (
     <>
+      <button
+        type="button"
+        aria-label="메뉴 닫기"
+        tabIndex={isOpen ? 0 : -1}
+        className={`fixed inset-x-0 bottom-0 top-16 z-40 bg-black/40 transition-opacity duration-200 lg:hidden ${
+          isOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        onClick={onClose}
+      />
       <aside
         id="separator-sidebar"
-        className="fixed top-16 left-0 z-40 w-52 h-screen transition-transform translate-x-0"
-        aria-label="Sidebar"
+        className={`fixed bottom-0 left-0 top-16 z-50 w-64 max-w-[85vw] transition-[transform,visibility] duration-200 lg:z-30 lg:w-52 lg:max-w-none lg:translate-x-0 ${
+          isOpen
+            ? 'visible translate-x-0'
+            : 'invisible -translate-x-full delay-200 lg:visible lg:delay-0'
+        }`}
+        aria-label="주요 메뉴"
       >
-        <div className="flex flex-col justify-between h-[calc(100%-64px)] px-3 py-4 overflow-y-auto bg-neutral-50 ">
+        <div className="flex h-full flex-col justify-between overflow-y-auto bg-neutral-50 px-3 py-4 shadow-xl lg:shadow-none">
           <div>
             {menuLists.map((menuList, idx) => (
               <div key={idx}>
@@ -27,16 +39,19 @@ export default function SideBar({ menuLists, currentMenuId, externalMenuList }) 
                       active={pathname === menu.path || pathname.startsWith(menu.path + '/')}
                       title={menu.title}
                       prepend={menu.prependIcon}
+                      onNavigate={onClose}
                     />
                   ))}
-                  <Separator className="my-4 border-t border-neutral-300" />
+                  <li aria-hidden="true">
+                    <Separator className="my-4 border-t border-neutral-300" />
+                  </li>
                 </SideBarMenuList>
               </div>
             ))}
           </div>
           <div>
             <SideBarMenuList>
-              {externalMenuList.map((menu, idx) => (
+              {externalMenuList.map((menu) => (
                 <SideBarMenuListItem
                   key={menu.menuId}
                   id={menu.menuId}
@@ -45,6 +60,7 @@ export default function SideBar({ menuLists, currentMenuId, externalMenuList }) 
                   title={menu.title}
                   prepend={menu.prependIcon}
                   newtab
+                  onNavigate={onClose}
                 />
               ))}
             </SideBarMenuList>

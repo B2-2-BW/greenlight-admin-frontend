@@ -1,4 +1,15 @@
-import { Button, Description, Form, Input, Label, Modal, Skeleton, Switch, TextField } from '@heroui/react';
+import {
+  Button,
+  Description,
+  FieldError,
+  Form,
+  Input,
+  Label,
+  Modal,
+  Skeleton,
+  Switch,
+  TextField,
+} from '@heroui/react';
 import { ArrowLeft } from '@gravity-ui/icons';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
@@ -9,6 +20,17 @@ import { useUserStore } from '../store/user.jsx';
 import { ToastUtil } from '../util/toastUtil.js';
 
 const fieldClass = 'ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent';
+const enabledMessage = {
+  true: {
+    title: '사이트 활성화',
+    subtitle: '사이트와 소속 계정이 서비스를 사용할 수 있습니다.',
+  },
+  false: {
+    title: '사이트 비활성화',
+    subtitle: '사이트와 소속 계정의 서비스 이용이 제한됩니다.',
+  },
+};
+
 function FieldsSkeleton() {
   return (
     <div className="flex flex-col gap-6">
@@ -23,6 +45,7 @@ export default function SiteDetailPage() {
   const { siteId } = useParams();
   const navigate = useNavigate();
   const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const canManageSite = role === 'SUPER';
   const [site, setSite] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,6 +75,10 @@ export default function SiteDetailPage() {
   }, [load]);
   const submit = async (event) => {
     event.preventDefault();
+    if (!canManageSite) {
+      ToastUtil.error('사이트 관리', '사이트 정보를 변경할 권한이 없습니다.');
+      return;
+    }
     setSaving(true);
     try {
       const payload = { siteName: name, siteDescription: description, siteEnabled: enabled };
@@ -94,10 +121,16 @@ export default function SiteDetailPage() {
   };
   return (
     <div className="w-full bg-neutral-50">
-      <div className="p-4 max-w-[1080px]">
-        <header className="mt-8 mb-4 flex items-center justify-between gap-4">
-          <h1 className="text-3xl font-bold">사이트 상세</h1>
-          <Button isIconOnly variant="ghost" onPress={() => navigate('/sites')} aria-label="사이트 목록으로 돌아가기">
+      <div className="max-w-[1080px] p-4 sm:p-6">
+        <header className="mb-4 mt-4 flex items-center justify-between gap-4 sm:mt-8">
+          <h1 className="text-2xl font-bold sm:text-3xl">사이트 상세</h1>
+          <Button
+            size="lg"
+            isIconOnly
+            variant="ghost"
+            onPress={() => navigate('/sites')}
+            aria-label="사이트 목록으로 돌아가기"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </header>
@@ -114,18 +147,24 @@ export default function SiteDetailPage() {
           <p className="py-10 text-center text-sm text-muted">사이트 정보를 찾을 수 없습니다.</p>
         ) : (
           <>
-            <Form className="flex flex-col gap-4" onSubmit={submit}>
+            <Form className="flex flex-col gap-4" validationBehavior="native" onSubmit={submit}>
               <FormSection title="사이트 정보">
                 <div className="flex w-full flex-col gap-6">
                   <TextField className="w-full max-w-2xl" isReadOnly>
                     <Label className="text-base">사이트 ID</Label>
                     <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={site.siteId} />
                   </TextField>
-                  <TextField className="w-full max-w-2xl">
+                  <TextField
+                    name="siteName"
+                    className="w-full max-w-2xl"
+                    isRequired
+                    isReadOnly={!canManageSite}
+                  >
                     <Label className="text-base">사이트명</Label>
                     <Input className={fieldClass} value={name} onChange={(event) => setName(event.target.value)} />
+                    <FieldError>사이트명을 입력해 주세요.</FieldError>
                   </TextField>
-                  <TextField className="w-full max-w-2xl">
+                  <TextField className="w-full max-w-2xl" isReadOnly={!canManageSite}>
                     <Label className="text-base">사이트 설명</Label>
                     <Input
                       className={fieldClass}
@@ -137,19 +176,32 @@ export default function SiteDetailPage() {
               </FormSection>
               <FormSection title="운영 상태">
                 <div className="flex flex-col gap-2">
-                  <Switch isSelected={enabled} onChange={setEnabled} className="group w-full max-w-lg">
-                    <Switch.Content className="flex w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                  <Label className="text-base" isRequired>
+                    사이트 활성/비활성화
+                  </Label>
+                  <Switch
+                    isSelected={enabled}
+                    onChange={setEnabled}
+                    className="group w-full max-w-lg"
+                    isDisabled={!canManageSite}
+                  >
+                    <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                       <Switch.Control>
                         <Switch.Thumb>
                           <Switch.Icon />
                         </Switch.Thumb>
                       </Switch.Control>
-                      <span className="text-base">{enabled ? '사이트 활성화' : '사이트 비활성화'}</span>
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <span className="text-base">{enabledMessage[enabled].title}</span>
+                        <span className="text-sm text-muted">{enabledMessage[enabled].subtitle}</span>
+                      </span>
                     </Switch.Content>
                   </Switch>
-                  <Description className="text-sm text-muted">
-                    비활성화하면 이 사이트의 대기열 시스템을 사용할 수 없습니다.
-                  </Description>
+                  {!canManageSite && (
+                    <Description className="text-sm text-muted">
+                      사이트 관리자는 사이트 정보를 조회할 수 있지만 변경할 수 없습니다.
+                    </Description>
+                  )}
                 </div>
               </FormSection>
               {role === 'SUPER' && (
@@ -166,18 +218,25 @@ export default function SiteDetailPage() {
                       onOpenChange={setIsKeyRotationConfirmOpen}
                       onConfirm={rotateApiKey}
                     >
-                      <Button type="button" isPending={isKeyRotationPending} isDisabled={isKeyRotationPending}>
+                      <Button
+                        type="button"
+                        isPending={isKeyRotationPending}
+                        isDisabled={isKeyRotationPending}
+                        className="min-h-11"
+                      >
                         새 API Key 발급
                       </Button>
                     </ConfirmAlertDialog>
                   </div>
                 </FormSection>
               )}
-              <div className="sticky bottom-2 mt-4 w-full rounded-xl bg-white">
-                <Button type="submit" size="lg" isPending={saving} fullWidth>
-                  저장하기
-                </Button>
-              </div>
+              {canManageSite && (
+                <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+                  <Button type="submit" size="lg" isPending={saving} fullWidth className="min-h-11">
+                    저장하기
+                  </Button>
+                </div>
+              )}
             </Form>
           </>
         )}
@@ -185,7 +244,7 @@ export default function SiteDetailPage() {
       <Modal isOpen={newApiKey !== null} onOpenChange={closeNewApiKey}>
         <Modal.Backdrop className="z-49">
           <Modal.Container size="sm">
-            <Modal.Dialog>
+            <Modal.Dialog className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-md">
               <Modal.CloseTrigger />
               <Modal.Header>
                 <Modal.Heading>새 API Key</Modal.Heading>
@@ -194,9 +253,11 @@ export default function SiteDetailPage() {
                 <p className="text-sm text-danger">이 화면을 닫으면 다시 확인할 수 없습니다.</p>
                 <Input isReadOnly value={newApiKey ?? ''} className="font-mono text-sm" />
               </Modal.Body>
-              <Modal.Footer>
-                <Button onPress={copyNewApiKey}>복사하기</Button>
-                <Button slot="close" variant="tertiary">
+              <Modal.Footer className="flex-col-reverse gap-2 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
+                <Button onPress={copyNewApiKey} className="min-h-11 w-full sm:w-auto">
+                  복사하기
+                </Button>
+                <Button slot="close" variant="tertiary" className="min-h-11 w-full sm:w-auto">
                   닫기
                 </Button>
               </Modal.Footer>

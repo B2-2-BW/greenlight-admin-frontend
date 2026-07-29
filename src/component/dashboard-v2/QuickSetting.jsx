@@ -7,7 +7,7 @@ import {
   FieldError,
   Input,
   Label,
-  Popover,
+  Modal,
   Separator,
   TextField,
   useOverlayState,
@@ -16,6 +16,7 @@ import { Gear, Power } from '@gravity-ui/icons';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { useDashboard } from '../../provider/DashboardProvider.jsx';
 import { RoomClient } from '../../api/room/index.js';
+import { useUserStore } from '../../store/user.jsx';
 
 const settingFields = [
   {
@@ -90,13 +91,12 @@ function QuickNumberSetting({ label, unit, description, value, steps, error, isP
   );
 }
 
-function DisableAlert({ children, isOpen, onOpenChange, onConfirm, isPending }) {
+function DisableAlert({ isOpen, onOpenChange, onConfirm, isPending }) {
   return (
     <AlertDialog isOpen={isOpen} onOpenChange={onOpenChange}>
-      {children}
-      <AlertDialog.Backdrop className="z-49">
+      <AlertDialog.Backdrop>
         <AlertDialog.Container>
-          <AlertDialog.Dialog className="sm:max-w-[400px]">
+          <AlertDialog.Dialog className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-[400px]">
             <AlertDialog.CloseTrigger />
             <AlertDialog.Header>
               <AlertDialog.Icon status="danger" />
@@ -121,6 +121,8 @@ function DisableAlert({ children, isOpen, onOpenChange, onConfirm, isPending }) 
 }
 
 const QuickSetting = ({ room }) => {
+  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const canManageRooms = role === 'SITE_ADMIN' || role === 'SUPER';
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState(() => createDraft(room));
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
@@ -185,6 +187,10 @@ const QuickSetting = ({ room }) => {
     setDraft(createDraft(room));
   };
 
+  const openDisableAlert = () => {
+    disableAlertState.setOpen(true);
+  };
+
   const disableRoom = async () => {
     if (!room?.roomId) {
       ToastUtil.error('비활성화 실패', '대기열 정보를 확인할 수 없습니다.');
@@ -206,82 +212,108 @@ const QuickSetting = ({ room }) => {
     }
   };
 
+  if (!canManageRooms) return null;
+
+  const quickSettingButton = (
+    <Button isIconOnly variant="ghost" aria-label={`${room?.name ?? '대기열'} 빠른 설정`} title="빠른 설정">
+      <Gear />
+    </Button>
+  );
+
+  const settings = (
+    <>
+      <div className="flex flex-col gap-5">
+        {settingFields.map((field) => (
+          <QuickNumberSetting
+            key={field.key}
+            {...field}
+            value={draft[field.key]}
+            error={errors[field.key]}
+            isPending={isSubmitLoading}
+            onChange={(value) => handleSettingChange(field.key, value)}
+            onAdjust={(amount) => adjustSetting(field.key, amount)}
+          />
+        ))}
+      </div>
+
+      {changedFields.length > 0 && (
+        <div className="rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-600" aria-live="polite">
+          <p className="mb-1 font-medium text-neutral-700">변경 예정</p>
+          {changedFields.map(({ key, label, unit }) => (
+            <p key={key} className="flex items-center justify-between gap-3 tabular-nums">
+              <span>{label}</span>
+              <span>
+                {originalValues[key].toLocaleString()} → {parsedValues[key].toLocaleString()} {unit}
+              </span>
+            </p>
+          ))}
+        </div>
+      )}
+
+      {hasZeroValue && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          0으로 설정하면 해당 대기열의 사용자 진입이 제한됩니다.
+        </p>
+      )}
+    </>
+  );
+
+  const changeActions = (
+    <div className="flex w-full justify-end gap-2">
+      <Button variant="tertiary" onPress={resetDraft} isDisabled={!isDirty || isSubmitLoading}>
+        되돌리기
+      </Button>
+      <Button
+        onPress={handleSettingChangeSubmit}
+        isPending={isSubmitLoading}
+        isDisabled={!isDirty || hasError || isSubmitLoading}
+      >
+        {isSubmitLoading ? '저장 중' : '변경사항 적용'}
+      </Button>
+    </div>
+  );
+
+  const disableButton = (
+    <Button
+      variant="danger-soft"
+      fullWidth
+      isDisabled={room?.enabled === false || isSubmitLoading}
+      onPress={openDisableAlert}
+    >
+      <Power />
+      대기열 비활성화
+    </Button>
+  );
+
   return (
     <>
-      <Popover isOpen={isOpen} onOpenChange={handleQuickSettingOpen}>
-        <Button isIconOnly variant="ghost" aria-label={`${room?.name ?? '대기열'} 빠른 설정`} title="빠른 설정">
-          <Gear />
-        </Button>
+      <Modal isOpen={isOpen} onOpenChange={handleQuickSettingOpen}>
+        {quickSettingButton}
+        <Modal.Backdrop>
+          <Modal.Container placement="auto" size="sm" scroll="inside">
+            <Modal.Dialog className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-sm:max-h-[calc(100dvh-5rem)] max-sm:w-full">
+              <Modal.CloseTrigger />
+              <Modal.Header className="min-w-0 pr-8">
+                <Modal.Heading className="font-semibold">빠른 설정</Modal.Heading>
+                <p className="truncate text-sm text-neutral-500">{room?.name}</p>
+              </Modal.Header>
+              <Modal.Body className="flex flex-col gap-5">{settings}</Modal.Body>
+              <Modal.Footer className="shrink-0 flex-col items-stretch gap-3 border-t border-separator pt-4 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+                {changeActions}
+                <Separator />
+                {disableButton}
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
 
-        <Popover.Content placement="bottom left" className="border-black/20 border">
-          <Popover.Dialog className="flex w-[340px] max-w-[calc(100vw-2rem)] flex-col gap-4">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <Popover.Heading className="font-semibold">빠른 설정</Popover.Heading>
-              <p className="truncate text-sm text-neutral-500">{room?.name}</p>
-            </div>
-            <Separator />
-            <div className="flex flex-col gap-5">
-              {settingFields.map((field) => (
-                <QuickNumberSetting
-                  key={field.key}
-                  {...field}
-                  value={draft[field.key]}
-                  error={errors[field.key]}
-                  isPending={isSubmitLoading}
-                  onChange={(value) => handleSettingChange(field.key, value)}
-                  onAdjust={(amount) => adjustSetting(field.key, amount)}
-                />
-              ))}
-            </div>
-
-            {changedFields.length > 0 && (
-              <div className="rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-600" aria-live="polite">
-                <p className="mb-1 font-medium text-neutral-700">변경 예정</p>
-                {changedFields.map(({ key, label, unit }) => (
-                  <p key={key} className="flex items-center justify-between gap-3 tabular-nums">
-                    <span>{label}</span>
-                    <span>
-                      {originalValues[key].toLocaleString()} → {parsedValues[key].toLocaleString()} {unit}
-                    </span>
-                  </p>
-                ))}
-              </div>
-            )}
-
-            {hasZeroValue && (
-              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                0으로 설정하면 해당 대기열의 사용자 진입이 제한됩니다.
-              </p>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <Button variant="tertiary" onPress={resetDraft} isDisabled={!isDirty || isSubmitLoading}>
-                되돌리기
-              </Button>
-              <Button
-                onPress={handleSettingChangeSubmit}
-                isPending={isSubmitLoading}
-                isDisabled={!isDirty || hasError || isSubmitLoading}
-              >
-                {isSubmitLoading ? '저장 중' : '변경사항 적용'}
-              </Button>
-            </div>
-
-            <Separator />
-            <DisableAlert
-              isOpen={disableAlertState.isOpen}
-              onOpenChange={disableAlertState.setOpen}
-              onConfirm={disableRoom}
-              isPending={isDisableLoading}
-            >
-              <Button variant="danger-soft" fullWidth isDisabled={room?.enabled === false || isSubmitLoading}>
-                <Power />
-                대기열 비활성화
-              </Button>
-            </DisableAlert>
-          </Popover.Dialog>
-        </Popover.Content>
-      </Popover>
+      <DisableAlert
+        isOpen={disableAlertState.isOpen}
+        onOpenChange={disableAlertState.setOpen}
+        onConfirm={disableRoom}
+        isPending={isDisableLoading}
+      />
     </>
   );
 };

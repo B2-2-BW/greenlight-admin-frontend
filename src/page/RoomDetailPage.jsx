@@ -11,12 +11,10 @@ export default function RoomDetailPage() {
     document.title = '대기열 상세 | Greenlight Admin';
   }, []);
   return (
-    <>
-      <div className="w-full  bg-neutral-50">
-        <div className="p-4 max-w-[1080px] h-[100vh-64px]">
-          <RoomDetailForm onPressBack={onPressBack} />
-        </div>
+    <div className="min-h-[calc(100dvh-64px)] w-full bg-neutral-50">
+      <div className="w-full max-w-[1080px] p-3 pb-0 sm:p-6 sm:pb-6">
+        <RoomDetailForm onPressBack={onPressBack} />
       </div>
-    </>
+    </div>
   );
 }

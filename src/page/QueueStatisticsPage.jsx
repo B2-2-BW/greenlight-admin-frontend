@@ -267,13 +267,13 @@ export default function QueueStatisticsPage() {
   );
 
   return (
-    <main className="max-w-[1440px] p-4">
-      <h1 className="mb-4 mt-8 text-3xl font-bold">대기열 통계</h1>
+    <main className="w-full min-w-0 max-w-[1080px] p-4 sm:p-6">
+      <h1 className="mb-4 mt-4 text-2xl font-bold sm:mt-8 sm:text-3xl">대기열 통계</h1>
       <Card className="mb-4">
         <Card.Content className="grid gap-x-3 gap-y-1 p-4 lg:grid-cols-[minmax(0,26rem)_minmax(0,14rem)_auto] lg:items-end">
           <I18nProvider locale="ko-KR">
             <DateRangePicker
-              className="min-w-0 lg:col-start-1 lg:row-start-1"
+              className="w-full min-w-0 lg:col-start-1 lg:row-start-1"
               value={dateRange}
               onChange={setDateRange}
               granularity="minute"
@@ -342,7 +342,7 @@ export default function QueueStatisticsPage() {
                 </Select.Value>
                 <Select.Indicator />
               </Select.Trigger>
-              <Select.Popover>
+              <Select.Popover isNonModal>
                 <ListBox selectionMode="multiple">
                   {availableRooms.map((room) => (
                     <ListBox.Item key={room.roomId} id={room.roomId} textValue={room.name}>
@@ -355,7 +355,7 @@ export default function QueueStatisticsPage() {
             </Select>
           </div>
           <Button
-            className="lg:col-start-3 lg:row-start-1"
+            className="w-full sm:w-auto sm:justify-self-start lg:col-start-3 lg:row-start-1"
             onPress={loadStatistics}
             isPending={isLoading}
             isDisabled={Boolean(rangeError)}
@@ -415,68 +415,74 @@ export default function QueueStatisticsPage() {
               <h2 className="text-lg font-semibold">Room별 요약</h2>
             </Card.Header>
             <Card.Content className="overflow-x-auto p-4">
-              <Table>
-                <Table.Content
-                  aria-label="Room별 대기열 통계 요약"
-                  sortDescriptor={roomSortDescriptor}
-                  onSortChange={setRoomSortDescriptor}
-                >
-                  <Table.Header>
-                    <Table.Column id="name" allowsSorting isRowHeader>
-                      {({ sortDirection }) => (
-                        <Table.SortableColumnHeader sortDirection={sortDirection}>Room</Table.SortableColumnHeader>
-                      )}
-                    </Table.Column>
-                    <Table.Column id="maxWaiting" allowsSorting>
-                      {({ sortDirection }) => (
-                        <Table.SortableColumnHeader sortDirection={sortDirection}>
-                          최대 동시 대기
-                        </Table.SortableColumnHeader>
-                      )}
-                    </Table.Column>
-                    <Table.Column id="maxActive" allowsSorting>
-                      {({ sortDirection }) => (
-                        <Table.SortableColumnHeader sortDirection={sortDirection}>최대 활성</Table.SortableColumnHeader>
-                      )}
-                    </Table.Column>
-                    <Table.Column id="waitingCount" allowsSorting>
-                      {({ sortDirection }) => (
-                        <Table.SortableColumnHeader sortDirection={sortDirection}>대기 유입</Table.SortableColumnHeader>
-                      )}
-                    </Table.Column>
-                    <Table.Column id="enteredCount" allowsSorting>
-                      {({ sortDirection }) => (
-                        <Table.SortableColumnHeader sortDirection={sortDirection}>입장</Table.SortableColumnHeader>
-                      )}
-                    </Table.Column>
-                    <Table.Column id="exitedCount" allowsSorting>
-                      {({ sortDirection }) => (
-                        <Table.SortableColumnHeader sortDirection={sortDirection}>이탈</Table.SortableColumnHeader>
-                      )}
-                    </Table.Column>
-                    <Table.Column id="cancelledCount" allowsSorting>
-                      {({ sortDirection }) => (
-                        <Table.SortableColumnHeader sortDirection={sortDirection}>취소</Table.SortableColumnHeader>
-                      )}
-                    </Table.Column>
-                  </Table.Header>
-                  <Table.Body>
-                    <Table.Collection items={sortedRoomSummary}>
-                      {(room) => (
-                        <Table.Row id={room.roomId}>
-                          <Table.Cell className="font-medium">{room.name}</Table.Cell>
-                          <Table.Cell>{formatNumber(room.maxWaiting)}</Table.Cell>
-                          <Table.Cell>{formatNumber(room.maxActive)}</Table.Cell>
-                          <Table.Cell>{formatNumber(room.waitingCount)}</Table.Cell>
-                          <Table.Cell>{formatNumber(room.enteredCount)}</Table.Cell>
-                          <Table.Cell>{formatNumber(room.exitedCount)}</Table.Cell>
-                          <Table.Cell>{formatNumber(room.cancelledCount)}</Table.Cell>
-                        </Table.Row>
-                      )}
-                    </Table.Collection>
-                  </Table.Body>
-                </Table.Content>
-              </Table>
+              <div className="min-w-[760px]">
+                <Table>
+                  <Table.Content
+                    aria-label="Room별 대기열 통계 요약"
+                    sortDescriptor={roomSortDescriptor}
+                    onSortChange={setRoomSortDescriptor}
+                  >
+                    <Table.Header>
+                      <Table.Column id="name" allowsSorting isRowHeader>
+                        {({ sortDirection }) => (
+                          <Table.SortableColumnHeader sortDirection={sortDirection}>Room</Table.SortableColumnHeader>
+                        )}
+                      </Table.Column>
+                      <Table.Column id="maxWaiting" allowsSorting>
+                        {({ sortDirection }) => (
+                          <Table.SortableColumnHeader sortDirection={sortDirection}>
+                            최대 동시 대기
+                          </Table.SortableColumnHeader>
+                        )}
+                      </Table.Column>
+                      <Table.Column id="maxActive" allowsSorting>
+                        {({ sortDirection }) => (
+                          <Table.SortableColumnHeader sortDirection={sortDirection}>
+                            최대 활성
+                          </Table.SortableColumnHeader>
+                        )}
+                      </Table.Column>
+                      <Table.Column id="waitingCount" allowsSorting>
+                        {({ sortDirection }) => (
+                          <Table.SortableColumnHeader sortDirection={sortDirection}>
+                            대기 유입
+                          </Table.SortableColumnHeader>
+                        )}
+                      </Table.Column>
+                      <Table.Column id="enteredCount" allowsSorting>
+                        {({ sortDirection }) => (
+                          <Table.SortableColumnHeader sortDirection={sortDirection}>입장</Table.SortableColumnHeader>
+                        )}
+                      </Table.Column>
+                      <Table.Column id="exitedCount" allowsSorting>
+                        {({ sortDirection }) => (
+                          <Table.SortableColumnHeader sortDirection={sortDirection}>이탈</Table.SortableColumnHeader>
+                        )}
+                      </Table.Column>
+                      <Table.Column id="cancelledCount" allowsSorting>
+                        {({ sortDirection }) => (
+                          <Table.SortableColumnHeader sortDirection={sortDirection}>취소</Table.SortableColumnHeader>
+                        )}
+                      </Table.Column>
+                    </Table.Header>
+                    <Table.Body>
+                      <Table.Collection items={sortedRoomSummary}>
+                        {(room) => (
+                          <Table.Row id={room.roomId}>
+                            <Table.Cell className="font-medium">{room.name}</Table.Cell>
+                            <Table.Cell>{formatNumber(room.maxWaiting)}</Table.Cell>
+                            <Table.Cell>{formatNumber(room.maxActive)}</Table.Cell>
+                            <Table.Cell>{formatNumber(room.waitingCount)}</Table.Cell>
+                            <Table.Cell>{formatNumber(room.enteredCount)}</Table.Cell>
+                            <Table.Cell>{formatNumber(room.exitedCount)}</Table.Cell>
+                            <Table.Cell>{formatNumber(room.cancelledCount)}</Table.Cell>
+                          </Table.Row>
+                        )}
+                      </Table.Collection>
+                    </Table.Body>
+                  </Table.Content>
+                </Table>
+              </div>
             </Card.Content>
           </Card>
         </>

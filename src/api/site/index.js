@@ -14,6 +14,8 @@ const updateSiteInfo = async (siteId, data) => {
   return await commonAxiosInstance.put(`/sites/${siteId}`, data);
 };
 
+const updateQueueEnabled = (siteId, queueEnabled) => updateSiteInfo(siteId, { queueEnabled });
+
 const getSites = ({ page = 1, size = 10, query = '', enabled, signal } = {}) =>
   commonAxiosInstance.get('/sites', {
     params: {
@@ -36,6 +38,7 @@ const syncAllSiteData = async () => {
 const SiteClient = {
   findSite,
   updateSiteInfo,
+  updateQueueEnabled,
   getSites,
   getManagedSite,
   rotateSiteApiKey,

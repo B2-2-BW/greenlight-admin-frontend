@@ -13,7 +13,7 @@ import {
   TextField,
 } from '@heroui/react';
 import { ArrowLeft } from '@gravity-ui/icons';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { UserClient } from '../api/user/index.js';
 import { SiteClient } from '../api/site/index.js';
@@ -35,6 +35,9 @@ const statusConfig = {
   REJECTED: { label: '반려', color: 'danger' },
   DISABLED: { label: '비활성', color: 'default' },
 };
+
+const getSiteLabel = (site) =>
+  `${site.siteEnabled ? '' : '(비활성) '}${site.siteName} (${site.siteId})`;
 
 function ReadonlyField({ label, value }) {
   return (
@@ -65,15 +68,13 @@ export default function UserDetailPage() {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [passwordErrors, setPasswordErrors] = useState({});
+  const approvalFormRef = useRef(null);
   const currentUser = useUserStore((state) => state.user);
   const currentUserId = currentUser?.userId;
-  const currentSiteId = currentUser?.siteId ?? currentUser?.userSiteId;
   const [approval, setApproval] = useState({ username: '', userEmail: '', siteId: '', userRole: 'USER' });
   const [sites, setSites] = useState([]);
   const [isSitesLoading, setIsSitesLoading] = useState(false);
-  const [approvalError, setApprovalError] = useState('');
   const [management, setManagement] = useState({ username: '', userEmail: '', siteId: '', userRole: 'USER' });
-  const [managementError, setManagementError] = useState('');
 
   const fetchUser = useCallback(async () => {
     try {
@@ -109,23 +110,18 @@ export default function UserDetailPage() {
 
   useEffect(() => {
     if (!user || !['PENDING', 'ACTIVE', 'DISABLED'].includes(user.accountStatus)) return;
-    if (currentUser?.userRole === 'SITE_ADMIN') {
-      setSites([{ siteId: currentSiteId, siteName: currentUser.siteName ?? currentSiteId }]);
-      if (user.accountStatus === 'PENDING') {
-        setApproval((current) => ({ ...current, siteId: currentSiteId }));
-      } else {
-        setManagement((current) => ({ ...current, siteId: currentSiteId }));
-      }
-      return;
-    }
-    if (currentUser?.userRole !== 'SUPER') return;
+    if (!['SITE_ADMIN', 'SUPER'].includes(currentUser?.userRole)) return;
 
     const controller = new AbortController();
     let cancelled = false;
     const loadSites = async () => {
       setIsSitesLoading(true);
       try {
-        const firstResponse = await SiteClient.getSites({ page: 1, size: 100, signal: controller.signal });
+        const firstResponse = await SiteClient.getSites({
+          page: 1,
+          size: 100,
+          signal: controller.signal,
+        });
         const firstPage = firstResponse.data ?? {};
         const remainingResponses = await Promise.all(
           Array.from({ length: Math.max(0, (firstPage.totalPages ?? 1) - 1) }, (_, index) =>
@@ -151,7 +147,7 @@ export default function UserDetailPage() {
       cancelled = true;
       controller.abort();
     };
-  }, [currentSiteId, currentUser?.siteName, currentUser?.userRole, user]);
+  }, [currentUser?.userRole, user]);
 
   const changeStatus = async (accountStatus) => {
     setIsActionLoading(true);
@@ -176,11 +172,11 @@ export default function UserDetailPage() {
   };
 
   const approveUser = async () => {
-    if (!approval.username.trim() || !approval.userEmail.trim() || !approval.siteId || !approval.userRole) {
-      setApprovalError('이름, 이메일, 사이트, 역할을 모두 확인해 주세요.');
+    if (!approvalFormRef.current?.checkValidity()) {
+      setDialogAction(null);
+      approvalFormRef.current?.reportValidity();
       return;
     }
-    setApprovalError('');
     setIsActionLoading(true);
     try {
       const response = await UserClient.approveUser(userId, {
@@ -207,11 +203,6 @@ export default function UserDetailPage() {
 
   const updateManagedUser = async (event) => {
     event.preventDefault();
-    if (!management.username.trim() || !management.userEmail.trim() || !management.siteId || !management.userRole) {
-      setManagementError('이름, 이메일, 사이트, 역할을 모두 확인해 주세요.');
-      return;
-    }
-    setManagementError('');
     setIsActionLoading(true);
     try {
       const response = await UserClient.updateManagedUser(userId, {
@@ -233,6 +224,19 @@ export default function UserDetailPage() {
     } finally {
       setIsActionLoading(false);
     }
+  };
+
+  const openApprovalDialog = (event) => {
+    event.preventDefault();
+    setDialogAction('approve');
+  };
+
+  const handleApprovalDialogOpenChange = (open) => {
+    if (!open) {
+      setDialogAction(null);
+      return;
+    }
+    approvalFormRef.current?.requestSubmit();
   };
 
   const resetPassword = async (event) => {
@@ -297,7 +301,7 @@ export default function UserDetailPage() {
               onOpenChange={(open) => setDialogAction(open ? 'disable' : null)}
               onConfirm={() => changeStatus('DISABLED')}
             >
-              <Button variant="danger-soft" isDisabled={isActionLoading}>
+              <Button variant="danger-soft" isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">
                 계정 비활성화
               </Button>
             </ConfirmAlertDialog>
@@ -311,7 +315,7 @@ export default function UserDetailPage() {
               onOpenChange={(open) => setDialogAction(open ? 'activate' : null)}
               onConfirm={() => changeStatus('ACTIVE')}
             >
-              <Button isDisabled={isActionLoading}>계정 활성화</Button>
+              <Button isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">계정 활성화</Button>
             </ConfirmAlertDialog>
           )}
           {user.accountStatus === 'REJECTED' && (
@@ -323,7 +327,7 @@ export default function UserDetailPage() {
               onOpenChange={(open) => setDialogAction(open ? 'review' : null)}
               onConfirm={() => changeStatus('PENDING')}
             >
-              <Button isDisabled={isActionLoading}>승인 재검토</Button>
+              <Button isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">승인 재검토</Button>
             </ConfirmAlertDialog>
           )}
         </div>
@@ -333,17 +337,17 @@ export default function UserDetailPage() {
 
   return (
     <div className="w-full bg-neutral-50">
-      <div className="p-4 max-w-[1080px]">
-        <header className="mt-8 mb-4 flex items-center justify-between gap-4">
+      <div className="max-w-[1080px] p-4 sm:p-6">
+        <header className="mb-4 mt-4 flex items-center justify-between gap-4 sm:mt-8">
           {isPageLoading ? (
             <Skeleton className="h-10 w-64 rounded-lg" />
           ) : (
             <div className="flex items-baseline gap-2">
-              <h1 className="text-3xl font-bold">사용자 상세</h1>
+              <h1 className="text-2xl font-bold sm:text-3xl">사용자 상세</h1>
             </div>
           )}
           <Button
-            size="md"
+            size="lg"
             isIconOnly
             variant="ghost"
             onPress={() => navigate('/users')}
@@ -384,7 +388,7 @@ export default function UserDetailPage() {
                   </p>
                   <Button
                     variant="secondary"
-                    className="w-fit"
+                    className="min-h-11 w-full sm:w-fit"
                     isDisabled={isActionLoading}
                     onPress={() => setIsPasswordDialogOpen(true)}
                   >
@@ -393,7 +397,7 @@ export default function UserDetailPage() {
                   <Modal isOpen={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
                     <Modal.Backdrop className="z-49">
                       <Modal.Container size="sm">
-                        <Modal.Dialog>
+                        <Modal.Dialog className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-md">
                           <Modal.CloseTrigger />
                           <Modal.Header>
                             <Modal.Heading>비밀번호 초기화</Modal.Heading>
@@ -423,11 +427,11 @@ export default function UserDetailPage() {
                                 </FieldError>
                               </TextField>
                             </Modal.Body>
-                            <Modal.Footer>
-                              <Button slot="close" variant="tertiary">
+                            <Modal.Footer className="flex-col-reverse gap-2 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
+                              <Button slot="close" variant="tertiary" className="min-h-11 w-full sm:w-auto">
                                 취소
                               </Button>
-                              <Button type="submit" isPending={isActionLoading}>
+                              <Button type="submit" isPending={isActionLoading} className="min-h-11 w-full sm:w-auto">
                                 비밀번호 설정
                               </Button>
                             </Modal.Footer>
@@ -447,70 +451,240 @@ export default function UserDetailPage() {
                 )}
                 <ReadonlyField label="사용자 ID" value={user.userId} />
                 {user.accountStatus === 'PENDING' && !isSuperUserReadOnly ? (
-                  <>
-                    <TextField className="w-full max-w-2xl" variant="default">
+                  <Form
+                    ref={approvalFormRef}
+                    onSubmit={openApprovalDialog}
+                    className="flex w-full flex-col gap-6"
+                  >
+                    <TextField
+                      name="username"
+                      isRequired
+                      value={approval.username}
+                      onChange={(username) => setApproval((current) => ({ ...current, username }))}
+                      validate={(value) => (value.trim() ? null : '이름을 입력해 주세요.')}
+                      className="w-full max-w-2xl"
+                      variant="default"
+                    >
                       <Label className="text-base">이름</Label>
                       <Input
                         className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                        value={approval.username}
-                        onChange={(event) => setApproval((current) => ({ ...current, username: event.target.value }))}
                       />
+                      <FieldError>이름을 입력해 주세요.</FieldError>
                     </TextField>
-                    <TextField className="w-full max-w-2xl" variant="default">
+                    <TextField
+                      name="userEmail"
+                      type="email"
+                      isRequired
+                      className="w-full max-w-2xl"
+                      variant="default"
+                    >
                       <Label className="text-base">이메일</Label>
                       <Input
                         className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                        type="email"
                         value={approval.userEmail}
                         onChange={(event) => setApproval((current) => ({ ...current, userEmail: event.target.value }))}
                       />
+                      <FieldError>올바른 이메일을 입력해 주세요.</FieldError>
                     </TextField>
-                    <div className="w-full max-w-2xl">
-                      <Label className="mb-2 block text-base">사이트</Label>
-                      <Select
-                        aria-label="사이트"
-                        value={approval.siteId}
-                        onChange={(siteId) => setApproval((current) => ({ ...current, siteId }))}
-                        isDisabled={isSitesLoading || currentUser?.userRole === 'SITE_ADMIN'}
+                    <Select
+                      name="siteId"
+                      isRequired
+                      className="w-full max-w-2xl"
+                      aria-label="사이트"
+                      value={approval.siteId}
+                      onChange={(siteId) => setApproval((current) => ({ ...current, siteId }))}
+                      isDisabled={isSitesLoading || currentUser?.userRole === 'SITE_ADMIN'}
+                    >
+                      <Label className="text-base">사이트</Label>
+                      <Select.Trigger className="min-h-11 w-full items-center ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:max-w-64">
+                        <Select.Value>
+                          {() => {
+                            if (isSitesLoading) return '사이트를 불러오는 중...';
+                            const selectedSite = sites.find((site) => site.siteId === approval.siteId);
+                            return selectedSite ? (
+                              <span className={selectedSite.siteEnabled ? undefined : 'text-neutral-400'}>
+                                {getSiteLabel(selectedSite)}
+                              </span>
+                            ) : (
+                              '사이트 선택'
+                            );
+                          }}
+                        </Select.Value>
+                        <Select.Indicator />
+                      </Select.Trigger>
+                      <Select.Popover isNonModal className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
+                        <ListBox>
+                          {sites.map((site) => (
+                            <ListBox.Item
+                              key={site.siteId}
+                              id={site.siteId}
+                              textValue={getSiteLabel(site)}
+                            >
+                              <ListBox.ItemIndicator />
+                              <span className={site.siteEnabled ? undefined : 'text-neutral-400'}>
+                                {getSiteLabel(site)}
+                              </span>
+                            </ListBox.Item>
+                          ))}
+                        </ListBox>
+                      </Select.Popover>
+                      <FieldError>사이트를 선택해 주세요.</FieldError>
+                    </Select>
+                    <Select
+                      name="userRole"
+                      isRequired
+                      className="w-full max-w-2xl"
+                      aria-label="역할"
+                      value={approval.userRole}
+                      onChange={(userRole) => setApproval((current) => ({ ...current, userRole }))}
+                    >
+                      <Label className="text-base">역할</Label>
+                      <Select.Trigger className="min-h-11 w-full items-center ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:max-w-64">
+                        <Select.Value>{({ state }) => state.selectedItems[0]?.textValue ?? '역할 선택'}</Select.Value>
+                        <Select.Indicator />
+                      </Select.Trigger>
+                      <Select.Popover isNonModal className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
+                        <ListBox>
+                          {(currentUser?.userRole === 'SUPER'
+                            ? ['USER', 'SITE_ADMIN', 'SUPER']
+                            : ['USER', 'SITE_ADMIN']
+                          ).map((role) => (
+                            <ListBox.Item key={role} id={role} textValue={roleLabels[role]}>
+                              <ListBox.ItemIndicator />
+                              {roleLabels[role]}
+                            </ListBox.Item>
+                          ))}
+                        </ListBox>
+                      </Select.Popover>
+                      <FieldError>역할을 선택해 주세요.</FieldError>
+                    </Select>
+                    {canManageTarget && (
+                      <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap">
+                        <ConfirmAlertDialog
+                          title="가입을 승인할까요?"
+                          message={`사이트: ${sites.find((site) => site.siteId === approval.siteId)?.siteName ?? approval.siteId} (${approval.siteId}) · 역할: ${roleLabels[approval.userRole] ?? approval.userRole}`}
+                          confirmMessage="가입 승인"
+                          isOpen={dialogAction === 'approve'}
+                          onOpenChange={handleApprovalDialogOpenChange}
+                          onConfirm={approveUser}
+                        >
+                          <Button type="button" isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">
+                            가입 승인
+                          </Button>
+                        </ConfirmAlertDialog>
+                        <ConfirmAlertDialog
+                          title="가입 신청을 반려할까요?"
+                          message="반려된 계정은 로그인할 수 없습니다."
+                          confirmMessage="반려"
+                          isOpen={dialogAction === 'reject'}
+                          onOpenChange={(open) => setDialogAction(open ? 'reject' : null)}
+                          onConfirm={() => changeStatus('REJECTED')}
+                        >
+                          <Button variant="danger-soft" isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">
+                            가입 반려
+                          </Button>
+                        </ConfirmAlertDialog>
+                      </div>
+                    )}
+                  </Form>
+                ) : ['ACTIVE', 'DISABLED'].includes(user.accountStatus) && !isSuperUserReadOnly ? (
+                  <>
+                    <Form id="managed-user-form" onSubmit={updateManagedUser} className="flex w-full flex-col gap-6">
+                      <TextField
+                        name="username"
+                        isRequired
+                        value={management.username}
+                        onChange={(username) => setManagement((current) => ({ ...current, username }))}
+                        validate={(value) => (value.trim() ? null : '이름을 입력해 주세요.')}
+                        className="w-full max-w-2xl"
+                        variant="default"
                       >
-                        <Select.Trigger className="max-w-64 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
+                        <Label className="text-base">이름</Label>
+                        <Input
+                          className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
+                        />
+                        <FieldError>이름을 입력해 주세요.</FieldError>
+                      </TextField>
+                      <TextField
+                        name="userEmail"
+                        type="email"
+                        isRequired
+                        className="w-full max-w-2xl"
+                        variant="default"
+                      >
+                        <Label className="text-base">이메일</Label>
+                        <Input
+                          className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
+                          value={management.userEmail}
+                          onChange={(event) =>
+                            setManagement((current) => ({ ...current, userEmail: event.target.value }))
+                          }
+                        />
+                        <FieldError>올바른 이메일을 입력해 주세요.</FieldError>
+                      </TextField>
+                      <Select
+                        name="siteId"
+                        isRequired
+                        className="w-full max-w-2xl"
+                        aria-label="사이트"
+                        value={management.siteId}
+                        onChange={(siteId) => setManagement((current) => ({ ...current, siteId }))}
+                        isDisabled={
+                          isSitesLoading || user.userId === currentUserId || currentUser?.userRole === 'SITE_ADMIN'
+                        }
+                      >
+                        <Label className="text-base">사이트</Label>
+                        <Select.Trigger className="min-h-11 w-full items-center ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:w-64">
                           <Select.Value>
-                            {({ state }) =>
-                              isSitesLoading
-                                ? '사이트를 불러오는 중...'
-                                : (state.selectedItems[0]?.textValue ?? '사이트 선택')
-                            }
+                            {() => {
+                              if (isSitesLoading) return '사이트를 불러오는 중...';
+                              const selectedSite = sites.find((site) => site.siteId === management.siteId);
+                              return selectedSite ? (
+                                <span className={selectedSite.siteEnabled ? undefined : 'text-neutral-400'}>
+                                  {getSiteLabel(selectedSite)}
+                                </span>
+                              ) : (
+                                '사이트 선택'
+                              );
+                            }}
                           </Select.Value>
                           <Select.Indicator />
                         </Select.Trigger>
-                        <Select.Popover className="w-64" placement="bottom start">
+                        <Select.Popover isNonModal className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                           <ListBox>
                             {sites.map((site) => (
                               <ListBox.Item
                                 key={site.siteId}
                                 id={site.siteId}
-                                textValue={`${site.siteName} (${site.siteId})`}
+                                textValue={getSiteLabel(site)}
                               >
                                 <ListBox.ItemIndicator />
-                                {site.siteName} ({site.siteId})
+                                <span className={site.siteEnabled ? undefined : 'text-neutral-400'}>
+                                  {getSiteLabel(site)}
+                                </span>
                               </ListBox.Item>
                             ))}
                           </ListBox>
                         </Select.Popover>
+                        <FieldError>사이트를 선택해 주세요.</FieldError>
                       </Select>
-                    </div>
-                    <div className="w-full max-w-2xl">
-                      <Label className="mb-2 block text-base">역할</Label>
                       <Select
+                        name="userRole"
+                        isRequired
+                        className="w-full max-w-2xl"
                         aria-label="역할"
-                        value={approval.userRole}
-                        onChange={(userRole) => setApproval((current) => ({ ...current, userRole }))}
+                        value={management.userRole}
+                        onChange={(userRole) => setManagement((current) => ({ ...current, userRole }))}
+                        isDisabled={user.userId === currentUserId}
                       >
-                        <Select.Trigger className="max-w-64 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
-                          <Select.Value>{({ state }) => state.selectedItems[0]?.textValue ?? '역할 선택'}</Select.Value>
+                        <Label className="text-base">역할</Label>
+                        <Select.Trigger className="min-h-11 w-full items-center ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:max-w-64">
+                          <Select.Value>
+                            {({ state }) => state.selectedItems[0]?.textValue ?? '역할 선택'}
+                          </Select.Value>
                           <Select.Indicator />
                         </Select.Trigger>
-                        <Select.Popover className="w-64" placement="bottom start">
+                        <Select.Popover isNonModal className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                           <ListBox>
                             {(currentUser?.userRole === 'SUPER'
                               ? ['USER', 'SITE_ADMIN', 'SUPER']
@@ -523,126 +697,8 @@ export default function UserDetailPage() {
                             ))}
                           </ListBox>
                         </Select.Popover>
+                        <FieldError>역할을 선택해 주세요.</FieldError>
                       </Select>
-                    </div>
-                    {approvalError && <p className="text-sm text-danger">{approvalError}</p>}
-                    {canManageTarget && (
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        <ConfirmAlertDialog
-                          title="가입을 승인할까요?"
-                          message={`사이트: ${sites.find((site) => site.siteId === approval.siteId)?.siteName ?? approval.siteId} (${approval.siteId}) · 역할: ${roleLabels[approval.userRole] ?? approval.userRole}`}
-                          confirmMessage="가입 승인"
-                          isOpen={dialogAction === 'approve'}
-                          onOpenChange={(open) => setDialogAction(open ? 'approve' : null)}
-                          onConfirm={approveUser}
-                        >
-                          <Button isDisabled={isActionLoading}>가입 승인</Button>
-                        </ConfirmAlertDialog>
-                        <ConfirmAlertDialog
-                          title="가입 신청을 반려할까요?"
-                          message="반려된 계정은 로그인할 수 없습니다."
-                          confirmMessage="반려"
-                          isOpen={dialogAction === 'reject'}
-                          onOpenChange={(open) => setDialogAction(open ? 'reject' : null)}
-                          onConfirm={() => changeStatus('REJECTED')}
-                        >
-                          <Button variant="danger-soft" isDisabled={isActionLoading}>
-                            가입 반려
-                          </Button>
-                        </ConfirmAlertDialog>
-                      </div>
-                    )}
-                  </>
-                ) : ['ACTIVE', 'DISABLED'].includes(user.accountStatus) && !isSuperUserReadOnly ? (
-                  <>
-                    <Form id="managed-user-form" onSubmit={updateManagedUser} className="flex w-full flex-col gap-6">
-                      <TextField className="w-full max-w-2xl" variant="default">
-                        <Label className="text-base">이름</Label>
-                        <Input
-                          className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                          value={management.username}
-                          onChange={(event) =>
-                            setManagement((current) => ({ ...current, username: event.target.value }))
-                          }
-                        />
-                      </TextField>
-                      <TextField className="w-full max-w-2xl" variant="default">
-                        <Label className="text-base">이메일</Label>
-                        <Input
-                          className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                          type="email"
-                          value={management.userEmail}
-                          onChange={(event) =>
-                            setManagement((current) => ({ ...current, userEmail: event.target.value }))
-                          }
-                        />
-                      </TextField>
-                      <div className="w-full max-w-2xl">
-                        <Label className="mb-2 block text-base">사이트</Label>
-                        <Select
-                          aria-label="사이트"
-                          value={management.siteId}
-                          onChange={(siteId) => setManagement((current) => ({ ...current, siteId }))}
-                          isDisabled={
-                            isSitesLoading || user.userId === currentUserId || currentUser?.userRole === 'SITE_ADMIN'
-                          }
-                        >
-                          <Select.Trigger className="w-64 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
-                            <Select.Value>
-                              {({ state }) =>
-                                isSitesLoading
-                                  ? '사이트를 불러오는 중...'
-                                  : (state.selectedItems[0]?.textValue ?? '사이트 선택')
-                              }
-                            </Select.Value>
-                            <Select.Indicator />
-                          </Select.Trigger>
-                          <Select.Popover className="w-64" placement="bottom start">
-                            <ListBox>
-                              {sites.map((site) => (
-                                <ListBox.Item
-                                  key={site.siteId}
-                                  id={site.siteId}
-                                  textValue={`${site.siteName} (${site.siteId})`}
-                                >
-                                  <ListBox.ItemIndicator />
-                                  {site.siteName} ({site.siteId})
-                                </ListBox.Item>
-                              ))}
-                            </ListBox>
-                          </Select.Popover>
-                        </Select>
-                      </div>
-                      <div className="w-full max-w-2xl">
-                        <Label className="mb-2 block text-base">역할</Label>
-                        <Select
-                          aria-label="역할"
-                          value={management.userRole}
-                          onChange={(userRole) => setManagement((current) => ({ ...current, userRole }))}
-                          isDisabled={user.userId === currentUserId}
-                        >
-                          <Select.Trigger className="max-w-64 ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent">
-                            <Select.Value>
-                              {({ state }) => state.selectedItems[0]?.textValue ?? '역할 선택'}
-                            </Select.Value>
-                            <Select.Indicator />
-                          </Select.Trigger>
-                          <Select.Popover className="w-64" placement="bottom start">
-                            <ListBox>
-                              {(currentUser?.userRole === 'SUPER'
-                                ? ['USER', 'SITE_ADMIN', 'SUPER']
-                                : ['USER', 'SITE_ADMIN']
-                              ).map((role) => (
-                                <ListBox.Item key={role} id={role} textValue={roleLabels[role]}>
-                                  <ListBox.ItemIndicator />
-                                  {roleLabels[role]}
-                                </ListBox.Item>
-                              ))}
-                            </ListBox>
-                          </Select.Popover>
-                        </Select>
-                      </div>
-                      {managementError && <p className="text-sm text-danger">{managementError}</p>}
                     </Form>
                   </>
                 ) : (
@@ -657,10 +713,10 @@ export default function UserDetailPage() {
             </FormSection>
 
             {canSaveManagedUser && (
-              <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
+              <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
                 <Button
                   size="lg"
-                  className="h-10 rounded-2xl"
+                  className="min-h-11 rounded-2xl"
                   type="submit"
                   form="managed-user-form"
                   isPending={isActionLoading}

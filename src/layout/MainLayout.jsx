@@ -1,6 +1,7 @@
 import SideBar from '../component/SideBar.jsx';
 import NavBar from '../component/NavBar.jsx';
-import { Outlet } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
+import { useEffect, useState } from 'react';
 import {
   CalendarIcon,
   ClipboardFilledIcon,
@@ -28,6 +29,8 @@ const externalMenuList = [
   },
 ];
 export default function MainLayout() {
+  const { pathname } = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
   const canManageUsers = role === 'SITE_ADMIN' || role === 'SUPER';
   const menuLists = [
@@ -72,11 +75,47 @@ export default function MainLayout() {
     ],
   ];
 
+  useEffect(() => {
+    const animationFrame = window.requestAnimationFrame(() => setIsSidebarOpen(false));
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isSidebarOpen) return undefined;
+
+    const desktopMediaQuery = window.matchMedia('(min-width: 1024px)');
+    const previousOverflow = document.body.style.overflow;
+    const updateBodyScroll = () => {
+      document.body.style.overflow = desktopMediaQuery.matches ? previousOverflow : 'hidden';
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setIsSidebarOpen(false);
+    };
+
+    updateBodyScroll();
+    desktopMediaQuery.addEventListener('change', updateBodyScroll);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      desktopMediaQuery.removeEventListener('change', updateBodyScroll);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSidebarOpen]);
+
   return (
-    <div className="MainLayout ">
-      <SideBar menuLists={menuLists} externalMenuList={externalMenuList} />
-      <NavBar />
-      <div className="ml-52 overflow-none ">
+    <div className="MainLayout min-h-dvh">
+      <NavBar
+        isSidebarOpen={isSidebarOpen}
+        onSidebarToggle={() => setIsSidebarOpen((isOpen) => !isOpen)}
+      />
+      <SideBar
+        menuLists={menuLists}
+        externalMenuList={externalMenuList}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
+      <div className="min-w-0 lg:ml-52">
         <Outlet />
       </div>
     </div>

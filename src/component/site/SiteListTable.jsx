@@ -7,7 +7,7 @@ import { ToastUtil } from '../../util/toastUtil.js';
 const PAGE_SIZE = 10;
 const columns = [
   { name: '사이트', uid: 'site' },
-  { name: '설명', uid: 'description' },
+  { name: '설명', uid: 'description', className: 'hidden sm:table-cell' },
   { name: '상태', uid: 'enabled' },
 ];
 
@@ -73,31 +73,32 @@ export default function SiteListTable() {
   if (isLoading) return <Skeleton className="h-80 w-full rounded-xl" />;
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
         <SearchField name="site-search" value={inputQuery} onChange={setInputQuery} variant="secondary">
           <SearchField.Group>
             <SearchField.SearchIcon />
-            <SearchField.Input className="w-[280px]" placeholder="사이트 ID, 이름 또는 설명으로 검색" />
+            <SearchField.Input className="w-full sm:w-[280px]" placeholder="사이트 ID, 이름 또는 설명으로 검색" />
             <SearchField.ClearButton />
           </SearchField.Group>
         </SearchField>
-        <p className="text-sm text-muted">{isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}개`}</p>
+        <p className="text-sm text-muted sm:text-right">{isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}개`}</p>
       </div>
       <Table>
         <Table.Content aria-label="사이트 목록" onRowAction={(key) => navigate(`/sites/${key}`)}>
           <Table.Header columns={columns}>
-            {(column) => <Table.Column id={column.uid}>{column.name}</Table.Column>}
+            {(column) => <Table.Column id={column.uid} className={column.className}>{column.name}</Table.Column>}
           </Table.Header>
           <Table.Body>
             <Table.Collection items={sites}>
               {(site) => (
                 <Table.Row id={site.siteId} className="cursor-pointer">
                   {columns.map((column) => (
-                    <Table.Cell key={column.uid}>
+                    <Table.Cell key={column.uid} className={column.className}>
                       {column.uid === 'site' ? (
                         <div className="flex flex-col">
                           <span className="font-medium">{site.siteName}</span>
                           <span className="text-xs text-muted">{site.siteId}</span>
+                          <span className="mt-1 text-xs text-muted sm:hidden">{site.siteDescription || '설명 없음'}</span>
                         </div>
                       ) : column.uid === 'description' ? (
                         site.siteDescription || '-'
@@ -119,14 +120,14 @@ export default function SiteListTable() {
       )}
       {pageData.totalPages > 1 && (
         <Pagination className="justify-center" aria-label="사이트 목록 페이지">
-          <Pagination.Summary>{`${(pageData.page - 1) * pageData.size + 1}-${Math.min(pageData.page * pageData.size, pageData.totalElements)} / ${pageData.totalElements}개`}</Pagination.Summary>
+          <Pagination.Summary className="hidden sm:block">{`${(pageData.page - 1) * pageData.size + 1}-${Math.min(pageData.page * pageData.size, pageData.totalElements)} / ${pageData.totalElements}개`}</Pagination.Summary>
           <Pagination.Content>
             <Pagination.Item>
-              <Pagination.Previous
+              <Pagination.Previous aria-label="이전 페이지"
                 isDisabled={isFetching || pageData.page === 1}
                 onPress={() => setPage((value) => Math.max(1, value - 1))}
               >
-                <Pagination.PreviousIcon /> 이전
+                <Pagination.PreviousIcon /> <span className="hidden sm:inline">이전</span>
               </Pagination.Previous>
             </Pagination.Item>
             {pageItems.map((item) =>
@@ -147,11 +148,11 @@ export default function SiteListTable() {
               )
             )}
             <Pagination.Item>
-              <Pagination.Next
+              <Pagination.Next aria-label="다음 페이지"
                 isDisabled={isFetching || pageData.page === pageData.totalPages}
                 onPress={() => setPage((value) => Math.min(pageData.totalPages, value + 1))}
               >
-                다음 <Pagination.NextIcon />
+                <span className="hidden sm:inline">다음 </span><Pagination.NextIcon />
               </Pagination.Next>
             </Pagination.Item>
           </Pagination.Content>

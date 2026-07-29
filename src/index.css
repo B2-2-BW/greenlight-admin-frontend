@@ -2,7 +2,7 @@
 layer(base);
 
 @import 'tailwindcss';
-@import "@heroui/styles";
+@import '@heroui/styles';
 
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
@@ -13,8 +13,8 @@ layer(base);
   color utility to any element that depends on these defaults.
 */
 :root {
-  --accent: #20814C;
-  --focus: #20814C;
+  --accent: #20814c;
+  --focus: #20814c;
   /*--color-primary-foreground: #FFFFFF;*/
   /*--color-primary-tertiary: #FB0000;*/
   /*--color-primary-focus: #20814C;*/
@@ -45,6 +45,62 @@ layer(base);
   }
 }
 
+@layer utilities {
+  /*
+   * Keep HeroUI's danger ring on invalid fields when local focus:ring-accent
+   * utilities are present. Ring width and shadow remain owned by HeroUI.
+   */
+  [data-slot='input']:is([data-invalid='true'], [aria-invalid='true']):is(
+      :focus,
+      :focus-visible,
+      [data-focused='true'],
+      [data-focus-visible='true']
+    ),
+  [data-slot='select']:is([data-invalid='true'], [aria-invalid='true'])
+    [data-slot='select-trigger']:is(:focus, :focus-visible, [data-focused='true'], [data-focus-visible='true']),
+  [data-slot='number-field']:is([data-invalid='true'], [aria-invalid='true'])
+    [data-slot='number-field-group']:is(:focus-within, [data-focus-within='true']),
+  [data-slot='number-field-group']:is([data-invalid='true'], [aria-invalid='true']):is(
+      :focus-within,
+      [data-focus-within='true']
+    ) {
+    --tw-ring-color: var(--danger);
+  }
+}
+
 * {
-    font-family: 'Pretendard', sans-serif;
+  box-sizing: border-box;
+  font-family: 'Pretendard', sans-serif;
+}
+
+html {
+  min-width: 320px;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+body:has(.MainLayout) .admin-toast-region.toast-region--top-end {
+  top: calc(4rem + 1rem);
+}
+
+[data-slot='modal-backdrop'],
+[data-slot='alert-dialog-backdrop'] {
+  z-index: 70;
+}
+
+@media (max-width: 767px) {
+  .profile-dropdown-popover.dropdown__popover {
+    width: min(18rem, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+  }
+}
+
+@media (min-width: 768px) {
+  .profile-dropdown-popover.dropdown__popover {
+    width: 13.75rem;
+  }
 }
