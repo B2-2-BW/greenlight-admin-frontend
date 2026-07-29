@@ -242,10 +242,10 @@ export default function MyPageForm() {
         </FormSection>
 
         {!isPageLoading && (
-          <div className="bottom-2 sticky mt-4 w-full bg-white rounded-xl z-20">
+          <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
             <Button
               size="lg"
-              className="h-10 rounded-2xl"
+              className="min-h-11 rounded-2xl"
               type="submit"
               form="my-profile-form"
               isPending={isProfileSubmitLoading}
@@ -259,7 +259,7 @@ export default function MyPageForm() {
       <Modal isOpen={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
         <Modal.Backdrop className="z-49">
           <Modal.Container size="sm">
-            <Modal.Dialog>
+            <Modal.Dialog className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-md">
               <Modal.CloseTrigger />
               <Modal.Header className="pb-2">
                 <Modal.Heading className="text-xl font-bold">비밀번호 변경</Modal.Heading>
@@ -305,11 +305,11 @@ export default function MyPageForm() {
                     </FieldError>
                   </TextField>
                 </Modal.Body>
-                <Modal.Footer>
-                  <Button slot="close" variant="tertiary">
+                <Modal.Footer className="flex-col-reverse gap-2 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-end">
+                  <Button slot="close" variant="tertiary" className="min-h-11 w-full sm:w-auto">
                     취소
                   </Button>
-                  <Button type="submit" isPending={isSubmitLoading}>
+                  <Button type="submit" isPending={isSubmitLoading} className="min-h-11 w-full sm:w-auto">
                     변경하기
                   </Button>
                 </Modal.Footer>

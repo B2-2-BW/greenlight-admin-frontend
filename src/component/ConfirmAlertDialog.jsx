@@ -14,18 +14,18 @@ export default function ConfirmAlertDialog({
       {children}
       <AlertDialog.Backdrop className="z-49">
         <AlertDialog.Container>
-          <AlertDialog.Dialog className="sm:max-w-[400px]">
+          <AlertDialog.Dialog className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-[400px]">
             <AlertDialog.CloseTrigger />
             <AlertDialog.Header>
               <AlertDialog.Icon status="danger" />
               <AlertDialog.Heading>{title}</AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body>{message}</AlertDialog.Body>
-            <AlertDialog.Footer>
-              <Button slot="close" variant="tertiary">
+            <AlertDialog.Footer className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button slot="close" variant="tertiary" className="min-h-11 w-full sm:w-auto">
                 취소하기
               </Button>
-              <Button slot="close" variant="danger" onPress={onConfirm}>
+              <Button slot="close" variant="danger" onPress={onConfirm} className="min-h-11 w-full sm:w-auto">
                 {confirmMessage || '확인'}
               </Button>
             </AlertDialog.Footer>

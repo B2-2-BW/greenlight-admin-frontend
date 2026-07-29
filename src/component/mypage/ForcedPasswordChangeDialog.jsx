@@ -85,7 +85,7 @@ export default function ForcedPasswordChangeDialog() {
     <Modal isOpen>
       <Modal.Backdrop className="z-49">
         <Modal.Container size="sm">
-          <Modal.Dialog>
+          <Modal.Dialog className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-md">
             <Modal.Header className="pb-2">
               <Modal.Heading className="text-xl font-bold">비밀번호를 변경해 주세요</Modal.Heading>
             </Modal.Header>
@@ -138,8 +138,8 @@ export default function ForcedPasswordChangeDialog() {
                   <FieldError>{passwordErrors.newPasswordConfirm ?? '신규 비밀번호 확인을 입력해 주세요.'}</FieldError>
                 </TextField>
               </Modal.Body>
-              <Modal.Footer>
-                <Button type="submit" isPending={isPending}>
+              <Modal.Footer className="pb-[max(1rem,env(safe-area-inset-bottom))]">
+                <Button type="submit" isPending={isPending} className="min-h-11 w-full">
                   변경하고 로그인
                 </Button>
               </Modal.Footer>

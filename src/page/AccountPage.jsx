@@ -8,9 +8,9 @@ export default function AccountPage() {
 
   return (
     <div className="w-full bg-neutral-50">
-      <div className="p-4 max-w-[1080px]">
-        <header className="mt-8 mb-4 flex items-center justify-between gap-4">
-          <h1 className="text-3xl font-bold">내 계정</h1>
+      <div className="max-w-[1080px] p-4 sm:p-6">
+        <header className="mb-4 mt-4 flex items-center justify-between gap-4 sm:mt-8">
+          <h1 className="text-2xl font-bold sm:text-3xl">내 계정</h1>
         </header>
         <MyPageForm />
       </div>
