@@ -153,7 +153,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
 
   return (
     <div
-      className={`rounded-xl bg-white flex flex-col shadow-background-secondary shadow-lg relative transition-transform ${isMain ? 'border-accent h-[400px] min-h-[400px] md:h-full md:min-h-[656px] border-2' : 'border-neutral-200 h-[400px] min-w-0 w-full border'}`}
+      className={`rounded-xl bg-white flex flex-col shadow-background-secondary shadow-lg relative transition-transform ${isMain ? 'border-accent h-[400px] min-h-[400px] md:h-full md:min-h-0 border-2' : 'border-neutral-200 h-[400px] min-w-0 w-full border'}`}
     >
       <div className="p-2 flex justify-between items-center gap-2 border-b w-full">
         {/* 좌측 영역: 이름 + 상태 칩 */}

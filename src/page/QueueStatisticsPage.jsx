@@ -182,9 +182,10 @@ export default function QueueStatisticsPage() {
   const sortedRoomSummary = useMemo(() => {
     const { column, direction } = roomSortDescriptor;
     return [...roomSummary].sort((first, second) => {
-      const comparison = column === 'name'
-        ? roomNameCollator.compare(first.name, second.name)
-        : (first[column] ?? 0) - (second[column] ?? 0);
+      const comparison =
+        column === 'name'
+          ? roomNameCollator.compare(first.name, second.name)
+          : (first[column] ?? 0) - (second[column] ?? 0);
 
       if (comparison !== 0) return direction === 'descending' ? -comparison : comparison;
       return roomNameCollator.compare(first.name, second.name);
