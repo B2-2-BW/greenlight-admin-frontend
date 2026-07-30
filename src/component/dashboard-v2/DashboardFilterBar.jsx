@@ -70,7 +70,7 @@ function EnabledFilterSelect({ value, onChange }) {
         <Funnel />
         {enabledSelectFilterLabel}
       </Button>
-      <Select.Popover isNonModal className="w-32" placement="bottom start">
+      <Select.Popover className="w-32" placement="bottom start">
         <ListBox selectionMode="multiple">
           <ListBox.Item id="true" textValue="활성">
             <ListBox.ItemIndicator />

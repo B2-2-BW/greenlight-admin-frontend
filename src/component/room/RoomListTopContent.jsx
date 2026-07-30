@@ -22,7 +22,7 @@ function FilterSelect({ label, value, onChange, options }) {
         <Select.Value>{({ state }) => state.selectedItems[0]?.textValue}</Select.Value>
         <Select.Indicator />
       </Select.Trigger>
-      <Select.Popover isNonModal>
+      <Select.Popover>
         <ListBox>
           {options.map((option) => (
             <ListBox.Item key={option.id} id={option.id} textValue={option.label}>

@@ -512,7 +512,7 @@ export default function UserDetailPage() {
                         </Select.Value>
                         <Select.Indicator />
                       </Select.Trigger>
-                      <Select.Popover isNonModal className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
+                      <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                         <ListBox>
                           {sites.map((site) => (
                             <ListBox.Item
@@ -543,7 +543,7 @@ export default function UserDetailPage() {
                         <Select.Value>{({ state }) => state.selectedItems[0]?.textValue ?? '역할 선택'}</Select.Value>
                         <Select.Indicator />
                       </Select.Trigger>
-                      <Select.Popover isNonModal className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
+                      <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                         <ListBox>
                           {(currentUser?.userRole === 'SUPER'
                             ? ['USER', 'SITE_ADMIN', 'SUPER']
@@ -650,7 +650,7 @@ export default function UserDetailPage() {
                           </Select.Value>
                           <Select.Indicator />
                         </Select.Trigger>
-                        <Select.Popover isNonModal className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
+                        <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                           <ListBox>
                             {sites.map((site) => (
                               <ListBox.Item
@@ -684,7 +684,7 @@ export default function UserDetailPage() {
                           </Select.Value>
                           <Select.Indicator />
                         </Select.Trigger>
-                        <Select.Popover isNonModal className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
+                        <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                           <ListBox>
                             {(currentUser?.userRole === 'SUPER'
                               ? ['USER', 'SITE_ADMIN', 'SUPER']
