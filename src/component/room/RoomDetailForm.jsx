@@ -555,7 +555,7 @@ export default function RoomDetailForm({ onPressBack }) {
                         <Select.Indicator />
                       </Select.Trigger>
 
-                      <Select.Popover isNonModal placement="bottom start">
+                      <Select.Popover placement="bottom start">
                         <ListBox>
                           {DEFAULT_RULE_TYPES.map((defaultType) => (
                             <ListBox.Item key={defaultType.value} id={defaultType.value} textValue={defaultType.name}>
