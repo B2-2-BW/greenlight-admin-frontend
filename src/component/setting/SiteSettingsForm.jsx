@@ -352,11 +352,10 @@ export default function SiteSettingsForm() {
           {/*</SectionTitle>*/}
         </div>
         {canManageSite && (
-          <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+          <div className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)] border-t border-neutral-200 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:bottom-2 sm:mx-0 sm:w-full sm:border-0 sm:p-0">
             <Button
-              size="lg"
-              className="min-h-11 rounded-2xl"
               type="submit"
+              className="min-h-12 rounded-2xl sm:min-h-10"
               isPending={isSubmitLoading}
               isDisabled={Object.keys(changes).length === 0 || isSubmitLoading}
               fullWidth
