@@ -127,7 +127,7 @@ export default function SiteSettingsForm() {
       setReason('');
       setIsSaveConfirmOpen(false);
       await fetchSiteInfo();
-      ToastUtil.success('시스템 설정', '저장 후 적용된 설정을 확인했습니다.');
+      ToastUtil.success('시스템 설정', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error.response);
       ToastUtil.error('시스템 설정', error.response?.data?.detail ?? '저장에 실패했습니다.');

@@ -155,7 +155,7 @@ export default function SiteDetailPage() {
       setReason('');
       setIsSaveConfirmOpen(false);
       await load();
-      ToastUtil.success('사이트 관리', '저장 후 적용된 사이트 정보를 확인했습니다.');
+      ToastUtil.success('사이트 관리', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error);
       ToastUtil.error('사이트 관리', error.response?.data?.detail ?? '사이트 정보를 저장하지 못했습니다.');
@@ -310,11 +310,7 @@ export default function SiteDetailPage() {
                       <Label className="text-base" isRequired>
                         사이트 활성/비활성화
                       </Label>
-                      <Switch
-                        isSelected={enabled}
-                        onChange={setEnabled}
-                        className="group w-full max-w-lg"
-                      >
+                      <Switch isSelected={enabled} onChange={setEnabled} className="group w-full max-w-lg">
                         <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                           <Switch.Control>
                             <Switch.Thumb>
@@ -377,7 +373,12 @@ export default function SiteDetailPage() {
                         onConfirm={handleSyncRoomData}
                         onOpenChange={setIsRoomSyncDialogOpen}
                       >
-                        <Button type="button" variant="secondary" isPending={syncTarget === 'room'} className="min-h-11">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          isPending={syncTarget === 'room'}
+                          className="min-h-11"
+                        >
                           전체 대기열 설정 동기화
                         </Button>
                       </ConfirmAlertDialog>
@@ -394,7 +395,12 @@ export default function SiteDetailPage() {
                         onConfirm={handleSyncSiteData}
                         onOpenChange={setIsSiteSyncDialogOpen}
                       >
-                        <Button type="button" variant="secondary" isPending={syncTarget === 'site'} className="min-h-11">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          isPending={syncTarget === 'site'}
+                          className="min-h-11"
+                        >
                           {isSuperUser ? '전체 사이트 설정 동기화' : '사이트 설정 동기화'}
                         </Button>
                       </ConfirmAlertDialog>
@@ -410,7 +416,7 @@ export default function SiteDetailPage() {
                     </Description>
                     <ConfirmAlertDialog
                       title="새 API Key를 발급할까요?"
-                      message={(
+                      message={
                         <div className="flex flex-col gap-3">
                           <p>기존 API Key는 즉시 만료되며 되돌릴 수 없습니다.</p>
                           <TextField className="w-full" isRequired>
@@ -422,7 +428,7 @@ export default function SiteDetailPage() {
                             />
                           </TextField>
                         </div>
-                      )}
+                      }
                       confirmMessage="새 API Key 발급"
                       isConfirmDisabled={!keyRotationReason.trim()}
                       isOpen={isKeyRotationConfirmOpen}
@@ -547,7 +553,9 @@ export default function SiteDetailPage() {
           <Modal.Container size="sm">
             <Modal.Dialog className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
               <Modal.CloseTrigger />
-              <Modal.Header><Modal.Heading>사이트 폐기</Modal.Heading></Modal.Header>
+              <Modal.Header>
+                <Modal.Heading>사이트 폐기</Modal.Heading>
+              </Modal.Header>
               <Modal.Body className="flex flex-col gap-4">
                 <p className="text-sm text-danger">
                   이 작업은 사이트 ID 재사용이나 화면에서의 복구를 지원하지 않습니다.
@@ -571,16 +579,14 @@ export default function SiteDetailPage() {
                 </TextField>
               </Modal.Body>
               <Modal.Footer className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <Button slot="close" variant="tertiary" className="w-full sm:w-auto">취소</Button>
+                <Button slot="close" variant="tertiary" className="w-full sm:w-auto">
+                  취소
+                </Button>
                 <Button
                   variant="danger"
                   className="w-full sm:w-auto"
                   isPending={isDeletePending}
-                  isDisabled={
-                    isDeletePending ||
-                    deleteConfirmation !== siteId ||
-                    !deleteReason.trim()
-                  }
+                  isDisabled={isDeletePending || deleteConfirmation !== siteId || !deleteReason.trim()}
                   onPress={deleteSite}
                 >
                   사이트 폐기
