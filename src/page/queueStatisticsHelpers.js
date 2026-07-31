@@ -2,6 +2,22 @@ const metricKeys = ['totalWaiting', 'totalActive', 'waitingCount', 'enteredCount
 
 const asNumber = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
 
+export const ROOM_SUMMARY_METRICS = [
+  { key: 'maxWaiting', label: '최대 동시 대기' },
+  { key: 'maxActive', label: '최대 활성' },
+  { key: 'waitingCount', label: '대기 유입' },
+  { key: 'enteredCount', label: '입장' },
+  { key: 'exitedCount', label: '이탈' },
+  { key: 'cancelledCount', label: '취소' },
+];
+
+export const KPI_METRICS = [
+  { key: 'maxWaiting', label: '최대 동시 대기 인원', unit: '명' },
+  { key: 'waitingCount', label: '대기 유입', unit: '건' },
+  { key: 'enteredCount', label: '입장', unit: '건' },
+  { key: 'cancelledCount', label: '취소', unit: '건' },
+];
+
 export const buildQueueWindows = (series = []) => {
   const byTimestamp = new Map();
 
