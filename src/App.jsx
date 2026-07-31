@@ -17,10 +17,12 @@ import DashboardV2Page from './page/DashboardV2Page.jsx';
 import AccountPage from './page/AccountPage.jsx';
 import UserDetailPage from './page/UserDetailPage.jsx';
 import AdminRoute from './router/AdminRoute.jsx';
+import SuperRoute from './router/SuperRoute.jsx';
 import ForcedPasswordChangeDialog from './component/mypage/ForcedPasswordChangeDialog.jsx';
 import SiteManagementPage from './page/SiteManagementPage.jsx';
 import SiteDetailPage from './page/SiteDetailPage.jsx';
 import QueueStatisticsSkeleton from './component/QueueStatisticsSkeleton.jsx';
+import AuditLogPage from './page/AuditLogPage.jsx';
 
 const QueueStatisticsPage = lazy(() => import('./page/QueueStatisticsPage.jsx'));
 
@@ -59,7 +61,15 @@ function App() {
             }
           />
           <Route path="/rooms/:roomId" element={<RoomDetailPage />} />
-          <Route path="/schedulers" element={<SchedulerPage />} />
+          <Route
+            path="/system-status"
+            element={
+              <SuperRoute>
+                <SchedulerPage />
+              </SuperRoute>
+            }
+          />
+          <Route path="/schedulers" element={<Navigate to="/system-status" replace />} />
           <Route path="/settings" element={<SiteSettingsPage />} />
           <Route
             path="/users"
@@ -90,6 +100,14 @@ function App() {
             element={
               <AdminRoute>
                 <SiteDetailPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/audit-logs"
+            element={
+              <AdminRoute>
+                <AuditLogPage />
               </AdminRoute>
             }
           />
