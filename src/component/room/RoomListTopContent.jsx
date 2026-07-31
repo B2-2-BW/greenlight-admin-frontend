@@ -82,7 +82,7 @@ export default function RoomListTopContent({ filters, onFiltersChange }) {
             options={statusOptions}
           />
           {canManageRooms && (
-            <Button className="col-span-2 min-h-11 w-full sm:w-auto" onPress={() => navigate('/rooms/new')}>
+            <Button className="col-span-2 w-full sm:w-auto" onPress={() => navigate('/rooms/new')}>
               대기열 추가
             </Button>
           )}
