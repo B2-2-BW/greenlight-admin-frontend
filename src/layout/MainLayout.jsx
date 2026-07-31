@@ -33,6 +33,7 @@ export default function MainLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
   const canManageUsers = role === 'SITE_ADMIN' || role === 'SUPER';
+  const isSuper = role === 'SUPER';
   const menuLists = [
     [
       { title: '대시보드', prependIcon: <HomeIcon color="#6b7280" />, path: '/dashboard', menuId: 2 },
@@ -70,6 +71,22 @@ export default function MainLayout() {
               path: '/sites',
               menuId: 17,
             },
+            {
+              title: '감사로그',
+              prependIcon: <ClipboardFilledIcon color="#6b7280" />,
+              path: '/audit-logs',
+              menuId: 19,
+            },
+            ...(isSuper
+              ? [
+                  {
+                    title: '시스템 상태',
+                    prependIcon: <SquareChartFilledIcon color="#6b7280" />,
+                    path: '/system-status',
+                    menuId: 20,
+                  },
+                ]
+              : []),
           ]
         : []),
     ],
@@ -104,7 +121,7 @@ export default function MainLayout() {
   }, [isSidebarOpen]);
 
   return (
-    <div className="MainLayout min-h-dvh">
+    <div className="MainLayout min-h-dvh pt-16">
       <NavBar
         isSidebarOpen={isSidebarOpen}
         onSidebarToggle={() => setIsSidebarOpen((isOpen) => !isOpen)}
