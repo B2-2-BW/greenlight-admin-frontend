@@ -125,7 +125,7 @@ export default function MainLayout() {
   }, [isSidebarOpen]);
 
   return (
-    <div className="MainLayout min-h-dvh pt-16">
+    <div className="MainLayout min-h-dvh bg-neutral-50 pt-16">
       <NavBar
         isSidebarOpen={isSidebarOpen}
         onSidebarToggle={() => setIsSidebarOpen((isOpen) => !isOpen)}

@@ -121,9 +121,7 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
                 </Avatar>
               </div>
             </Button>
-            {/* Keep account actions over the page without locking the root scroll container. */}
             <Dropdown.Popover
-              isNonModal
               placement="bottom end"
               containerPadding={16}
               offset={16}
