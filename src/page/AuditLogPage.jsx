@@ -19,12 +19,14 @@ import { fromDate, getLocalTimeZone } from '@internationalized/date';
 import { I18nProvider } from '@react-aria/i18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AuditClient } from '../api/audit/index.js';
+import { SiteClient } from '../api/site/index.js';
 import ChangeDiff from '../component/audit/ChangeDiff.jsx';
 import { useUserStore } from '../store/user.jsx';
 import { ToastUtil } from '../util/toastUtil.js';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 const ONE_DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+const MAX_RANGE_MILLISECONDS = 7 * ONE_DAY_IN_MILLISECONDS;
 const LOCAL_TIME_ZONE = getLocalTimeZone();
 
 const createInitialFilters = () => {
@@ -44,7 +46,10 @@ const createInitialFilters = () => {
 
 const getRangeError = (range) => {
   if (!range?.start || !range?.end) return '시작 및 종료 시각을 모두 입력해 주세요.';
-  if (range.start.compare(range.end) >= 0) return '시작 시각은 종료 시각보다 앞서야 합니다.';
+  const start = range.start.toDate(LOCAL_TIME_ZONE).getTime();
+  const end = range.end.toDate(LOCAL_TIME_ZONE).getTime();
+  if (start >= end) return '시작 시각은 종료 시각보다 앞서야 합니다.';
+  if (end - start > MAX_RANGE_MILLISECONDS) return '조회 기간은 최대 7일까지 선택할 수 있습니다.';
   return null;
 };
 
@@ -103,7 +108,7 @@ function AuditTextFilter({ id, label, value, onChange }) {
   );
 }
 
-function AuditFilterSelect({ id, label, value, onChange, options }) {
+function AuditFilterSelect({ id, label, value, onChange, options, isDisabled = false }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <span id={`${id}-label`} className="text-sm font-medium">
@@ -115,6 +120,7 @@ function AuditFilterSelect({ id, label, value, onChange, options }) {
         onChange={onChange}
         className="w-full"
         variant="secondary"
+        isDisabled={isDisabled}
       >
         <Select.Trigger className="h-10">
           <Select.Value>{({ state }) => state.selectedItems[0]?.textValue}</Select.Value>
@@ -143,7 +149,59 @@ export default function AuditLogPage() {
   const [result, setResult] = useState({ content: [], totalPages: 0, totalElements: 0 });
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [sites, setSites] = useState([]);
+  const [sitesLoading, setSitesLoading] = useState(false);
   const rangeError = getRangeError(filters.dateRange);
+  const siteOptions = useMemo(
+    () => [
+      { id: 'ALL', label: '전체 사이트' },
+      ...sites.map((site) => ({
+        id: site.siteId,
+        label: `${site.siteEnabled ? '' : '(비활성) '}${site.siteName || site.siteId} (${site.siteId})`,
+      })),
+    ],
+    [sites]
+  );
+
+  useEffect(() => {
+    if (role !== 'SUPER') return undefined;
+    const controller = new AbortController();
+    let cancelled = false;
+    const loadSites = async () => {
+      setSitesLoading(true);
+      try {
+        const firstResponse = await SiteClient.getSites({
+          page: 1,
+          size: 100,
+          signal: controller.signal,
+        });
+        const firstPage = firstResponse.data ?? {};
+        const remainingResponses = await Promise.all(
+          Array.from({ length: Math.max(0, (firstPage.totalPages ?? 1) - 1) }, (_, index) =>
+            SiteClient.getSites({ page: index + 2, size: 100, signal: controller.signal })
+          )
+        );
+        if (!cancelled) {
+          setSites([
+            ...(firstPage.content ?? []),
+            ...remainingResponses.flatMap((response) => response.data?.content ?? []),
+          ]);
+        }
+      } catch (error) {
+        if (error.code !== 'ERR_CANCELED') {
+          console.error(error);
+          ToastUtil.error('감사로그', '사이트 목록을 불러오지 못했습니다.');
+        }
+      } finally {
+        if (!cancelled) setSitesLoading(false);
+      }
+    };
+    loadSites();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [role]);
 
   const load = useCallback(
     (signal) => {
@@ -205,11 +263,13 @@ export default function AuditLogPage() {
         <Form onSubmit={submit} className="mb-5 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-sm">
           <div className={`grid w-full gap-3 sm:grid-cols-2 ${role === 'SUPER' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
             {role === 'SUPER' && (
-              <AuditTextFilter
+              <AuditFilterSelect
                 id="audit-site-id"
-                label="사이트 ID"
+                label="사이트"
                 value={filters.siteId}
-                onChange={(event) => setFilters({ ...filters, siteId: event.target.value })}
+                onChange={(value) => setFilters({ ...filters, siteId: value === 'ALL' ? '' : value })}
+                options={siteOptions}
+                isDisabled={sitesLoading}
               />
             )}
             <AuditTextFilter
@@ -286,13 +346,13 @@ export default function AuditLogPage() {
               className={`text-sm lg:col-start-1 lg:row-start-2 ${rangeError ? 'text-danger' : 'text-muted'}`}
               role={rangeError ? 'alert' : undefined}
             >
-              {rangeError ?? '기본 조회 기간은 최근 1일입니다.'}
+              {rangeError ?? '시작과 종료 시각을 선택해 주세요. 최대 7일까지 조회할 수 있습니다.'}
             </p>
             <div className="flex gap-2 lg:col-start-2 lg:row-start-1">
-              <Button type="submit" className="min-h-11 flex-1" isDisabled={Boolean(rangeError)}>
+              <Button type="submit" className="flex-1" isDisabled={Boolean(rangeError)}>
                 조회
               </Button>
-              <Button type="button" variant="secondary" className="min-h-11" onPress={reset}>
+              <Button type="button" variant="secondary" onPress={reset}>
                 초기화
               </Button>
             </div>

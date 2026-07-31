@@ -2,7 +2,7 @@ import { commonAxiosInstance } from '../index.js';
 
 const getAuditLogs = ({
   page = 1,
-  size = 20,
+  size = 10,
   siteId,
   createdBy,
   targetType,
