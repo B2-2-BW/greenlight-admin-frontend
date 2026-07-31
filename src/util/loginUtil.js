@@ -53,8 +53,8 @@ async function issueAndSetAccessToken() {
 
     LoginUtil.setAccessToken(accessToken);
   } catch (err) {
-    LoginUtil.clearAccessToken();
     if (err?.response?.status === 401 || err?.response?.status === 403) {
+      LoginUtil.clearAccessToken();
       console.warn('Unauthorized', err);
     } else {
       console.error('Failed to issue access token', err);

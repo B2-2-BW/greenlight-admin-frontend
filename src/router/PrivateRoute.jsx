@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from 'react-router';
+import { Alert, Button, Spinner } from '@heroui/react';
 import { LoginUtil } from '../util/loginUtil.js';
 import { useUserStore } from '../store/user.jsx';
 import { UserClient } from '../api/user/index.js';
@@ -8,7 +9,9 @@ import { useEffect, useState } from 'react';
 function PrivateRoute({ children }) {
   const location = useLocation();
   const setUser = useUserStore((state) => state.setUser);
+  const clearUser = useUserStore((state) => state.clearUser);
   const [authStatus, setAuthStatus] = useState('checking');
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -22,12 +25,19 @@ function PrivateRoute({ children }) {
           accessToken = LoginUtil.getAccessToken();
         }
 
-        const result = LoginUtil.validateJwt(accessToken);
+        let result = LoginUtil.validateJwt(accessToken);
+        if (!result?.valid && result?.expired) {
+          await LoginUtil.issueAndSetAccessToken();
+          accessToken = LoginUtil.getAccessToken();
+          result = LoginUtil.validateJwt(accessToken);
+        }
 
         if (!result?.valid) {
           if (result?.error) {
             console.error(result.error);
           }
+          LoginUtil.clearAccessToken();
+          clearUser();
           if (!cancelled) setAuthStatus('unauthenticated');
           return;
         }
@@ -38,13 +48,21 @@ function PrivateRoute({ children }) {
             setUser(response.data);
             setAuthStatus('authenticated');
           } else {
+            LoginUtil.clearAccessToken();
+            clearUser();
             setAuthStatus('unauthenticated');
           }
         }
       } catch (error) {
         console.error(error);
         if (!cancelled) {
-          setAuthStatus('unauthenticated');
+          if (error?.response?.status === 401 || error?.response?.status === 403) {
+            LoginUtil.clearAccessToken();
+            clearUser();
+            setAuthStatus('unauthenticated');
+          } else {
+            setAuthStatus('service-error');
+          }
         }
       }
     };
@@ -54,10 +72,37 @@ function PrivateRoute({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [location.pathname, setUser]);
+  }, [clearUser, retryCount, setUser]);
 
   if (authStatus === 'checking') {
-    return null; // 또는 로딩 스피너
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <Spinner color="accent" size="lg" aria-label="로그인 상태 확인 중" />
+      </div>
+    );
+  }
+
+  if (authStatus === 'service-error') {
+    return (
+      <div className="flex min-h-dvh items-center justify-center p-4">
+        <Alert status="danger" className="max-w-lg">
+          <Alert.Content>
+            <Alert.Title>서비스에 연결할 수 없습니다</Alert.Title>
+            <Alert.Description>잠시 후 다시 시도해 주세요.</Alert.Description>
+            <div className="mt-4">
+              <Button
+                onPress={() => {
+                  setAuthStatus('checking');
+                  setRetryCount((count) => count + 1);
+                }}
+              >
+                다시 시도
+              </Button>
+            </div>
+          </Alert.Content>
+        </Alert>
+      </div>
+    );
   }
 
   if (authStatus === 'unauthenticated') {

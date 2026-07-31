@@ -24,6 +24,12 @@ export const usePreferenceStore = create(
     {
       name: 'preferenceStorage',
       storage: createJSONStorage(() => localStorage),
+      partialize: ({ dashboardFilter, loginPreference }) => ({ dashboardFilter, loginPreference }),
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        dashboardFilter: persistedState?.dashboardFilter ?? currentState.dashboardFilter,
+        loginPreference: persistedState?.loginPreference ?? currentState.loginPreference,
+      }),
     }
   )
 );
