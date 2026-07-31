@@ -16,12 +16,20 @@ const labels = {
   defaultDestinationUrl: '기본 이동 URL',
   roomEnvironment: '환경',
   adImageUrl: '광고 이미지 URL',
+  roomRules: '대기열 규칙',
+  accountStatus: '계정 상태',
+  username: '사용자명',
+  userEmail: '이메일',
+  siteId: '사이트',
+  userRole: '역할',
+  passwordReset: '비밀번호 초기화',
 };
 
 const displayValue = (value, field) => {
   if (value === null || value === undefined || value === '') return '(없음)';
   if (field === 'deleted') return value ? '폐기됨' : '정상';
   if (field === 'apiKeyRotated') return value ? '교체됨' : '교체 전';
+  if (field === 'passwordReset') return value ? '초기화됨' : '초기화 전';
   if (typeof value === 'boolean') return value ? '활성' : '비활성';
   if (typeof value === 'object') {
     try {

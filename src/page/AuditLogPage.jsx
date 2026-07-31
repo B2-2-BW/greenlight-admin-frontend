@@ -32,6 +32,7 @@ const LOCAL_TIME_ZONE = getLocalTimeZone();
 const createInitialFilters = () => {
   const end = new Date();
   end.setSeconds(0, 0);
+  end.setMinutes(end.getMinutes() + 1);
   return {
     siteId: '',
     createdBy: '',
