@@ -17,11 +17,7 @@ import { UserClient } from '../../api/user/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { DateUtil } from '../../util/dateUtil.jsx';
 import { useUserStore } from '../../store/user.jsx';
-import {
-  getProfileAppearance,
-  normalizeProfileInitials,
-  PROFILE_COLOR_PRESETS,
-} from '../../util/profileAppearance.js';
+import { getProfileAppearance, normalizeProfileInitials, PROFILE_COLOR_PRESETS } from '../../util/profileAppearance.js';
 
 const roleLabels = {
   SUPER: '슈퍼유저',
@@ -266,7 +262,9 @@ export default function MyPageForm() {
                   </div>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                     <div className="min-w-0">
-                      <span id="profile-color-label" className="mb-2 block text-sm font-medium">색상</span>
+                      <span id="profile-color-label" className="mb-2 block text-sm font-medium">
+                        색상
+                      </span>
                       <ColorSwatchPicker
                         aria-labelledby="profile-color-label"
                         value={account.profileColor}
@@ -288,11 +286,7 @@ export default function MyPageForm() {
                     </div>
                     <TextField name="profileInitials" className="w-full sm:max-w-40" isRequired>
                       <Label>이니셜</Label>
-                      <Input
-                        value={account.profileInitials ?? ''}
-                        maxLength={2}
-                        onChange={updateProfileInitials}
-                      />
+                      <Input value={account.profileInitials ?? ''} maxLength={2} onChange={updateProfileInitials} />
                       <FieldError>{profileErrors.profileInitials ?? '이니셜을 입력해 주세요.'}</FieldError>
                     </TextField>
                   </div>
@@ -336,11 +330,11 @@ export default function MyPageForm() {
         </FormSection>
 
         {!isPageLoading && (
-          <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+          <div className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)] border-t border-neutral-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:bottom-2 sm:mx-0 sm:w-full sm:rounded-xl sm:border-0 sm:p-0">
             <Button
-              size="lg"
-              className="min-h-11 rounded-2xl"
               type="submit"
+              className="min-h-12 rounded-2xl sm:min-h-10"
+              size="lg"
               form="my-profile-form"
               isPending={isProfileSubmitLoading}
               fullWidth

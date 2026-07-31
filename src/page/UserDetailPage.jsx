@@ -91,8 +91,7 @@ const reasonActionConfig = {
   },
 };
 
-const getSiteLabel = (site) =>
-  `${site.siteEnabled ? '' : '(비활성) '}${site.siteName} (${site.siteId})`;
+const getSiteLabel = (site) => `${site.siteEnabled ? '' : '(비활성) '}${site.siteName} (${site.siteId})`;
 
 function ReadonlyField({ label, value }) {
   return (
@@ -234,11 +233,7 @@ export default function UserDetailPage() {
         });
         await fetchUser();
       } else {
-        const response = await UserClient.updateUserStatus(
-          userId,
-          actionConfig.accountStatus,
-          reason
-        );
+        const response = await UserClient.updateUserStatus(userId, actionConfig.accountStatus, reason);
         setUser(response.data);
         if (response.data?.accountStatus === 'PENDING') {
           setApproval({
@@ -504,10 +499,7 @@ export default function UserDetailPage() {
                 )}
                 <ReadonlyField label="사용자 ID" value={user.userId} />
                 {user.accountStatus === 'PENDING' && !isSuperUserReadOnly ? (
-                  <Form
-                    onSubmit={openApprovalDialog}
-                    className="flex w-full flex-col gap-6"
-                  >
+                  <Form onSubmit={openApprovalDialog} className="flex w-full flex-col gap-6">
                     <TextField
                       name="username"
                       isRequired
@@ -518,18 +510,10 @@ export default function UserDetailPage() {
                       variant="default"
                     >
                       <Label className="text-base">이름</Label>
-                      <Input
-                        className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                      />
+                      <Input className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent" />
                       <FieldError>이름을 입력해 주세요.</FieldError>
                     </TextField>
-                    <TextField
-                      name="userEmail"
-                      type="email"
-                      isRequired
-                      className="w-full max-w-2xl"
-                      variant="default"
-                    >
+                    <TextField name="userEmail" type="email" isRequired className="w-full max-w-2xl" variant="default">
                       <Label className="text-base">이메일</Label>
                       <Input
                         className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
@@ -567,11 +551,7 @@ export default function UserDetailPage() {
                       <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                         <ListBox>
                           {sites.map((site) => (
-                            <ListBox.Item
-                              key={site.siteId}
-                              id={site.siteId}
-                              textValue={getSiteLabel(site)}
-                            >
+                            <ListBox.Item key={site.siteId} id={site.siteId} textValue={getSiteLabel(site)}>
                               <ListBox.ItemIndicator />
                               <span className={site.siteEnabled ? undefined : 'text-neutral-400'}>
                                 {getSiteLabel(site)}
@@ -612,11 +592,7 @@ export default function UserDetailPage() {
                     </Select>
                     {canManageTarget && (
                       <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap">
-                        <Button
-                          type="submit"
-                          isDisabled={isActionLoading}
-                          className="min-h-11 w-full sm:w-auto"
-                        >
+                        <Button type="submit" isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">
                           가입 승인
                         </Button>
                         <Button
@@ -644,9 +620,7 @@ export default function UserDetailPage() {
                         variant="default"
                       >
                         <Label className="text-base">이름</Label>
-                        <Input
-                          className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                        />
+                        <Input className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent" />
                         <FieldError>이름을 입력해 주세요.</FieldError>
                       </TextField>
                       <TextField
@@ -697,11 +671,7 @@ export default function UserDetailPage() {
                         <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                           <ListBox>
                             {sites.map((site) => (
-                              <ListBox.Item
-                                key={site.siteId}
-                                id={site.siteId}
-                                textValue={getSiteLabel(site)}
-                              >
+                              <ListBox.Item key={site.siteId} id={site.siteId} textValue={getSiteLabel(site)}>
                                 <ListBox.ItemIndicator />
                                 <span className={site.siteEnabled ? undefined : 'text-neutral-400'}>
                                   {getSiteLabel(site)}
@@ -723,9 +693,7 @@ export default function UserDetailPage() {
                       >
                         <Label className="text-base">역할</Label>
                         <Select.Trigger className="min-h-11 w-full items-center ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:max-w-64">
-                          <Select.Value>
-                            {({ state }) => state.selectedItems[0]?.textValue ?? '역할 선택'}
-                          </Select.Value>
+                          <Select.Value>{({ state }) => state.selectedItems[0]?.textValue ?? '역할 선택'}</Select.Value>
                           <Select.Indicator />
                         </Select.Trigger>
                         <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
@@ -757,11 +725,11 @@ export default function UserDetailPage() {
             </FormSection>
 
             {canSaveManagedUser && (
-              <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+              <div className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)] border-t border-neutral-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:bottom-2 sm:mx-0 sm:w-full sm:rounded-xl sm:border-0 sm:p-0">
                 <Button
-                  size="lg"
-                  className="min-h-11 rounded-2xl"
                   type="submit"
+                  className="min-h-12 rounded-2xl sm:min-h-10"
+                  size="lg"
                   form="managed-user-form"
                   isPending={isActionLoading}
                   fullWidth
@@ -796,8 +764,7 @@ export default function UserDetailPage() {
                   {dialogAction === 'approve' && (
                     <div className="rounded-xl bg-neutral-100 p-3 text-sm">
                       <p>
-                        사이트:{' '}
-                        {sites.find((site) => site.siteId === approval.siteId)?.siteName ?? approval.siteId}
+                        사이트: {sites.find((site) => site.siteId === approval.siteId)?.siteName ?? approval.siteId}
                         {' · '}역할: {roleLabels[approval.userRole] ?? approval.userRole}
                       </p>
                     </div>
