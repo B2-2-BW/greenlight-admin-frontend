@@ -6,6 +6,7 @@ import { LoginUtil } from '../util/loginUtil.js';
 import { UserClient } from '../api/user/index.js';
 import { ToastUtil } from '../util/toastUtil.js';
 import { ENVIRONMENT_LABEL } from '../client/config.js';
+import { getProfileAppearance } from '../util/profileAppearance.js';
 
 export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
   const user = useUserStore((s) => s.user);
   const siteLabel = user?.siteName || user?.siteId;
   const showSiteId = user?.siteName && user?.siteId && user.siteName !== user.siteId;
+  const { profileColor, profileInitials } = getProfileAppearance(user);
 
   const goToHome = () => {
     navigate('/');
@@ -40,7 +42,7 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
   };
 
   return (
-    <nav className="sticky top-0 z-60 w-full border-b border-separator bg-background/90 backdrop-blur-lg">
+    <nav className="fixed inset-x-0 top-0 z-60 w-full border-b border-separator bg-background/90 backdrop-blur-lg">
       <header className="flex h-16 items-center justify-between gap-2 px-3 sm:px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
@@ -111,13 +113,17 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
         <div className="flex shrink-0 items-center">
           <Dropdown>
             <Button isIconOnly aria-label="계정 메뉴 열기">
-              <div className="ring-2 ring-accent rounded-full">
+              <div className="rounded-full" style={{ boxShadow: `0 0 0 2px ${profileColor}` }}>
                 <Avatar className="border-2 border-white transition-transform">
-                  <Avatar.Fallback className="bg-accent text-white">{user?.username?.[0]}</Avatar.Fallback>
+                  <Avatar.Fallback className="text-white" style={{ backgroundColor: profileColor }}>
+                    {profileInitials}
+                  </Avatar.Fallback>
                 </Avatar>
               </div>
             </Button>
+            {/* Keep account actions over the page without locking the root scroll container. */}
             <Dropdown.Popover
+              isNonModal
               placement="bottom end"
               containerPadding={16}
               offset={16}
@@ -127,9 +133,14 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
                 <Dropdown.Section showDivider aria-label="Profile & Actions">
                   <Dropdown.Item id="profile" isReadOnly className="h-14 gap-2 opacity-100">
                     <div className="inline-flex w-full min-w-0 items-center gap-2">
-                      <div className="ring-2 ring-accent shrink-0 rounded-full">
+                      <div
+                        className="shrink-0 rounded-full"
+                        style={{ boxShadow: `0 0 0 2px ${profileColor}` }}
+                      >
                         <Avatar className="border-2 border-white transition-transform">
-                          <Avatar.Fallback className="bg-accent text-white">{user?.username?.[0]}</Avatar.Fallback>
+                          <Avatar.Fallback className="text-white" style={{ backgroundColor: profileColor }}>
+                            {profileInitials}
+                          </Avatar.Fallback>
                         </Avatar>
                       </div>
                       <div className="flex min-w-0 flex-1 flex-col items-start">

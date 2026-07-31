@@ -1,15 +1,7 @@
 // 유저 생성
 import { commonAxiosInstance, publicAxiosInstance } from '../index.js';
 
-const me = async () => {
-  return await commonAxiosInstance.get(`/users/me`, {}).then(
-    (response) => response,
-    (error) => {
-      console.error(error);
-      return error.response;
-    }
-  );
-};
+const me = () => commonAxiosInstance.get('/users/me');
 
 const login = async (body) => {
   return await publicAxiosInstance.post(`/users/login`, body, {}).then(
@@ -51,16 +43,23 @@ const logout = () => {
   return commonAxiosInstance.post('/users/logout', {}, { withCredentials: true });
 };
 
-const getUsers = ({ page = 1, size = 10, query = '', signal } = {}) =>
+const getUsers = ({ page = 1, size = 10, query = '', status, role, siteId, signal } = {}) =>
   commonAxiosInstance.get('/users', {
-    params: { page, size, ...(query.trim() ? { query: query.trim() } : {}) },
+    params: {
+      page,
+      size,
+      ...(query.trim() ? { query: query.trim() } : {}),
+      ...(status ? { status } : {}),
+      ...(role ? { role } : {}),
+      ...(siteId ? { siteId } : {}),
+    },
     signal,
   });
 
 const getUser = (userId) => commonAxiosInstance.get(`/users/${userId}`);
 
-const updateUserStatus = (userId, accountStatus) =>
-  commonAxiosInstance.put(`/users/${userId}/status`, { accountStatus });
+const updateUserStatus = (userId, accountStatus, reason) =>
+  commonAxiosInstance.put(`/users/${userId}/status`, { accountStatus, reason });
 
 const approveUser = (userId, body) => commonAxiosInstance.put(`/users/${userId}/approval`, body);
 
@@ -68,6 +67,8 @@ const updateManagedUser = (userId, body) => commonAxiosInstance.put(`/users/${us
 
 const resetUserPassword = (userId, body) =>
   commonAxiosInstance.post(`/users/${userId}/password/reset`, body);
+
+const bulkAction = (body) => commonAxiosInstance.post('/users/bulk-actions', body);
 
 const UserClient = {
   me,
@@ -83,5 +84,6 @@ const UserClient = {
   approveUser,
   updateManagedUser,
   resetUserPassword,
+  bulkAction,
 };
 export { UserClient };
