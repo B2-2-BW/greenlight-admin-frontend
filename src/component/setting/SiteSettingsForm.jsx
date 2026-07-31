@@ -1,11 +1,13 @@
-import { Button, Description, Form, Input, Label, Skeleton, Switch, TextField } from '@heroui/react';
+import { Button, Description, Form, Input, Label, Modal, Skeleton, Switch, TextField } from '@heroui/react';
 import FormSection from '../common/FormSection.jsx';
 import ConfirmAlertDialog from '../ConfirmAlertDialog.jsx';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SiteClient } from '../../api/site/index.js';
 import { RoomClient } from '../../api/room/index.js';
 import { useUserStore } from '../../store/user.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
+import ChangeDiff from '../audit/ChangeDiff.jsx';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges.js';
 
 const enabledMessage = {
   true: {
@@ -24,6 +26,8 @@ export default function SiteSettingsForm() {
   const [siteInfo, setSiteInfo] = useState({});
 
   const [editQueueEnabled, setEditQueueEnabled] = useState(true);
+  const [reason, setReason] = useState('');
+  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
   const [isRoomSyncDialogOpen, setIsRoomSyncDialogOpen] = useState(false);
   const [isSiteSyncDialogOpen, setIsSiteSyncDialogOpen] = useState(false);
   const [syncTarget, setSyncTarget] = useState(null);
@@ -33,6 +37,16 @@ export default function SiteSettingsForm() {
   const canSyncRoomData = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
   const canManageQueue = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
   const isSuperUser = userRole === 'SUPER';
+  const changes = useMemo(() => {
+    if (!siteInfo?.siteId || Boolean(siteInfo.queueEnabled) === editQueueEnabled) return {};
+    return {
+      queueEnabled: {
+        before: Boolean(siteInfo.queueEnabled),
+        after: editQueueEnabled,
+      },
+    };
+  }, [editQueueEnabled, siteInfo]);
+  useUnsavedChanges(Object.keys(changes).length > 0);
 
   const fetchSiteInfo = async () => {
     setIsPageLoading(true);
@@ -55,33 +69,43 @@ export default function SiteSettingsForm() {
     fetchSiteInfo();
   }, []);
 
-  const reloadForm = () => {
-    setEditQueueEnabled(Boolean(siteInfo?.queueEnabled));
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!canManageQueue) {
       ToastUtil.error('시스템 설정', '대기열 설정을 변경할 권한이 없습니다.');
       return;
     }
+    if (Object.keys(changes).length === 0) {
+      ToastUtil.error('시스템 설정', '변경된 항목이 없습니다.');
+      return;
+    }
+    setIsSaveConfirmOpen(true);
+  };
+
+  const handleSaveConfirmed = async () => {
+    if (!reason.trim()) return;
     setIsSubmitLoading(true);
 
     try {
-      const response = await SiteClient.updateQueueEnabled(siteInfo.siteId, editQueueEnabled);
+      const response = await SiteClient.updateQueueEnabled(siteInfo.siteId, editQueueEnabled, reason.trim());
       if (response.status !== 200) {
         throw new Error('failed to create room ' + JSON.stringify(response));
       }
-      setSiteInfo(response.data);
-      setEditQueueEnabled(Boolean(response.data?.queueEnabled));
-      ToastUtil.success('시스템 설정', '성공적으로 저장했습니다.');
+      setReason('');
+      setIsSaveConfirmOpen(false);
+      await fetchSiteInfo();
+      ToastUtil.success('시스템 설정', '저장 후 적용된 설정을 확인했습니다.');
     } catch (error) {
       console.error(error.response);
       ToastUtil.error('시스템 설정', error.response?.data?.detail ?? '저장에 실패했습니다.');
-      reloadForm();
     } finally {
       setIsSubmitLoading(false);
     }
+  };
+
+  const handleSaveConfirmOpenChange = (open) => {
+    setIsSaveConfirmOpen(open);
+    if (!open && !isSubmitLoading) setReason('');
   };
 
   const handleSyncRoomData = async () => {
@@ -261,12 +285,57 @@ export default function SiteSettingsForm() {
         </div>
         {canManageQueue && (
           <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
-            <Button size="lg" className="min-h-11 rounded-2xl" type="submit" isPending={isSubmitLoading} fullWidth>
+            <Button
+              size="lg"
+              className="min-h-11 rounded-2xl"
+              type="submit"
+              isPending={isSubmitLoading}
+              isDisabled={Object.keys(changes).length === 0 || isSubmitLoading}
+              fullWidth
+            >
               저장하기
             </Button>
           </div>
         )}
       </Form>
+
+      <Modal isOpen={isSaveConfirmOpen} onOpenChange={handleSaveConfirmOpenChange}>
+        <Modal.Backdrop>
+          <Modal.Container size="lg">
+            <Modal.Dialog className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+              <Modal.CloseTrigger />
+              <Modal.Header>
+                <Modal.Heading>시스템 설정 변경 확인</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body className="flex flex-col gap-4">
+                <ChangeDiff changes={changes} />
+                <TextField className="w-full" isRequired>
+                  <Label>변경 사유</Label>
+                  <Input
+                    value={reason}
+                    maxLength={1000}
+                    onChange={(event) => setReason(event.target.value)}
+                    placeholder="변경이 필요한 이유를 입력해 주세요."
+                  />
+                </TextField>
+              </Modal.Body>
+              <Modal.Footer className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button slot="close" variant="tertiary" className="w-full sm:w-auto">
+                  취소
+                </Button>
+                <Button
+                  onPress={handleSaveConfirmed}
+                  isPending={isSubmitLoading}
+                  isDisabled={!reason.trim() || isSubmitLoading}
+                  className="w-full sm:w-auto"
+                >
+                  변경 적용
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
 
       {/*<ConfirmModal*/}
       {/*  isOpen={isOpenConfirm}*/}
