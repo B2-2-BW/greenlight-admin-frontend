@@ -1,5 +1,7 @@
 import {
+  Alert,
   Button,
+  Card,
   cn,
   Description,
   FieldError,
@@ -7,6 +9,7 @@ import {
   Input,
   Label,
   ListBox,
+  Modal,
   NumberField,
   Radio,
   RadioGroup,
@@ -18,18 +21,18 @@ import {
   Tooltip,
   useOverlayState,
 } from '@heroui/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import FormSection from '../common/FormSection.jsx';
 import ConfirmAlertDialog from '../ConfirmAlertDialog.jsx';
 import RoomStatusChip from './RoomStatusChip.jsx';
-import NotFoundPage from '../../page/NotFoundPage.jsx';
-import SomethingWentWrongPage from '../../page/SomethingWentWrongPage.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { RoomClient } from '../../api/room/index.js';
 import RoomRuleItemList from './RoomRuleItemList.jsx';
 import { ArrowLeft, TrashBin } from '@gravity-ui/icons';
 import { useUserStore } from '../../store/user.jsx';
+import ChangeDiff from '../audit/ChangeDiff.jsx';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges.js';
 
 const enabledMessage = {
   true: {
@@ -75,12 +78,20 @@ const defaultRoomRule = {
   description: '',
 };
 
+const normalizeRules = (rules) =>
+  (rules ?? []).map((rule) => ({
+    value: rule.value ?? '',
+    matchOperator: rule.matchOperator ?? 'EQUAL',
+    description: rule.description ?? '',
+  }));
+
 export default function RoomDetailForm({ onPressBack }) {
   const [errorStatus, setErrorStatus] = useState(null);
   const { roomId } = useParams();
 
-  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [loadStatus, setLoadStatus] = useState(roomId ? 'loading' : 'success');
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+  const isPageLoading = loadStatus === 'loading';
 
   const [room, setRoom] = useState(null);
   const [editName, setEditName] = useState('');
@@ -97,6 +108,8 @@ export default function RoomDetailForm({ onPressBack }) {
   const [previewAdImageUrl, setPreviewAdImageUrl] = useState('');
   const [previewAdImageRequestId, setPreviewAdImageRequestId] = useState(0);
   const [adImagePreviewStatus, setAdImagePreviewStatus] = useState('empty');
+  const [reason, setReason] = useState('');
+  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
   const adImagePreviewRequestIdRef = useRef(0);
 
   const navigate = useNavigate();
@@ -110,7 +123,7 @@ export default function RoomDetailForm({ onPressBack }) {
     setDescription('');
     setEditCapacity(0);
     setEditMaxTrafficPerSecond(0);
-    setEditEnabled(false);
+    setEditEnabled(true);
     setSelectDefaultRuleType('ALL');
     setEditDefaultDestinationUrl('');
     setEditAdImageUrl('');
@@ -128,8 +141,11 @@ export default function RoomDetailForm({ onPressBack }) {
 
   const fetchRoom = useCallback(
     async (fetchOptions = { clear: true }) => {
+      setLoadStatus('loading');
+      setErrorStatus(null);
       if (fetchOptions.clear) {
         clearForm();
+        setRoom(null);
       }
 
       try {
@@ -145,11 +161,11 @@ export default function RoomDetailForm({ onPressBack }) {
         setSelectDefaultRuleType(data?.defaultRuleType || 'ALL');
         setEditAdImageUrl(data?.adImageUrl?.trim() ?? '');
         setSelectRoomEnvironment(data?.roomEnvironment || 'DEV');
+        setLoadStatus('success');
       } catch (error) {
         console.error('Error fetching:', error);
-        setErrorStatus(error.status);
-      } finally {
-        setIsPageLoading(false);
+        setErrorStatus(error.response?.status ?? error.status ?? null);
+        setLoadStatus('error');
       }
     },
     [clearForm, roomId]
@@ -158,7 +174,7 @@ export default function RoomDetailForm({ onPressBack }) {
   // Location 이동 시 실행
   useEffect(() => {
     if (!roomId) {
-      setIsPageLoading(false);
+      setLoadStatus('success');
       return;
     }
     fetchRoom();
@@ -202,49 +218,126 @@ export default function RoomDetailForm({ onPressBack }) {
     setEditAdImageUrl(event.target.value);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!canManageRooms) {
-      ToastUtil.error('대기열 상세', '대기열 설정을 변경할 권한이 없습니다.');
-      return;
-    }
-    setIsSubmitLoading(true);
-
-    const data = {
+  const changes = useMemo(() => {
+    if (!roomId || !room) return {};
+    const previous = {
+      name: room.name ?? '',
+      description: room.description ?? '',
+      capacity: Number(room.capacity ?? 0),
+      maxTrafficPerSecond: Number(room.maxTrafficPerSecond ?? 0),
+      enabled: Boolean(room.enabled),
+      defaultRuleType: room.defaultRuleType ?? 'ALL',
+      defaultDestinationUrl: room.defaultDestinationUrl?.trim() ?? '',
+      roomEnvironment: room.roomEnvironment ?? 'DEV',
+      adImageUrl: room.adImageUrl?.trim() ?? '',
+      roomRules: normalizeRules(room.roomRules),
+    };
+    const current = {
       name: editName,
       description: editDescription,
-      capacity: editCapacity,
-      maxTrafficPerSecond: editMaxTrafficPerSecond,
+      capacity: Number(editCapacity ?? 0),
+      maxTrafficPerSecond: Number(editMaxTrafficPerSecond ?? 0),
       enabled: editEnabled,
       defaultRuleType: selectDefaultRuleType,
       defaultDestinationUrl: editDefaultDestinationUrl,
-      adImageUrl: editAdImageUrl,
-      roomRules: editRoomRules,
       roomEnvironment: selectRoomEnvironment,
-      updateRule: true,
+      adImageUrl: editAdImageUrl,
+      roomRules: selectDefaultRuleType === 'ALL' ? [] : normalizeRules(editRoomRules),
     };
+    return Object.fromEntries(
+      Object.keys(current)
+        .filter((field) => JSON.stringify(current[field]) !== JSON.stringify(previous[field]))
+        .map((field) => [field, { before: previous[field], after: current[field] }])
+    );
+  }, [
+    editAdImageUrl,
+    editCapacity,
+    editDefaultDestinationUrl,
+    editDescription,
+    editEnabled,
+    editMaxTrafficPerSecond,
+    editName,
+    editRoomRules,
+    room,
+    roomId,
+    selectDefaultRuleType,
+    selectRoomEnvironment,
+  ]);
+  const isDirty = Boolean(roomId) && (Object.keys(changes).length > 0 || reason.trim().length > 0);
+  const confirmNavigation = useUnsavedChanges(isDirty);
 
+  const buildRequestData = () => ({
+    name: editName,
+    description: editDescription,
+    capacity: editCapacity,
+    maxTrafficPerSecond: editMaxTrafficPerSecond,
+    enabled: editEnabled,
+    defaultRuleType: selectDefaultRuleType,
+    defaultDestinationUrl: editDefaultDestinationUrl,
+    adImageUrl: editAdImageUrl,
+    roomRules: editRoomRules,
+    roomEnvironment: selectRoomEnvironment,
+    updateRule: true,
+  });
+
+  const saveRoom = async (data) => {
+    setIsSubmitLoading(true);
     try {
       if (roomId) {
-        // roomId가 있는 경우 업데이트 화면
         await RoomClient.updateRoomById(roomId, data);
+        setReason('');
+        setIsSaveConfirmOpen(false);
         await fetchRoom({ clear: false });
+        ToastUtil.success('대기열 상세', '성공적으로 저장했습니다.');
       } else {
-        // 없는 경우 생성 화면
         const response = await RoomClient.createRoom(data);
         if (response.status === 201) {
           navigate(`/rooms/${response.data.roomId}`);
+          ToastUtil.success('대기열 상세', '성공적으로 저장했습니다.');
         } else {
           throw new Error('failed to create room ' + JSON.stringify(response));
         }
       }
-      ToastUtil.success('대기열 상세', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error.response);
       ToastUtil.error('대기열 상세', error.response?.data?.detail ?? '저장에 실패했습니다.');
     } finally {
       setIsSubmitLoading(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!canManageRooms) {
+      ToastUtil.error('대기열 상세', '대기열 설정을 변경할 권한이 없습니다.');
+      return;
+    }
+    if (roomId && loadStatus !== 'success') {
+      ToastUtil.error('대기열 상세', '대기열 정보를 불러온 후 저장할 수 있습니다.');
+      return;
+    }
+    if (roomId) {
+      if (Object.keys(changes).length === 0) {
+        ToastUtil.error('대기열 상세', '변경된 항목이 없습니다.');
+        return;
+      }
+      setIsSaveConfirmOpen(true);
+      return;
+    }
+    await saveRoom(buildRequestData());
+  };
+
+  const handleUpdateConfirmed = async () => {
+    const normalizedReason = reason.trim();
+    await saveRoom({
+      ...buildRequestData(),
+      ...(normalizedReason ? { reason: normalizedReason } : {}),
+    });
+  };
+
+  const handleSaveConfirmOpenChange = (open) => {
+    setIsSaveConfirmOpen(open);
+    if (!open && !isSubmitLoading) setReason('');
   };
 
   const handleDeleteRoomPress = useCallback(
@@ -303,10 +396,28 @@ export default function RoomDetailForm({ onPressBack }) {
     setSelectDefaultRuleType(value);
   };
 
-  if (errorStatus === 404) {
-    return <NotFoundPage />;
-  } else if (errorStatus === 500) {
-    return <SomethingWentWrongPage />;
+  if (loadStatus === 'error') {
+    const errorTitle = errorStatus === 404 ? '대기열을 찾을 수 없습니다.' : '대기열 정보를 불러오지 못했습니다.';
+    return (
+      <Card className="w-full">
+        <Card.Content className="flex flex-col gap-4 p-5">
+          <Alert status="danger">
+            <Alert.Content>
+              <Alert.Title>{errorTitle}</Alert.Title>
+              <Alert.Description>
+                저장 기능이 차단되었습니다. 다시 조회하거나 대기열 목록으로 이동해 주세요.
+              </Alert.Description>
+            </Alert.Content>
+          </Alert>
+          <div className="flex flex-wrap gap-2">
+            <Button onPress={() => fetchRoom()}>다시 조회</Button>
+            <Button variant="secondary" onPress={() => confirmNavigation() && onPressBack()}>
+              목록으로 이동
+            </Button>
+          </div>
+        </Card.Content>
+      </Card>
+    );
   }
 
   return (
@@ -356,7 +467,7 @@ export default function RoomDetailForm({ onPressBack }) {
                     variant="ghost"
                     aria-label="대기열 목록으로 돌아가기"
                     className="min-h-11 min-w-11"
-                    onPress={onPressBack}
+                    onPress={() => confirmNavigation() && onPressBack()}
                   >
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
@@ -704,13 +815,58 @@ export default function RoomDetailForm({ onPressBack }) {
         </div>
         {canManageRooms && (
           <div className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)] border-t border-neutral-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:bottom-2 sm:mx-0 sm:w-full sm:rounded-xl sm:border-0 sm:p-0">
-            <Button type="submit" className="min-h-12 rounded-2xl sm:min-h-10" isPending={isSubmitLoading} fullWidth>
+            <Button
+              type="submit"
+              className="min-h-12 rounded-2xl sm:min-h-10"
+              isPending={isSubmitLoading}
+              isDisabled={
+                isSubmitLoading || (roomId != null && (loadStatus !== 'success' || Object.keys(changes).length === 0))
+              }
+              fullWidth
+            >
               {isSubmitLoading ? <Spinner color="current" size="sm" /> : null}
               저장하기
             </Button>
           </div>
         )}
       </Form>
+      <Modal isOpen={isSaveConfirmOpen} onOpenChange={handleSaveConfirmOpenChange}>
+        <Modal.Backdrop>
+          <Modal.Container size="lg">
+            <Modal.Dialog className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+              <Modal.CloseTrigger />
+              <Modal.Header>
+                <Modal.Heading>대기열 변경 확인</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body className="flex flex-col gap-4">
+                <ChangeDiff changes={changes} />
+                <TextField className="w-full">
+                  <Label>변경 사유 (선택)</Label>
+                  <Input
+                    value={reason}
+                    maxLength={1000}
+                    onChange={(event) => setReason(event.target.value)}
+                    placeholder="변경이 필요한 이유를 입력해 주세요."
+                  />
+                </TextField>
+              </Modal.Body>
+              <Modal.Footer className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button slot="close" variant="tertiary" className="w-full sm:w-auto">
+                  취소
+                </Button>
+                <Button
+                  onPress={handleUpdateConfirmed}
+                  isPending={isSubmitLoading}
+                  isDisabled={isSubmitLoading}
+                  className="w-full sm:w-auto"
+                >
+                  변경 적용
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
     </>
   );
 }

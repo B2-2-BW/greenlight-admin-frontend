@@ -55,7 +55,7 @@ function QuickNumberSetting({ label, unit, description, value, steps, error, isP
 
   return (
     <div className="flex flex-col gap-2">
-      <TextField type="number" inputMode="numeric" isInvalid={Boolean(error)}>
+      <TextField type="number" inputMode="numeric" isDisabled={isPending} isInvalid={Boolean(error)}>
         <div className="flex items-center justify-between gap-2">
           <Label className="text-sm font-medium text-neutral-700">{label}</Label>
           <span className="text-xs text-neutral-500">{unit}</span>
@@ -67,7 +67,6 @@ function QuickNumberSetting({ label, unit, description, value, steps, error, isP
           className="tabular-nums ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
           value={value}
           onChange={(event) => onChange(event.currentTarget.value)}
-          isDisabled={isPending}
         />
         {error ? (
           <FieldError>{error}</FieldError>
@@ -223,15 +222,15 @@ const QuickSetting = ({ room }) => {
   const settings = (
     <>
       <div className="flex flex-col gap-5">
-        {settingFields.map((field) => (
+        {settingFields.map(({ key, ...fieldProps }) => (
           <QuickNumberSetting
-            key={field.key}
-            {...field}
-            value={draft[field.key]}
-            error={errors[field.key]}
+            key={key}
+            {...fieldProps}
+            value={draft[key]}
+            error={errors[key]}
             isPending={isSubmitLoading}
-            onChange={(value) => handleSettingChange(field.key, value)}
-            onAdjust={(amount) => adjustSetting(field.key, amount)}
+            onChange={(value) => handleSettingChange(key, value)}
+            onAdjust={(amount) => adjustSetting(key, amount)}
           />
         ))}
       </div>

@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { AlertDialog, Button, Dropdown, Label, ListBox, Select, Tabs, useOverlayState } from '@heroui/react';
+import { useCallback, useState } from 'react';
+import { AlertDialog, Button, Dropdown, Input, Label, ListBox, Select, Tabs, TextField, useOverlayState } from '@heroui/react';
 import { Funnel, Gear, Power } from '@gravity-ui/icons';
 import { SiteClient } from '../../api/site/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
@@ -86,7 +86,7 @@ function EnabledFilterSelect({ value, onChange }) {
   );
 }
 
-function DisableQueueAlert({ isOpen, onOpenChange, onConfirm }) {
+function DisableQueueAlert({ isOpen, onOpenChange, onConfirm, reason, onReasonChange }) {
   return (
     <AlertDialog isOpen={isOpen} onOpenChange={onOpenChange}>
       <AlertDialog.Backdrop>
@@ -101,12 +101,20 @@ function DisableQueueAlert({ isOpen, onOpenChange, onConfirm }) {
               <p>
                 이후 신규 티켓 발급 요청은 대기 없이 통과합니다. 이미 발급된 티켓에는 즉시 적용되지 않습니다.
               </p>
+              <TextField className="mt-4 w-full" isRequired>
+                <Label>변경 사유</Label>
+                <Input
+                  value={reason}
+                  maxLength={1000}
+                  onChange={(event) => onReasonChange(event.target.value)}
+                />
+              </TextField>
             </AlertDialog.Body>
             <AlertDialog.Footer>
               <Button slot="close" variant="tertiary">
                 취소하기
               </Button>
-              <Button slot="close" variant="danger" onPress={onConfirm}>
+              <Button slot="close" variant="danger" onPress={onConfirm} isDisabled={!reason.trim()}>
                 전체 대기열 비활성화
               </Button>
             </AlertDialog.Footer>
@@ -128,6 +136,7 @@ const dashboardSettings = [
 
 export function DashboardFilterBar() {
   const disableQueueAlertState = useOverlayState();
+  const [disableReason, setDisableReason] = useState('');
 
   const { fetchRoomList } = useDashboard();
 
@@ -150,11 +159,12 @@ export function DashboardFilterBar() {
         ToastUtil.error('저장 실패', '권한이 없습니다.');
         return;
       }
-      const response = await SiteClient.updateQueueEnabled(me.siteId, false);
+      const response = await SiteClient.updateQueueEnabled(me.siteId, false, disableReason.trim());
       if (response.status !== 200) {
         throw new Error('failed to create room ' + JSON.stringify(response));
       }
       await fetchRoomList();
+      setDisableReason('');
       ToastUtil.success('시스템 설정', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error.response);
@@ -269,6 +279,8 @@ export function DashboardFilterBar() {
           isOpen={disableQueueAlertState.isOpen}
           onOpenChange={disableQueueAlertState.setOpen}
           onConfirm={handleDisableQueue}
+          reason={disableReason}
+          onReasonChange={setDisableReason}
         />
       )}
     </div>
