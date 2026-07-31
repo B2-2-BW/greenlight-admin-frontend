@@ -1,12 +1,14 @@
 import { Button, Description, FieldError, Form, Input, Label, Modal, Skeleton, Switch, TextField } from '@heroui/react';
-import { ArrowLeft } from '@gravity-ui/icons';
-import { useCallback, useEffect, useState } from 'react';
+import { ArrowLeft, TrashBin } from '@gravity-ui/icons';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { SiteClient } from '../api/site/index.js';
 import FormSection from '../component/common/FormSection.jsx';
 import ConfirmAlertDialog from '../component/ConfirmAlertDialog.jsx';
 import { useUserStore } from '../store/user.jsx';
 import { ToastUtil } from '../util/toastUtil.js';
+import ChangeDiff from '../component/audit/ChangeDiff.jsx';
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges.js';
 
 const fieldClass = 'ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent';
 const enabledMessage = {
@@ -52,9 +54,15 @@ export default function SiteDetailPage() {
   const [description, setDescription] = useState('');
   const [enabled, setEnabled] = useState(false);
   const [queueEnabled, setQueueEnabled] = useState(false);
+  const [reason, setReason] = useState('');
   const [isKeyRotationPending, setIsKeyRotationPending] = useState(false);
   const [isKeyRotationConfirmOpen, setIsKeyRotationConfirmOpen] = useState(false);
   const [newApiKey, setNewApiKey] = useState(null);
+  const [keyRotationReason, setKeyRotationReason] = useState('');
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleteReason, setDeleteReason] = useState('');
+  const [isDeletePending, setIsDeletePending] = useState(false);
   const load = useCallback(async () => {
     try {
       const { data } = await SiteClient.getManagedSite(siteId);
@@ -74,10 +82,40 @@ export default function SiteDetailPage() {
     setLoading(true);
     load();
   }, [load]);
+  const changes = useMemo(() => {
+    if (!site) return {};
+    const current = {
+      siteName: name,
+      siteDescription: description,
+      siteEnabled: enabled,
+      queueEnabled,
+    };
+    const previous = {
+      siteName: site.siteName ?? '',
+      siteDescription: site.siteDescription ?? '',
+      siteEnabled: Boolean(site.siteEnabled),
+      queueEnabled: Boolean(site.queueEnabled),
+    };
+    return Object.fromEntries(
+      Object.keys(current)
+        .filter((field) => current[field] !== previous[field])
+        .map((field) => [field, { before: previous[field], after: current[field] }])
+    );
+  }, [description, enabled, name, queueEnabled, site]);
+  const isDirty = Object.keys(changes).length > 0 || reason.trim().length > 0;
+  const confirmNavigation = useUnsavedChanges(isDirty);
   const submit = async (event) => {
     event.preventDefault();
     if (!canManageSite) {
       ToastUtil.error('사이트 관리', '사이트 정보를 변경할 권한이 없습니다.');
+      return;
+    }
+    if (Object.keys(changes).length === 0) {
+      ToastUtil.error('사이트 관리', '변경된 항목이 없습니다.');
+      return;
+    }
+    if (!reason.trim()) {
+      ToastUtil.error('사이트 관리', '변경 사유를 입력해 주세요.');
       return;
     }
     setSaving(true);
@@ -87,14 +125,12 @@ export default function SiteDetailPage() {
         siteDescription: description,
         siteEnabled: enabled,
         queueEnabled,
+        reason: reason.trim(),
       };
-      const { data } = await SiteClient.updateSiteInfo(siteId, payload);
-      setSite(data);
-      setName(data.siteName ?? '');
-      setDescription(data.siteDescription ?? '');
-      setEnabled(Boolean(data.siteEnabled));
-      setQueueEnabled(Boolean(data.queueEnabled));
-      ToastUtil.success('사이트 관리', '사이트 정보를 저장했습니다.');
+      await SiteClient.updateSiteInfo(siteId, payload);
+      setReason('');
+      await load();
+      ToastUtil.success('사이트 관리', '저장 후 적용된 사이트 정보를 확인했습니다.');
     } catch (error) {
       console.error(error);
       ToastUtil.error('사이트 관리', error.response?.data?.detail ?? '사이트 정보를 저장하지 못했습니다.');
@@ -103,10 +139,15 @@ export default function SiteDetailPage() {
     }
   };
   const rotateApiKey = async () => {
+    if (!keyRotationReason.trim()) {
+      ToastUtil.error('API Key 발급', '변경 사유를 입력해 주세요.');
+      return;
+    }
     setIsKeyRotationPending(true);
     try {
-      const { data } = await SiteClient.rotateSiteApiKey(siteId);
+      const { data } = await SiteClient.rotateSiteApiKey(siteId, keyRotationReason.trim());
       setNewApiKey(data.apiKey);
+      setKeyRotationReason('');
     } catch (error) {
       ToastUtil.error('API Key 발급', error.response?.data?.detail ?? '새 API Key를 발급하지 못했습니다.');
     } finally {
@@ -126,6 +167,26 @@ export default function SiteDetailPage() {
       ToastUtil.error('API Key 발급', 'API Key를 복사하지 못했습니다.');
     }
   };
+  const handleDeleteOpenChange = (open) => {
+    setIsDeleteOpen(open);
+    if (!open && !isDeletePending) {
+      setDeleteConfirmation('');
+      setDeleteReason('');
+    }
+  };
+  const deleteSite = async () => {
+    if (deleteConfirmation !== siteId || !deleteReason.trim()) return;
+    setIsDeletePending(true);
+    try {
+      await SiteClient.deleteSite(siteId, deleteReason.trim());
+      ToastUtil.success('사이트 폐기', '사이트와 소속 계정 및 대기열을 비활성화했습니다.');
+      navigate('/sites');
+    } catch (error) {
+      ToastUtil.error('사이트 폐기', error.response?.data?.detail ?? '사이트를 폐기하지 못했습니다.');
+    } finally {
+      setIsDeletePending(false);
+    }
+  };
   return (
     <div className="w-full bg-neutral-50">
       <div className="max-w-[1080px] p-4 sm:p-6">
@@ -135,7 +196,7 @@ export default function SiteDetailPage() {
             size="lg"
             isIconOnly
             variant="ghost"
-            onPress={() => navigate('/sites')}
+            onPress={() => confirmNavigation() && navigate('/sites')}
             aria-label="사이트 목록으로 돌아가기"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -234,6 +295,22 @@ export default function SiteDetailPage() {
                   </div>
                 </div>
               </FormSection>
+              {canManageSite && (
+                <FormSection title="변경 확인">
+                  <div className="flex w-full max-w-2xl flex-col gap-4">
+                    <ChangeDiff changes={changes} />
+                    <TextField className="w-full" isRequired>
+                      <Label>변경 사유</Label>
+                      <Input
+                        value={reason}
+                        maxLength={1000}
+                        onChange={(event) => setReason(event.target.value)}
+                        placeholder="변경이 필요한 이유를 입력해 주세요."
+                      />
+                    </TextField>
+                  </div>
+                </FormSection>
+              )}
               {role === 'SUPER' && (
                 <FormSection title="API Key">
                   <div className="flex max-w-2xl flex-col gap-4">
@@ -242,10 +319,26 @@ export default function SiteDetailPage() {
                     </Description>
                     <ConfirmAlertDialog
                       title="새 API Key를 발급할까요?"
-                      message="기존 API Key는 즉시 만료되며 되돌릴 수 없습니다."
+                      message={(
+                        <div className="flex flex-col gap-3">
+                          <p>기존 API Key는 즉시 만료되며 되돌릴 수 없습니다.</p>
+                          <TextField className="w-full" isRequired>
+                            <Label>변경 사유</Label>
+                            <Input
+                              value={keyRotationReason}
+                              maxLength={1000}
+                              onChange={(event) => setKeyRotationReason(event.target.value)}
+                            />
+                          </TextField>
+                        </div>
+                      )}
                       confirmMessage="새 API Key 발급"
+                      isConfirmDisabled={!keyRotationReason.trim()}
                       isOpen={isKeyRotationConfirmOpen}
-                      onOpenChange={setIsKeyRotationConfirmOpen}
+                      onOpenChange={(open) => {
+                        setIsKeyRotationConfirmOpen(open);
+                        if (!open) setKeyRotationReason('');
+                      }}
                       onConfirm={rotateApiKey}
                     >
                       <Button
@@ -260,9 +353,34 @@ export default function SiteDetailPage() {
                   </div>
                 </FormSection>
               )}
+              {role === 'SUPER' && (
+                <FormSection title="사이트 폐기">
+                  <div className="flex max-w-2xl flex-col gap-4">
+                    <Description className="text-sm text-danger">
+                      사이트를 폐기하면 사이트와 소속 계정 및 대기열이 비활성화됩니다. 이 기능에서는 복구할 수 없습니다.
+                    </Description>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      className="min-h-11 w-fit"
+                      onPress={() => setIsDeleteOpen(true)}
+                    >
+                      <TrashBin className="h-5 w-5" />
+                      사이트 폐기
+                    </Button>
+                  </div>
+                </FormSection>
+              )}
               {canManageSite && (
                 <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
-                  <Button type="submit" size="lg" isPending={saving} fullWidth className="min-h-11">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    isPending={saving}
+                    isDisabled={Object.keys(changes).length === 0 || !reason.trim()}
+                    fullWidth
+                    className="min-h-11"
+                  >
                     저장하기
                   </Button>
                 </div>
@@ -289,6 +407,54 @@ export default function SiteDetailPage() {
                 </Button>
                 <Button slot="close" variant="tertiary" className="min-h-11 w-full sm:w-auto">
                   닫기
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
+      <Modal isOpen={isDeleteOpen} onOpenChange={handleDeleteOpenChange}>
+        <Modal.Backdrop>
+          <Modal.Container size="sm">
+            <Modal.Dialog className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+              <Modal.CloseTrigger />
+              <Modal.Header><Modal.Heading>사이트 폐기</Modal.Heading></Modal.Header>
+              <Modal.Body className="flex flex-col gap-4">
+                <p className="text-sm text-danger">
+                  이 작업은 사이트 ID 재사용이나 화면에서의 복구를 지원하지 않습니다.
+                </p>
+                <TextField className="w-full" isRequired>
+                  <Label>확인을 위해 사이트 ID 입력</Label>
+                  <Input
+                    value={deleteConfirmation}
+                    onChange={(event) => setDeleteConfirmation(event.target.value)}
+                    placeholder={siteId}
+                  />
+                  <Description>{siteId}를 정확히 입력해 주세요.</Description>
+                </TextField>
+                <TextField className="w-full" isRequired>
+                  <Label>폐기 사유</Label>
+                  <Input
+                    value={deleteReason}
+                    maxLength={1000}
+                    onChange={(event) => setDeleteReason(event.target.value)}
+                  />
+                </TextField>
+              </Modal.Body>
+              <Modal.Footer className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button slot="close" variant="tertiary" className="w-full sm:w-auto">취소</Button>
+                <Button
+                  variant="danger"
+                  className="w-full sm:w-auto"
+                  isPending={isDeletePending}
+                  isDisabled={
+                    isDeletePending ||
+                    deleteConfirmation !== siteId ||
+                    !deleteReason.trim()
+                  }
+                  onPress={deleteSite}
+                >
+                  사이트 폐기
                 </Button>
               </Modal.Footer>
             </Modal.Dialog>

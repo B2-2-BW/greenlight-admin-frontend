@@ -1,8 +1,10 @@
-import { Chip, Pagination, SearchField, Skeleton, Table } from '@heroui/react';
+import { Button, Chip, Input, Modal, Pagination, SearchField, Skeleton, Table } from '@heroui/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { SiteClient } from '../../api/site/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
+import { useUserStore } from '../../store/user.jsx';
+import SiteCreateModal from './SiteCreateModal.jsx';
 
 const PAGE_SIZE = 10;
 const columns = [
@@ -18,8 +20,13 @@ export default function SiteListTable() {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageData, setPageData] = useState({ page: 1, size: PAGE_SIZE, totalElements: 0, totalPages: 0, query: '' });
+  const [reloadKey, setReloadKey] = useState(0);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createdSite, setCreatedSite] = useState(null);
   const generationRef = useRef(0);
   const navigate = useNavigate();
+  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const isSuper = role === 'SUPER';
   const isFetching = isLoading || page !== pageData.page || query !== pageData.query;
 
   useEffect(() => {
@@ -56,7 +63,7 @@ export default function SiteListTable() {
         if (generation === generationRef.current) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [page, query]);
+  }, [page, query, reloadKey]);
 
   const pageItems = useMemo(() => {
     const total = pageData.totalPages;
@@ -81,7 +88,10 @@ export default function SiteListTable() {
             <SearchField.ClearButton />
           </SearchField.Group>
         </SearchField>
-        <p className="text-sm text-muted sm:text-right">{isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}개`}</p>
+        <div className="flex items-center justify-between gap-3 sm:justify-end">
+          <p className="text-sm text-muted sm:text-right">{isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}개`}</p>
+          {isSuper && <Button onPress={() => setIsCreateOpen(true)}>사이트 생성</Button>}
+        </div>
       </div>
       <Table>
         <Table.Content aria-label="사이트 목록" onRowAction={(key) => navigate(`/sites/${key}`)}>
@@ -158,6 +168,46 @@ export default function SiteListTable() {
           </Pagination.Content>
         </Pagination>
       )}
+      <SiteCreateModal
+        isOpen={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onCreated={(site) => {
+          setIsCreateOpen(false);
+          setCreatedSite(site);
+          setPage(1);
+          setReloadKey((value) => value + 1);
+        }}
+      />
+      <Modal isOpen={createdSite !== null} onOpenChange={(open) => !open && setCreatedSite(null)}>
+        <Modal.Backdrop>
+          <Modal.Container size="sm">
+            <Modal.Dialog>
+              <Modal.CloseTrigger />
+              <Modal.Header><Modal.Heading>사이트 API Key</Modal.Heading></Modal.Header>
+              <Modal.Body className="flex flex-col gap-3">
+                <p className="text-sm text-danger">이 화면을 닫으면 API Key를 다시 확인할 수 없습니다.</p>
+                <Input isReadOnly value={createdSite?.apiKey ?? ''} className="font-mono text-sm" />
+              </Modal.Body>
+              <Modal.Footer className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button slot="close" variant="tertiary" className="w-full sm:w-auto">닫기</Button>
+                <Button
+                  className="w-full sm:w-auto"
+                  onPress={async () => {
+                    try {
+                      await navigator.clipboard.writeText(createdSite?.apiKey ?? '');
+                      ToastUtil.success('사이트 생성', 'API Key를 복사했습니다.');
+                    } catch {
+                      ToastUtil.error('사이트 생성', 'API Key를 복사하지 못했습니다.');
+                    }
+                  }}
+                >
+                  복사하기
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
     </div>
   );
 }
