@@ -1,10 +1,23 @@
-import { Button, Chip, FieldError, Form, Input, Label, Modal, Skeleton, TextField } from '@heroui/react';
+import {
+  Avatar,
+  Button,
+  Chip,
+  ColorSwatchPicker,
+  FieldError,
+  Form,
+  Input,
+  Label,
+  Modal,
+  Skeleton,
+  TextField,
+} from '@heroui/react';
 import { useEffect, useState } from 'react';
 import FormSection from '../common/FormSection.jsx';
 import { UserClient } from '../../api/user/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { DateUtil } from '../../util/dateUtil.jsx';
 import { useUserStore } from '../../store/user.jsx';
+import { getProfileAppearance, normalizeProfileInitials, PROFILE_COLOR_PRESETS } from '../../util/profileAppearance.js';
 
 const roleLabels = {
   SUPER: '슈퍼유저',
@@ -18,6 +31,11 @@ const statusConfig = {
   DISABLED: { label: '비활성', color: 'default' },
   REJECTED: { label: '반려', color: 'danger' },
 };
+
+const withProfileAppearance = (account = {}) => ({
+  ...account,
+  ...getProfileAppearance(account),
+});
 
 export default function MyPageForm() {
   const [isPageLoading, setIsPageLoading] = useState(true);
@@ -35,8 +53,9 @@ export default function MyPageForm() {
       try {
         const response = await UserClient.me();
         if (response?.status !== 200) throw new Error('Failed to load account');
-        setAccount(response.data ?? {});
-        setUser(response.data ?? {});
+        const nextAccount = withProfileAppearance(response.data);
+        setAccount(nextAccount);
+        setUser(nextAccount);
       } catch (error) {
         console.error(error);
         ToastUtil.error('내 계정', '계정 정보를 불러오지 못했습니다.');
@@ -70,6 +89,19 @@ export default function MyPageForm() {
     }
   };
 
+  const updateProfileInitials = (event) => {
+    setAccount((current) => ({
+      ...current,
+      profileInitials: normalizeProfileInitials(event.target.value),
+    }));
+    setProfileErrors((current) => {
+      if (!current.profileInitials) return current;
+      const next = { ...current };
+      delete next.profileInitials;
+      return next;
+    });
+  };
+
   const handleProfileSubmit = async (event) => {
     event.preventDefault();
 
@@ -79,6 +111,9 @@ export default function MyPageForm() {
     }
     if (!account.userEmail?.trim()) {
       validationErrors.userEmail = '이메일을 입력해 주세요.';
+    }
+    if (!normalizeProfileInitials(account.profileInitials)) {
+      validationErrors.profileInitials = '이니셜을 입력해 주세요.';
     }
     if (Object.keys(validationErrors).length > 0) {
       setProfileErrors(validationErrors);
@@ -92,9 +127,12 @@ export default function MyPageForm() {
         username: account.username.trim(),
         userEmail: account.userEmail.trim(),
         phoneNumber: account.phoneNumber?.trim() || null,
+        profileColor: account.profileColor,
+        profileInitials: normalizeProfileInitials(account.profileInitials),
       });
-      setAccount(response.data);
-      setUser(response.data);
+      const nextAccount = withProfileAppearance(response.data);
+      setAccount(nextAccount);
+      setUser(nextAccount);
       ToastUtil.success('내 정보 저장', '계정 정보를 저장했습니다.');
     } catch (error) {
       console.error(error);
@@ -204,6 +242,56 @@ export default function MyPageForm() {
               onSubmit={handleProfileSubmit}
               validationErrors={profileErrors}
             >
+              <div className="flex w-full max-w-2xl flex-col gap-5 rounded-xl border border-separator p-4 sm:flex-row sm:items-center">
+                <Avatar
+                  size="lg"
+                  className="shrink-0 border-2 border-white"
+                  style={{ boxShadow: `0 0 0 2px ${account.profileColor}` }}
+                >
+                  <Avatar.Fallback
+                    className="text-lg font-semibold text-white"
+                    style={{ backgroundColor: account.profileColor }}
+                  >
+                    {account.profileInitials}
+                  </Avatar.Fallback>
+                </Avatar>
+                <div className="flex min-w-0 flex-1 flex-col gap-4">
+                  <div>
+                    <p className="font-medium">프로필 표시</p>
+                    <p className="text-sm text-muted">상단 계정 메뉴에 표시할 색상과 이니셜을 선택합니다.</p>
+                  </div>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                    <div className="min-w-0">
+                      <span id="profile-color-label" className="mb-2 block text-sm font-medium">
+                        색상
+                      </span>
+                      <ColorSwatchPicker
+                        aria-labelledby="profile-color-label"
+                        value={account.profileColor}
+                        onChange={(color) =>
+                          setAccount((current) => ({
+                            ...current,
+                            profileColor: color.toString('hex').toUpperCase(),
+                          }))
+                        }
+                        size="lg"
+                      >
+                        {PROFILE_COLOR_PRESETS.map((color) => (
+                          <ColorSwatchPicker.Item key={color} color={color}>
+                            <ColorSwatchPicker.Swatch />
+                            <ColorSwatchPicker.Indicator />
+                          </ColorSwatchPicker.Item>
+                        ))}
+                      </ColorSwatchPicker>
+                    </div>
+                    <TextField name="profileInitials" className="w-full sm:max-w-40" isRequired>
+                      <Label>이니셜</Label>
+                      <Input value={account.profileInitials ?? ''} maxLength={2} onChange={updateProfileInitials} />
+                      <FieldError>{profileErrors.profileInitials ?? '이니셜을 입력해 주세요.'}</FieldError>
+                    </TextField>
+                  </div>
+                </div>
+              </div>
               <TextField className="w-full max-w-2xl" isReadOnly variant="default">
                 <Label className="text-base">사용자 ID</Label>
                 <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={account.userId ?? ''} />
@@ -242,11 +330,11 @@ export default function MyPageForm() {
         </FormSection>
 
         {!isPageLoading && (
-          <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+          <div className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)] border-t border-neutral-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:bottom-2 sm:mx-0 sm:w-full sm:rounded-xl sm:border-0 sm:p-0">
             <Button
-              size="lg"
-              className="min-h-11 rounded-2xl"
               type="submit"
+              className="min-h-12 rounded-2xl sm:min-h-10"
+              size="lg"
               form="my-profile-form"
               isPending={isProfileSubmitLoading}
               fullWidth

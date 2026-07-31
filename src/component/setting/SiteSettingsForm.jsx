@@ -1,11 +1,25 @@
-import { Button, Description, Form, Input, Label, Skeleton, Switch, TextField } from '@heroui/react';
+import {
+  Button,
+  Description,
+  FieldError,
+  Form,
+  Input,
+  Label,
+  Modal,
+  Skeleton,
+  Switch,
+  TextArea,
+  TextField,
+} from '@heroui/react';
 import FormSection from '../common/FormSection.jsx';
 import ConfirmAlertDialog from '../ConfirmAlertDialog.jsx';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SiteClient } from '../../api/site/index.js';
 import { RoomClient } from '../../api/room/index.js';
 import { useUserStore } from '../../store/user.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
+import ChangeDiff from '../audit/ChangeDiff.jsx';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges.js';
 
 const enabledMessage = {
   true: {
@@ -23,7 +37,11 @@ export default function SiteSettingsForm() {
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
   const [siteInfo, setSiteInfo] = useState({});
 
+  const [editSiteName, setEditSiteName] = useState('');
+  const [editSiteDescription, setEditSiteDescription] = useState('');
   const [editQueueEnabled, setEditQueueEnabled] = useState(true);
+  const [reason, setReason] = useState('');
+  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
   const [isRoomSyncDialogOpen, setIsRoomSyncDialogOpen] = useState(false);
   const [isSiteSyncDialogOpen, setIsSiteSyncDialogOpen] = useState(false);
   const [syncTarget, setSyncTarget] = useState(null);
@@ -31,8 +49,27 @@ export default function SiteSettingsForm() {
   const user = useUserStore((state) => state.user);
   const userRole = user?.role ?? user?.userRole;
   const canSyncRoomData = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
-  const canManageQueue = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
+  const canManageSite = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
   const isSuperUser = userRole === 'SUPER';
+  const changes = useMemo(() => {
+    if (!siteInfo?.siteId) return {};
+    const current = {
+      siteName: editSiteName,
+      siteDescription: editSiteDescription,
+      queueEnabled: editQueueEnabled,
+    };
+    const previous = {
+      siteName: siteInfo.siteName ?? '',
+      siteDescription: siteInfo.siteDescription ?? '',
+      queueEnabled: Boolean(siteInfo.queueEnabled),
+    };
+    return Object.fromEntries(
+      Object.keys(current)
+        .filter((field) => current[field] !== previous[field])
+        .map((field) => [field, { before: previous[field], after: current[field] }])
+    );
+  }, [editQueueEnabled, editSiteDescription, editSiteName, siteInfo]);
+  useUnsavedChanges(Object.keys(changes).length > 0);
 
   const fetchSiteInfo = async () => {
     setIsPageLoading(true);
@@ -42,6 +79,8 @@ export default function SiteSettingsForm() {
       const res = await SiteClient.findSite(me.siteId);
       const data = res.data;
       setSiteInfo(data);
+      setEditSiteName(data?.siteName ?? '');
+      setEditSiteDescription(data?.siteDescription ?? '');
       setEditQueueEnabled(Boolean(data?.queueEnabled));
     } catch (error) {
       console.error('Error fetching siteInfo:', error);
@@ -55,33 +94,51 @@ export default function SiteSettingsForm() {
     fetchSiteInfo();
   }, []);
 
-  const reloadForm = () => {
-    setEditQueueEnabled(Boolean(siteInfo?.queueEnabled));
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!canManageQueue) {
-      ToastUtil.error('시스템 설정', '대기열 설정을 변경할 권한이 없습니다.');
+    if (!canManageSite) {
+      ToastUtil.error('시스템 설정', '사이트 설정을 변경할 권한이 없습니다.');
       return;
     }
+    if (!editSiteName.trim()) {
+      ToastUtil.error('시스템 설정', '사이트명을 입력해 주세요.');
+      return;
+    }
+    if (Object.keys(changes).length === 0) {
+      ToastUtil.error('시스템 설정', '변경된 항목이 없습니다.');
+      return;
+    }
+    setIsSaveConfirmOpen(true);
+  };
+
+  const handleSaveConfirmed = async () => {
+    if (!reason.trim()) return;
     setIsSubmitLoading(true);
 
     try {
-      const response = await SiteClient.updateQueueEnabled(siteInfo.siteId, editQueueEnabled);
+      const payload = { reason: reason.trim() };
+      if (changes.siteName) payload.siteName = editSiteName.trim();
+      if (changes.siteDescription) payload.siteDescription = editSiteDescription.trim();
+      if (changes.queueEnabled) payload.queueEnabled = editQueueEnabled;
+      const response = await SiteClient.updateSiteInfo(siteInfo.siteId, payload);
       if (response.status !== 200) {
         throw new Error('failed to create room ' + JSON.stringify(response));
       }
-      setSiteInfo(response.data);
-      setEditQueueEnabled(Boolean(response.data?.queueEnabled));
+      setReason('');
+      setIsSaveConfirmOpen(false);
+      await fetchSiteInfo();
       ToastUtil.success('시스템 설정', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error.response);
       ToastUtil.error('시스템 설정', error.response?.data?.detail ?? '저장에 실패했습니다.');
-      reloadForm();
     } finally {
       setIsSubmitLoading(false);
     }
+  };
+
+  const handleSaveConfirmOpenChange = (open) => {
+    setIsSaveConfirmOpen(open);
+    if (!open && !isSubmitLoading) setReason('');
   };
 
   const handleSyncRoomData = async () => {
@@ -157,9 +214,44 @@ export default function SiteSettingsForm() {
                   <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={siteInfo?.siteId} />
                 </TextField>
 
-                <TextField name="siteName" type="text" isReadOnly className="w-full max-w-md" variant="default">
+                <TextField
+                  name="siteName"
+                  type="text"
+                  isRequired
+                  isReadOnly={!canManageSite}
+                  className="w-full max-w-md"
+                  variant="default"
+                >
                   <Label className="text-base">사이트명</Label>
-                  <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={siteInfo?.siteName} />
+                  <Input
+                    className={`text-base ring-1 focus:ring-2 ring-neutral-200 ${
+                      canManageSite ? 'focus:ring-accent' : 'bg-neutral-100'
+                    }`}
+                    value={editSiteName}
+                    maxLength={255}
+                    onChange={(event) => setEditSiteName(event.target.value)}
+                  />
+                  <FieldError>사이트명을 입력해 주세요.</FieldError>
+                </TextField>
+
+                <TextField
+                  name="siteDescription"
+                  type="text"
+                  isReadOnly={!canManageSite}
+                  className="w-full max-w-md"
+                  variant="default"
+                >
+                  <Label className="text-base">사이트 설명</Label>
+                  <TextArea
+                    className={`text-base ring-1 focus:ring-2 ring-neutral-200 ${
+                      canManageSite ? 'focus:ring-accent' : 'bg-neutral-100'
+                    }`}
+                    value={editSiteDescription}
+                    maxLength={4000}
+                    rows={3}
+                    placeholder="사이트에 대한 설명을 입력해 주세요."
+                    onChange={(event) => setEditSiteDescription(event.target.value)}
+                  />
                 </TextField>
               </div>
             )}
@@ -182,7 +274,7 @@ export default function SiteSettingsForm() {
                     className="group w-full max-w-lg"
                     isRequired
                     validationBehavior="aria"
-                    isDisabled={!canManageQueue}
+                    isDisabled={!canManageSite}
                   >
                     <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                       <Switch.Control>
@@ -196,7 +288,7 @@ export default function SiteSettingsForm() {
                       </span>
                     </Switch.Content>
                   </Switch>
-                  {!canManageQueue && (
+                  {!canManageSite && (
                     <Description className="text-sm text-muted">
                       일반 사용자는 대기열 운영 상태를 조회할 수 있지만 변경할 수 없습니다.
                     </Description>
@@ -259,14 +351,58 @@ export default function SiteSettingsForm() {
           {/*  </Skeleton>*/}
           {/*</SectionTitle>*/}
         </div>
-        {canManageQueue && (
-          <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
-            <Button size="lg" className="min-h-11 rounded-2xl" type="submit" isPending={isSubmitLoading} fullWidth>
+        {canManageSite && (
+          <div className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)] border-t border-neutral-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:bottom-2 sm:mx-0 sm:w-full sm:rounded-xl sm:border-0 sm:p-0">
+            <Button
+              type="submit"
+              className="min-h-12 rounded-2xl sm:min-h-10"
+              isPending={isSubmitLoading}
+              isDisabled={Object.keys(changes).length === 0 || isSubmitLoading}
+              fullWidth
+            >
               저장하기
             </Button>
           </div>
         )}
       </Form>
+
+      <Modal isOpen={isSaveConfirmOpen} onOpenChange={handleSaveConfirmOpenChange}>
+        <Modal.Backdrop>
+          <Modal.Container size="lg">
+            <Modal.Dialog className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+              <Modal.CloseTrigger />
+              <Modal.Header>
+                <Modal.Heading>시스템 설정 변경 확인</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body className="flex flex-col gap-4">
+                <ChangeDiff changes={changes} />
+                <TextField className="w-full" isRequired>
+                  <Label>변경 사유</Label>
+                  <Input
+                    value={reason}
+                    maxLength={1000}
+                    onChange={(event) => setReason(event.target.value)}
+                    placeholder="변경이 필요한 이유를 입력해 주세요."
+                  />
+                </TextField>
+              </Modal.Body>
+              <Modal.Footer className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button slot="close" variant="tertiary" className="w-full sm:w-auto">
+                  취소
+                </Button>
+                <Button
+                  onPress={handleSaveConfirmed}
+                  isPending={isSubmitLoading}
+                  isDisabled={!reason.trim() || isSubmitLoading}
+                  className="w-full sm:w-auto"
+                >
+                  변경 적용
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
 
       {/*<ConfirmModal*/}
       {/*  isOpen={isOpenConfirm}*/}

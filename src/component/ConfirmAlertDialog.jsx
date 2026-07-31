@@ -8,6 +8,7 @@ export default function ConfirmAlertDialog({
   title,
   message,
   confirmMessage,
+  isConfirmDisabled = false,
 }) {
   return (
     <AlertDialog isOpen={isOpen} onOpenChange={onOpenChange}>
@@ -25,7 +26,13 @@ export default function ConfirmAlertDialog({
               <Button slot="close" variant="tertiary" className="min-h-11 w-full sm:w-auto">
                 취소하기
               </Button>
-              <Button slot="close" variant="danger" onPress={onConfirm} className="min-h-11 w-full sm:w-auto">
+              <Button
+                slot="close"
+                variant="danger"
+                onPress={onConfirm}
+                isDisabled={isConfirmDisabled}
+                className="min-h-11 w-full sm:w-auto"
+              >
                 {confirmMessage || '확인'}
               </Button>
             </AlertDialog.Footer>

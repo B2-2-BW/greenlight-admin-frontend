@@ -10,14 +10,14 @@ import {
   Select,
   Skeleton,
   Surface,
+  TextArea,
   TextField,
 } from '@heroui/react';
 import { ArrowLeft } from '@gravity-ui/icons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { UserClient } from '../api/user/index.js';
 import { SiteClient } from '../api/site/index.js';
-import ConfirmAlertDialog from '../component/ConfirmAlertDialog.jsx';
 import FormSection from '../component/common/FormSection.jsx';
 import { ToastUtil } from '../util/toastUtil.js';
 import { DateUtil } from '../util/dateUtil.jsx';
@@ -36,8 +36,62 @@ const statusConfig = {
   DISABLED: { label: '비활성', color: 'default' },
 };
 
-const getSiteLabel = (site) =>
-  `${site.siteEnabled ? '' : '(비활성) '}${site.siteName} (${site.siteId})`;
+const reasonActionConfig = {
+  approve: {
+    title: '가입을 승인할까요?',
+    description: '검토한 가입 정보와 승인 사유를 함께 저장합니다.',
+    reasonLabel: '승인 사유',
+    reasonPlaceholder: '승인 사유를 입력해 주세요.',
+    submitLabel: '가입 승인',
+    action: 'APPROVE',
+    toastTitle: '가입 승인',
+    toastMessage: '가입 정보를 확인하고 계정을 승인했습니다.',
+  },
+  reject: {
+    title: '가입 신청을 반려할까요?',
+    description: '반려된 계정은 로그인할 수 없으며 반려 사유가 감사로그에 기록됩니다.',
+    reasonLabel: '반려 사유',
+    reasonPlaceholder: '반려 사유를 입력해 주세요.',
+    submitLabel: '가입 반려',
+    action: 'REJECT',
+    isDanger: true,
+    toastTitle: '가입 반려',
+    toastMessage: '가입 신청을 반려했습니다.',
+  },
+  disable: {
+    title: '계정을 비활성화할까요?',
+    description: '비활성화된 계정은 새로 로그인하거나 토큰을 갱신할 수 없습니다.',
+    reasonLabel: '비활성화 사유',
+    reasonPlaceholder: '비활성화 사유를 입력해 주세요.',
+    submitLabel: '계정 비활성화',
+    action: 'DISABLE',
+    isDanger: true,
+    toastTitle: '계정 비활성화',
+    toastMessage: '계정을 비활성화했습니다.',
+  },
+  activate: {
+    title: '계정을 활성화할까요?',
+    description: '활성화 즉시 사용자가 다시 로그인할 수 있습니다.',
+    reasonLabel: '활성화 사유',
+    reasonPlaceholder: '활성화 사유를 입력해 주세요.',
+    submitLabel: '계정 활성화',
+    accountStatus: 'ACTIVE',
+    toastTitle: '계정 활성화',
+    toastMessage: '계정을 활성화했습니다.',
+  },
+  review: {
+    title: '가입 신청을 다시 검토할까요?',
+    description: '승인 대기 상태로 변경한 뒤 가입 정보와 역할을 다시 확인해야 합니다.',
+    reasonLabel: '재검토 사유',
+    reasonPlaceholder: '재검토 사유를 입력해 주세요.',
+    submitLabel: '승인 재검토',
+    accountStatus: 'PENDING',
+    toastTitle: '승인 재검토',
+    toastMessage: '가입 신청을 승인 대기 상태로 변경했습니다.',
+  },
+};
+
+const getSiteLabel = (site) => `${site.siteEnabled ? '' : '(비활성) '}${site.siteName} (${site.siteId})`;
 
 function ReadonlyField({ label, value }) {
   return (
@@ -68,7 +122,7 @@ export default function UserDetailPage() {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [passwordErrors, setPasswordErrors] = useState({});
-  const approvalFormRef = useRef(null);
+  const [actionReason, setActionReason] = useState('');
   const currentUser = useUserStore((state) => state.user);
   const currentUserId = currentUser?.userId;
   const [approval, setApproval] = useState({ username: '', userEmail: '', siteId: '', userRole: 'USER' });
@@ -149,53 +203,56 @@ export default function UserDetailPage() {
     };
   }, [currentUser?.userRole, user]);
 
-  const changeStatus = async (accountStatus) => {
+  const submitReasonAction = async (event) => {
+    event.preventDefault();
+    const actionConfig = reasonActionConfig[dialogAction];
+    const reason = actionReason.trim();
+    if (!actionConfig || !reason) return;
+
     setIsActionLoading(true);
     try {
-      const response = await UserClient.updateUserStatus(userId, accountStatus);
-      setUser(response.data);
-      if (response.data?.accountStatus === 'PENDING') {
-        setApproval({
+      if (dialogAction === 'approve') {
+        const response = await UserClient.approveUser(userId, {
+          ...approval,
+          username: approval.username.trim(),
+          userEmail: approval.userEmail.trim(),
+          reason,
+        });
+        setUser(response.data);
+        setManagement({
           username: response.data.username ?? '',
           userEmail: response.data.userEmail ?? '',
           siteId: response.data.siteId ?? '',
           userRole: response.data.userRole ?? 'USER',
         });
+      } else if (actionConfig.action) {
+        await UserClient.bulkAction({
+          userIds: [userId],
+          action: actionConfig.action,
+          reason,
+        });
+        await fetchUser();
+      } else {
+        const response = await UserClient.updateUserStatus(userId, actionConfig.accountStatus, reason);
+        setUser(response.data);
+        if (response.data?.accountStatus === 'PENDING') {
+          setApproval({
+            username: response.data.username ?? '',
+            userEmail: response.data.userEmail ?? '',
+            siteId: response.data.siteId ?? '',
+            userRole: response.data.userRole ?? 'USER',
+          });
+        }
       }
-      ToastUtil.success('계정 상태 변경', '계정 상태를 변경했습니다.');
+      setDialogAction(null);
+      setActionReason('');
+      ToastUtil.success(actionConfig.toastTitle, actionConfig.toastMessage);
     } catch (error) {
       console.error(error);
-      ToastUtil.error('계정 상태 변경', error.response?.data?.detail ?? '계정 상태를 변경하지 못했습니다.');
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
-  const approveUser = async () => {
-    if (!approvalFormRef.current?.checkValidity()) {
-      setDialogAction(null);
-      approvalFormRef.current?.reportValidity();
-      return;
-    }
-    setIsActionLoading(true);
-    try {
-      const response = await UserClient.approveUser(userId, {
-        ...approval,
-        username: approval.username.trim(),
-        userEmail: approval.userEmail.trim(),
-      });
-      setUser(response.data);
-      setManagement({
-        username: response.data.username ?? '',
-        userEmail: response.data.userEmail ?? '',
-        siteId: response.data.siteId ?? '',
-        userRole: response.data.userRole ?? 'USER',
-      });
-      setDialogAction(null);
-      ToastUtil.success('가입 승인', '가입 정보를 확인하고 계정을 승인했습니다.');
-    } catch (error) {
-      console.error(error);
-      ToastUtil.error('가입 승인', error.response?.data?.detail ?? '가입 정보를 확인하고 승인하지 못했습니다.');
+      ToastUtil.error(
+        actionConfig.toastTitle,
+        error.response?.data?.detail ?? `${actionConfig.submitLabel} 처리에 실패했습니다.`
+      );
     } finally {
       setIsActionLoading(false);
     }
@@ -228,15 +285,12 @@ export default function UserDetailPage() {
 
   const openApprovalDialog = (event) => {
     event.preventDefault();
-    setDialogAction('approve');
+    openReasonAction('approve');
   };
 
-  const handleApprovalDialogOpenChange = (open) => {
-    if (!open) {
-      setDialogAction(null);
-      return;
-    }
-    approvalFormRef.current?.requestSubmit();
+  const openReasonAction = (action) => {
+    setActionReason('');
+    setDialogAction(action);
   };
 
   const resetPassword = async (event) => {
@@ -274,6 +328,7 @@ export default function UserDetailPage() {
   const isSuperUserReadOnly = currentUser?.userRole === 'SITE_ADMIN' && user?.userRole === 'SUPER';
   const canManageTarget = user?.userId !== currentUserId && !isSuperUserReadOnly;
   const canSaveManagedUser = ['ACTIVE', 'DISABLED'].includes(user?.accountStatus) && !isSuperUserReadOnly;
+  const currentReasonAction = reasonActionConfig[dialogAction] ?? null;
 
   const statusContent = (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -292,43 +347,36 @@ export default function UserDetailPage() {
       </div>
       {canManageTarget && user?.accountStatus && user?.accountStatus !== 'PENDING' && (
         <div className="flex shrink-0 flex-wrap justify-start gap-2">
-          {user.accountStatus === 'ACTIVE' && (
-            <ConfirmAlertDialog
-              title="계정을 비활성화할까요?"
-              message="비활성화된 계정은 새로 로그인하거나 토큰을 갱신할 수 없습니다."
-              confirmMessage="비활성화"
-              isOpen={dialogAction === 'disable'}
-              onOpenChange={(open) => setDialogAction(open ? 'disable' : null)}
-              onConfirm={() => changeStatus('DISABLED')}
+          {user.accountStatus === 'ACTIVE' && user.userRole !== 'SUPER' && (
+            <Button
+              type="button"
+              variant="danger-soft"
+              isDisabled={isActionLoading}
+              className="min-h-11 w-full sm:w-auto"
+              onPress={() => openReasonAction('disable')}
             >
-              <Button variant="danger-soft" isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">
-                계정 비활성화
-              </Button>
-            </ConfirmAlertDialog>
+              계정 비활성화
+            </Button>
           )}
           {user.accountStatus === 'DISABLED' && (
-            <ConfirmAlertDialog
-              title="계정을 활성화할까요?"
-              message="활성화 즉시 사용자가 로그인할 수 있습니다."
-              confirmMessage="활성화"
-              isOpen={dialogAction === 'activate'}
-              onOpenChange={(open) => setDialogAction(open ? 'activate' : null)}
-              onConfirm={() => changeStatus('ACTIVE')}
+            <Button
+              type="button"
+              isDisabled={isActionLoading}
+              className="min-h-11 w-full sm:w-auto"
+              onPress={() => openReasonAction('activate')}
             >
-              <Button isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">계정 활성화</Button>
-            </ConfirmAlertDialog>
+              계정 활성화
+            </Button>
           )}
           {user.accountStatus === 'REJECTED' && (
-            <ConfirmAlertDialog
-              title="가입 신청을 다시 검토할까요?"
-              message="승인 대기 상태로 변경한 뒤 가입 정보와 역할을 다시 확인해야 합니다."
-              confirmMessage="승인 재검토"
-              isOpen={dialogAction === 'review'}
-              onOpenChange={(open) => setDialogAction(open ? 'review' : null)}
-              onConfirm={() => changeStatus('PENDING')}
+            <Button
+              type="button"
+              isDisabled={isActionLoading}
+              className="min-h-11 w-full sm:w-auto"
+              onPress={() => openReasonAction('review')}
             >
-              <Button isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">승인 재검토</Button>
-            </ConfirmAlertDialog>
+              승인 재검토
+            </Button>
           )}
         </div>
       )}
@@ -451,11 +499,7 @@ export default function UserDetailPage() {
                 )}
                 <ReadonlyField label="사용자 ID" value={user.userId} />
                 {user.accountStatus === 'PENDING' && !isSuperUserReadOnly ? (
-                  <Form
-                    ref={approvalFormRef}
-                    onSubmit={openApprovalDialog}
-                    className="flex w-full flex-col gap-6"
-                  >
+                  <Form onSubmit={openApprovalDialog} className="flex w-full flex-col gap-6">
                     <TextField
                       name="username"
                       isRequired
@@ -466,18 +510,10 @@ export default function UserDetailPage() {
                       variant="default"
                     >
                       <Label className="text-base">이름</Label>
-                      <Input
-                        className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                      />
+                      <Input className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent" />
                       <FieldError>이름을 입력해 주세요.</FieldError>
                     </TextField>
-                    <TextField
-                      name="userEmail"
-                      type="email"
-                      isRequired
-                      className="w-full max-w-2xl"
-                      variant="default"
-                    >
+                    <TextField name="userEmail" type="email" isRequired className="w-full max-w-2xl" variant="default">
                       <Label className="text-base">이메일</Label>
                       <Input
                         className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
@@ -515,11 +551,7 @@ export default function UserDetailPage() {
                       <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                         <ListBox>
                           {sites.map((site) => (
-                            <ListBox.Item
-                              key={site.siteId}
-                              id={site.siteId}
-                              textValue={getSiteLabel(site)}
-                            >
+                            <ListBox.Item key={site.siteId} id={site.siteId} textValue={getSiteLabel(site)}>
                               <ListBox.ItemIndicator />
                               <span className={site.siteEnabled ? undefined : 'text-neutral-400'}>
                                 {getSiteLabel(site)}
@@ -560,30 +592,18 @@ export default function UserDetailPage() {
                     </Select>
                     {canManageTarget && (
                       <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap">
-                        <ConfirmAlertDialog
-                          title="가입을 승인할까요?"
-                          message={`사이트: ${sites.find((site) => site.siteId === approval.siteId)?.siteName ?? approval.siteId} (${approval.siteId}) · 역할: ${roleLabels[approval.userRole] ?? approval.userRole}`}
-                          confirmMessage="가입 승인"
-                          isOpen={dialogAction === 'approve'}
-                          onOpenChange={handleApprovalDialogOpenChange}
-                          onConfirm={approveUser}
+                        <Button type="submit" isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">
+                          가입 승인
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="danger-soft"
+                          isDisabled={isActionLoading}
+                          className="min-h-11 w-full sm:w-auto"
+                          onPress={() => openReasonAction('reject')}
                         >
-                          <Button type="button" isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">
-                            가입 승인
-                          </Button>
-                        </ConfirmAlertDialog>
-                        <ConfirmAlertDialog
-                          title="가입 신청을 반려할까요?"
-                          message="반려된 계정은 로그인할 수 없습니다."
-                          confirmMessage="반려"
-                          isOpen={dialogAction === 'reject'}
-                          onOpenChange={(open) => setDialogAction(open ? 'reject' : null)}
-                          onConfirm={() => changeStatus('REJECTED')}
-                        >
-                          <Button variant="danger-soft" isDisabled={isActionLoading} className="min-h-11 w-full sm:w-auto">
-                            가입 반려
-                          </Button>
-                        </ConfirmAlertDialog>
+                          가입 반려
+                        </Button>
                       </div>
                     )}
                   </Form>
@@ -600,9 +620,7 @@ export default function UserDetailPage() {
                         variant="default"
                       >
                         <Label className="text-base">이름</Label>
-                        <Input
-                          className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent"
-                        />
+                        <Input className="ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent" />
                         <FieldError>이름을 입력해 주세요.</FieldError>
                       </TextField>
                       <TextField
@@ -653,11 +671,7 @@ export default function UserDetailPage() {
                         <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
                           <ListBox>
                             {sites.map((site) => (
-                              <ListBox.Item
-                                key={site.siteId}
-                                id={site.siteId}
-                                textValue={getSiteLabel(site)}
-                              >
+                              <ListBox.Item key={site.siteId} id={site.siteId} textValue={getSiteLabel(site)}>
                                 <ListBox.ItemIndicator />
                                 <span className={site.siteEnabled ? undefined : 'text-neutral-400'}>
                                   {getSiteLabel(site)}
@@ -679,9 +693,7 @@ export default function UserDetailPage() {
                       >
                         <Label className="text-base">역할</Label>
                         <Select.Trigger className="min-h-11 w-full items-center ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:max-w-64">
-                          <Select.Value>
-                            {({ state }) => state.selectedItems[0]?.textValue ?? '역할 선택'}
-                          </Select.Value>
+                          <Select.Value>{({ state }) => state.selectedItems[0]?.textValue ?? '역할 선택'}</Select.Value>
                           <Select.Indicator />
                         </Select.Trigger>
                         <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
@@ -713,11 +725,11 @@ export default function UserDetailPage() {
             </FormSection>
 
             {canSaveManagedUser && (
-              <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+              <div className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)] border-t border-neutral-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:bottom-2 sm:mx-0 sm:w-full sm:rounded-xl sm:border-0 sm:p-0">
                 <Button
-                  size="lg"
-                  className="min-h-11 rounded-2xl"
                   type="submit"
+                  className="min-h-12 rounded-2xl sm:min-h-10"
+                  size="lg"
                   form="managed-user-form"
                   isPending={isActionLoading}
                   fullWidth
@@ -729,6 +741,63 @@ export default function UserDetailPage() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={currentReasonAction !== null}
+        onOpenChange={(open) => {
+          if (!open && !isActionLoading) {
+            setDialogAction(null);
+            setActionReason('');
+          }
+        }}
+      >
+        <Modal.Backdrop isDismissable={!isActionLoading}>
+          <Modal.Container size="sm">
+            <Modal.Dialog className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-md">
+              <Modal.CloseTrigger isDisabled={isActionLoading} />
+              <Modal.Header>
+                <Modal.Heading>{currentReasonAction?.title}</Modal.Heading>
+              </Modal.Header>
+              <Form onSubmit={submitReasonAction}>
+                <Modal.Body className="flex flex-col gap-4">
+                  <p className="text-sm text-muted">{currentReasonAction?.description}</p>
+                  {dialogAction === 'approve' && (
+                    <div className="rounded-xl bg-neutral-100 p-3 text-sm">
+                      <p>
+                        사이트: {sites.find((site) => site.siteId === approval.siteId)?.siteName ?? approval.siteId}
+                        {' · '}역할: {roleLabels[approval.userRole] ?? approval.userRole}
+                      </p>
+                    </div>
+                  )}
+                  <TextField isRequired name="actionReason">
+                    <Label>{currentReasonAction?.reasonLabel}</Label>
+                    <TextArea
+                      value={actionReason}
+                      onChange={(event) => setActionReason(event.target.value)}
+                      maxLength={1000}
+                      rows={4}
+                      placeholder={currentReasonAction?.reasonPlaceholder}
+                    />
+                  </TextField>
+                </Modal.Body>
+                <Modal.Footer className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button slot="close" variant="tertiary" isDisabled={isActionLoading}>
+                    취소
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant={currentReasonAction?.isDanger ? 'danger' : 'primary'}
+                    isDisabled={!actionReason.trim()}
+                    isPending={isActionLoading}
+                  >
+                    {currentReasonAction?.submitLabel}
+                  </Button>
+                </Modal.Footer>
+              </Form>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
     </div>
   );
 }

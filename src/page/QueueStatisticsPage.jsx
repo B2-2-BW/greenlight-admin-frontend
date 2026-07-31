@@ -27,7 +27,18 @@ import {
 } from '@heroui/react';
 import { QueueStatisticsClient } from '../api/queue-statistics/index.js';
 import QueueStatisticsSkeleton from '../component/QueueStatisticsSkeleton.jsx';
-import { buildQueueWindows, summarizeQueueStatistics, summarizeRooms } from './queueStatisticsHelpers.js';
+import {
+  buildQueueWindows,
+  KPI_METRICS,
+  ROOM_SUMMARY_METRICS,
+  summarizeQueueStatistics,
+  summarizeRooms,
+} from './queueStatisticsHelpers.js';
+import {
+  downloadQueueStatisticsCsv,
+  downloadQueueStatisticsXlsx,
+} from './queueStatisticsExport.js';
+import { ToastUtil } from '../util/toastUtil.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -121,9 +132,11 @@ export default function QueueStatisticsPage() {
   const [dateRange, setDateRange] = useState(initialDateRange);
   const [selectedRoomIds, setSelectedRoomIds] = useState([]);
   const [statistics, setStatistics] = useState(null);
+  const [loadedRange, setLoadedRange] = useState(null);
   const [availableRooms, setAvailableRooms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isExportingXlsx, setIsExportingXlsx] = useState(false);
   const [roomSortDescriptor, setRoomSortDescriptor] = useState({
     column: 'name',
     direction: 'ascending',
@@ -139,21 +152,27 @@ export default function QueueStatisticsPage() {
     const controller = new AbortController();
     activeRequest.current = controller;
     const generation = ++requestGeneration.current;
+    const currentRange = {
+      from: dateRange.start.toDate(LOCAL_TIME_ZONE).toISOString(),
+      to: dateRange.end.toDate(LOCAL_TIME_ZONE).toISOString(),
+    };
     setIsLoading(true);
     setError(null);
     try {
       const response = await QueueStatisticsClient.getQueueStatistics({
         signal: controller.signal,
-        from: dateRange.start.toDate(LOCAL_TIME_ZONE).toISOString(),
-        to: dateRange.end.toDate(LOCAL_TIME_ZONE).toISOString(),
+        ...currentRange,
         roomIds: selectedRoomIds.length > 0 ? selectedRoomIds : undefined,
       });
       if (generation !== requestGeneration.current) return;
       const data = response.data ?? {};
       setStatistics(data);
       setAvailableRooms(Array.isArray(data.availableRooms) ? data.availableRooms : []);
+      setLoadedRange(currentRange);
     } catch (requestError) {
-      if (generation === requestGeneration.current && requestError.code !== 'ERR_CANCELED') setError(requestError);
+      if (generation === requestGeneration.current && requestError.code !== 'ERR_CANCELED') {
+        setError(requestError);
+      }
     } finally {
       if (generation === requestGeneration.current) setIsLoading(false);
     }
@@ -182,16 +201,43 @@ export default function QueueStatisticsPage() {
   const sortedRoomSummary = useMemo(() => {
     const { column, direction } = roomSortDescriptor;
     return [...roomSummary].sort((first, second) => {
-      const comparison =
+      const sortResult =
         column === 'name'
           ? roomNameCollator.compare(first.name, second.name)
           : (first[column] ?? 0) - (second[column] ?? 0);
 
-      if (comparison !== 0) return direction === 'descending' ? -comparison : comparison;
+      if (sortResult !== 0) return direction === 'descending' ? -sortResult : sortResult;
       return roomNameCollator.compare(first.name, second.name);
     });
   }, [roomSummary, roomSortDescriptor]);
   const hasSeriesData = windows.length > 0;
+  const canExport = Boolean(!isLoading && !error && loadedRange && hasSeriesData);
+  const exportReport = useMemo(
+    () => ({
+      currentRange: loadedRange,
+      summary,
+      rooms: roomSummary,
+    }),
+    [loadedRange, roomSummary, summary]
+  );
+
+  const handleCsvExport = () => {
+    if (!canExport) return;
+    downloadQueueStatisticsCsv(exportReport);
+  };
+
+  const handleXlsxExport = async () => {
+    if (!canExport) return;
+    setIsExportingXlsx(true);
+    try {
+      await downloadQueueStatisticsXlsx(exportReport);
+    } catch (exportError) {
+      console.error(exportError);
+      ToastUtil.error('XLSX 내보내기', '파일을 생성하지 못했습니다.');
+    } finally {
+      setIsExportingXlsx(false);
+    }
+  };
 
   const queueSizeData = useMemo(
     () => ({
@@ -366,6 +412,20 @@ export default function QueueStatisticsPage() {
         </Card.Content>
       </Card>
 
+      <div className="mb-4 flex flex-wrap justify-end gap-2">
+        <Button variant="secondary" onPress={handleCsvExport} isDisabled={!canExport}>
+          CSV 내보내기
+        </Button>
+        <Button
+          variant="secondary"
+          onPress={handleXlsxExport}
+          isPending={isExportingXlsx}
+          isDisabled={!canExport || isExportingXlsx}
+        >
+          XLSX 내보내기
+        </Button>
+      </div>
+
       {isLoading ? <QueueStatisticsSkeleton includeFilter={false} /> : null}
       {!isLoading && error ? (
         <div className="flex min-h-96 flex-col items-center justify-center gap-4 text-center">
@@ -393,10 +453,9 @@ export default function QueueStatisticsPage() {
       {!isLoading && !error && availableRooms.length > 0 && hasSeriesData ? (
         <>
           <section className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="대기열 핵심 지표">
-            <KpiCard label="최대 동시 대기 인원" value={summary.maxWaiting} unit="명" />
-            <KpiCard label="대기 유입" value={summary.waitingCount} unit="건" />
-            <KpiCard label="입장" value={summary.enteredCount} unit="건" />
-            <KpiCard label="취소" value={summary.cancelledCount} unit="건" />
+            {KPI_METRICS.map(({ key, label, unit }) => (
+              <KpiCard key={key} label={label} value={summary[key]} unit={unit} />
+            ))}
           </section>
           <section className="grid gap-4">
             <ChartCard title="대기열 규모 추이" chartClassName="h-64">
@@ -471,12 +530,9 @@ export default function QueueStatisticsPage() {
                         {(room) => (
                           <Table.Row id={room.roomId}>
                             <Table.Cell className="font-medium">{room.name}</Table.Cell>
-                            <Table.Cell>{formatNumber(room.maxWaiting)}</Table.Cell>
-                            <Table.Cell>{formatNumber(room.maxActive)}</Table.Cell>
-                            <Table.Cell>{formatNumber(room.waitingCount)}</Table.Cell>
-                            <Table.Cell>{formatNumber(room.enteredCount)}</Table.Cell>
-                            <Table.Cell>{formatNumber(room.exitedCount)}</Table.Cell>
-                            <Table.Cell>{formatNumber(room.cancelledCount)}</Table.Cell>
+                            {ROOM_SUMMARY_METRICS.map(({ key }) => (
+                              <Table.Cell key={key}>{formatNumber(room[key])}</Table.Cell>
+                            ))}
                           </Table.Row>
                         )}
                       </Table.Collection>

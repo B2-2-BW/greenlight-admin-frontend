@@ -15,7 +15,7 @@ console.warn = (...args) => {
 
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
-    <Toast.Provider placement="top end" className="admin-toast-region" />
+    <Toast.Provider placement="top end" className="admin-toast-region z-80" />
     <CookiesProvider defaultSetOptions={{ path: '/' }}>
       <App />
     </CookiesProvider>

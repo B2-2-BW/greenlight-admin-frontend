@@ -22,6 +22,9 @@ commonAxiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    if (typeof window !== 'undefined' && window.location.pathname) {
+      config.headers['X-Admin-Source-Path'] = window.location.pathname;
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -47,7 +50,11 @@ commonAxiosInstance.interceptors.response.use(
         await LoginUtil.issueAndSetAccessToken();
         return commonAxiosInstance(originalRequest);
       } catch (err) {
-        window.location.href = '/login';
+        if (err?.response?.status === 401 || err?.response?.status === 403) {
+          LoginUtil.clearAccessToken();
+          useUserStore.getState().clearUser();
+          window.location.href = '/login';
+        }
         return Promise.reject(err);
       }
     }

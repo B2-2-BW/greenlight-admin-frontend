@@ -1,139 +1,141 @@
-import { Card, Skeleton, Switch } from '@heroui/react';
+import { Alert, Card, Chip, Skeleton } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { SchedulerClient } from '../../api/scheduler/index.js';
-import { ToastUtil } from '../../util/toastUtil.js';
-import { useUserStore } from '../../store/user.jsx';
 
-const schedulerDescription = {
-  relocation: { title: 'relocation', name: '입장 스케쥴러', description: '실시간 고객 입장처리' },
-  capacity: { title: 'capacity', name: '활성사용자 스케쥴러', description: '실시간 활성사용자 수 계산' },
-  cleanup_session: { title: 'cleanup session', name: '세션 스케쥴러', description: '실시간 세션 계산 및 정리' },
-  redis_cleanup: {
-    title: 'redis cleanup',
-    name: '액션이벤트 정리 스케쥴러',
-    description: '엑션 이벤트 발생 로그 정리',
-  },
-  metric: { title: 'metric', name: '액션그룹 현황 기록 스케쥴러', description: '액션그룹별 대기/입장인원 기록' },
-};
+const POLLING_INTERVAL_MS = 5000;
 
-function isRunning(status) {
-  return status === 'RUNNING';
+function StatusChip({ status }) {
+  const isUp = status === 'UP' || status === 'RUNNING';
+  return (
+    <Chip color={isUp ? 'success' : 'danger'} variant="soft" size="md">
+      {isUp ? '정상' : '중단'}
+    </Chip>
+  );
 }
 
-function SchedulerCard({ scheduler, updateStatus, isUpdateLoading, canManageSchedulers }) {
-  const [running, setRunning] = useState(false);
-  useEffect(() => {
-    setRunning(isRunning(scheduler.status));
-  }, [scheduler]);
+function ComponentCard({ title, description, status }) {
   return (
     <Card className="py-4">
-      <Card.Header className="pb-0 pt-2 px-4 flex-col items-start">
-        <p className="text-xs uppercase font-bold">{schedulerDescription[scheduler.schedulerType].title}</p>
-        <small className="text-neutral-500">{schedulerDescription[scheduler.schedulerType].description}</small>
-        <h4 className="font-semibold text-lg">{schedulerDescription[scheduler.schedulerType].name}</h4>
-      </Card.Header>
-      <Card.Content className="overflow-visible p-4">
-        <div className="min-w-0">
-          <Switch
-            isDisabled={isUpdateLoading || !canManageSchedulers}
-            isSelected={running}
-            onChange={(newValue) => {
-              updateStatus(scheduler.schedulerType, newValue);
-            }}
-            className="group w-full max-w-md"
-          >
-            <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-content1 p-4 hover:bg-surface-hove group-data-[selected=true]:border-accent">
-              <Switch.Control>
-                <Switch.Thumb />
-              </Switch.Control>
-              <span className="flex min-w-0 flex-col gap-1">
-                <span className="flex gap-1 text-base">
-                  <span>상태:</span>
-                  <span className="font-semibold">{running ? '실행 중' : '중단됨'}</span>
-                </span>
-                <span className="text-sm text-muted">
-                  {running ? '스케줄러가 실행 중입니다.' : '스케줄러가 중단되었습니다.'}
-                </span>
-              </span>
-            </Switch.Content>
-          </Switch>
+      <Card.Header className="flex items-start justify-between gap-4 px-4 pb-0 pt-2">
+        <div>
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <p className="mt-1 text-sm text-muted">{description}</p>
         </div>
-      </Card.Content>
+        <StatusChip status={status} />
+      </Card.Header>
     </Card>
   );
 }
 
-export default function SchedulerList() {
-  const [schedulers, setSchedulers] = useState([]);
-  const [isPageLoading, setIsPageLoading] = useState(true);
-  const [isUpdateLoading, setIsUpdateLoading] = useState(false);
-  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
-  const canManageSchedulers = role === 'SITE_ADMIN' || role === 'SUPER';
-  const fetchSchedulers = async () => {
-    try {
-      const res = await SchedulerClient.getSchedulerStatusList();
-      setSchedulers(res);
-    } catch (e) {
-      console.error(e);
-      ToastUtil.error('스케쥴러 조회 실패', '스케쥴러를 조회할 수 없습니다. 관리자에게 문의해주세요. ' + e);
-    } finally {
-      setIsPageLoading(false);
-    }
-  };
+function LoadingCards() {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <Skeleton className="h-32 rounded-lg" />
+      <Skeleton className="h-32 rounded-lg" />
+      <Skeleton className="h-32 rounded-lg" />
+    </div>
+  );
+}
 
-  const updateStatus = async (schedulerType, newValue) => {
-    if (!canManageSchedulers) {
-      ToastUtil.error('스케쥴러 상태 변경 실패', '스케쥴러 상태를 변경할 권한이 없습니다.');
-      return;
-    }
-    setIsUpdateLoading(true);
-    let msg;
-    try {
-      if (newValue === true) {
-        await SchedulerClient.startScheduler(schedulerType);
-        msg = `스케쥴러를 성공적으로 시작하였습니다. scheduler: ${schedulerType}`;
-      } else {
-        await SchedulerClient.stopScheduler(schedulerType);
-        msg = `스케쥴러를 성공적으로 중단하였습니다. scheduler: ${schedulerType}`;
-      }
-      ToastUtil.success('스케쥴러 상태 변경', msg);
-    } catch (e) {
-      console.error(e);
-      ToastUtil.error(
-        '스케쥴러 상태 변경 실패',
-        e.response?.data?.detail ?? '스케쥴러 상태 변경에 실패했습니다.'
-      );
-    } finally {
-      await fetchSchedulers();
-      setIsUpdateLoading(false);
-    }
-  };
+export default function SchedulerList() {
+  const [systemStatus, setSystemStatus] = useState(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isUnavailable, setIsUnavailable] = useState(false);
 
   useEffect(() => {
-    fetchSchedulers();
+    let cancelled = false;
+
+    const fetchSystemStatus = async () => {
+      try {
+        const data = await SchedulerClient.getSchedulerStatusList();
+        if (!cancelled) {
+          setSystemStatus(data);
+          setIsUnavailable(false);
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setSystemStatus(null);
+          setIsUnavailable(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsInitialLoading(false);
+        }
+      }
+    };
+
+    fetchSystemStatus();
+    const intervalId = window.setInterval(fetchSystemStatus, POLLING_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
   }, []);
 
-  if (isPageLoading) {
+  if (isInitialLoading) {
+    return <LoadingCards />;
+  }
+
+  if (!systemStatus && isUnavailable) {
     return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Skeleton className="h-40 rounded-lg" />
-        <Skeleton className="h-40 rounded-lg" />
-        <Skeleton className="h-40 rounded-lg" />
-      </div>
+      <Alert status="danger">
+        <Alert.Content>
+          <Alert.Title>시스템 상태를 조회할 수 없습니다</Alert.Title>
+          <Alert.Description>서버 연결 상태를 확인해 주세요.</Alert.Description>
+        </Alert.Content>
+      </Alert>
     );
   }
 
+  const schedulers = systemStatus?.scheduler?.schedulers ?? [];
+
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {schedulers.map((scheduler) => (
-        <SchedulerCard
-          scheduler={scheduler}
-          key={scheduler.schedulerType}
-          updateStatus={updateStatus}
-          isUpdateLoading={isUpdateLoading}
-          canManageSchedulers={canManageSchedulers}
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <ComponentCard
+          title="DB"
+          description="데이터베이스 연결 상태"
+          status={systemStatus?.database?.status}
         />
-      ))}
+        <ComponentCard
+          title="Redis"
+          description="Redis 연결 상태"
+          status={systemStatus?.redis?.status}
+        />
+        <ComponentCard
+          title="Scheduler"
+          description="Scheduler 인스턴스 연결 상태"
+          status={systemStatus?.scheduler?.status}
+        />
+      </div>
+
+      <Card className="py-4">
+        <Card.Header className="px-4 pb-0 pt-2">
+          <h2 className="text-lg font-semibold">Scheduler 작업 상태</h2>
+        </Card.Header>
+        <Card.Content className="grid grid-cols-1 gap-3 p-4 md:grid-cols-2">
+          {schedulers.length === 0 ? (
+            <p className="text-sm text-muted">확인할 수 있는 Scheduler 작업이 없습니다.</p>
+          ) : (
+            schedulers.map((scheduler) => (
+              <div
+                key={scheduler.schedulerCode}
+                className="flex items-center justify-between gap-4 rounded-lg border border-default p-4"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium">{scheduler.name || scheduler.schedulerCode}</p>
+                  {scheduler.description ? (
+                    <p className="mt-1 text-sm text-muted">{scheduler.description}</p>
+                  ) : null}
+                </div>
+                <StatusChip status={scheduler.status} />
+              </div>
+            ))
+          )}
+        </Card.Content>
+      </Card>
     </div>
   );
 }
