@@ -1,8 +1,21 @@
-import { Button, Description, FieldError, Form, Input, Label, Modal, Skeleton, Switch, TextField } from '@heroui/react';
+import {
+  Button,
+  Description,
+  FieldError,
+  Form,
+  Input,
+  Label,
+  Modal,
+  Skeleton,
+  Switch,
+  TextArea,
+  TextField,
+} from '@heroui/react';
 import { ArrowLeft, TrashBin } from '@gravity-ui/icons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { SiteClient } from '../api/site/index.js';
+import { RoomClient } from '../api/room/index.js';
 import FormSection from '../component/common/FormSection.jsx';
 import ConfirmAlertDialog from '../component/ConfirmAlertDialog.jsx';
 import { useUserStore } from '../store/user.jsx';
@@ -18,7 +31,7 @@ const enabledMessage = {
   },
   false: {
     title: '사이트 비활성화',
-    subtitle: '사이트와 소속 계정의 서비스 이용이 제한됩니다.',
+    subtitle: '서비스 이용만 제한되며 소속 계정과 대기열의 개별 활성 상태는 유지됩니다.',
   },
 };
 const queueEnabledMessage = {
@@ -45,8 +58,11 @@ function FieldsSkeleton() {
 export default function SiteDetailPage() {
   const { siteId } = useParams();
   const navigate = useNavigate();
-  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
-  const canManageSite = role === 'SUPER';
+  const user = useUserStore((state) => state.user);
+  const role = user?.userRole ?? user?.role;
+  const isSuperUser = role === 'SUPER';
+  const canEditSiteInfo = isSuperUser;
+  const canManageSiteStatus = isSuperUser;
   const [site, setSite] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,6 +71,7 @@ export default function SiteDetailPage() {
   const [enabled, setEnabled] = useState(false);
   const [queueEnabled, setQueueEnabled] = useState(false);
   const [reason, setReason] = useState('');
+  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
   const [isKeyRotationPending, setIsKeyRotationPending] = useState(false);
   const [isKeyRotationConfirmOpen, setIsKeyRotationConfirmOpen] = useState(false);
   const [newApiKey, setNewApiKey] = useState(null);
@@ -63,6 +80,9 @@ export default function SiteDetailPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [deleteReason, setDeleteReason] = useState('');
   const [isDeletePending, setIsDeletePending] = useState(false);
+  const [isRoomSyncDialogOpen, setIsRoomSyncDialogOpen] = useState(false);
+  const [isSiteSyncDialogOpen, setIsSiteSyncDialogOpen] = useState(false);
+  const [syncTarget, setSyncTarget] = useState(null);
   const load = useCallback(async () => {
     try {
       const { data } = await SiteClient.getManagedSite(siteId);
@@ -87,26 +107,28 @@ export default function SiteDetailPage() {
     const current = {
       siteName: name,
       siteDescription: description,
-      siteEnabled: enabled,
-      queueEnabled,
     };
     const previous = {
       siteName: site.siteName ?? '',
       siteDescription: site.siteDescription ?? '',
-      siteEnabled: Boolean(site.siteEnabled),
-      queueEnabled: Boolean(site.queueEnabled),
     };
+    if (canManageSiteStatus) {
+      current.siteEnabled = enabled;
+      current.queueEnabled = queueEnabled;
+      previous.siteEnabled = Boolean(site.siteEnabled);
+      previous.queueEnabled = Boolean(site.queueEnabled);
+    }
     return Object.fromEntries(
       Object.keys(current)
         .filter((field) => current[field] !== previous[field])
         .map((field) => [field, { before: previous[field], after: current[field] }])
     );
-  }, [description, enabled, name, queueEnabled, site]);
-  const isDirty = Object.keys(changes).length > 0 || reason.trim().length > 0;
+  }, [canManageSiteStatus, description, enabled, name, queueEnabled, site]);
+  const isDirty = Object.keys(changes).length > 0;
   const confirmNavigation = useUnsavedChanges(isDirty);
   const submit = async (event) => {
     event.preventDefault();
-    if (!canManageSite) {
+    if (!canEditSiteInfo) {
       ToastUtil.error('사이트 관리', '사이트 정보를 변경할 권한이 없습니다.');
       return;
     }
@@ -114,21 +136,24 @@ export default function SiteDetailPage() {
       ToastUtil.error('사이트 관리', '변경된 항목이 없습니다.');
       return;
     }
-    if (!reason.trim()) {
-      ToastUtil.error('사이트 관리', '변경 사유를 입력해 주세요.');
+    if (!name.trim()) {
+      ToastUtil.error('사이트 관리', '사이트명을 입력해 주세요.');
       return;
     }
+    setIsSaveConfirmOpen(true);
+  };
+  const handleSaveConfirmed = async () => {
+    if (!reason.trim()) return;
     setSaving(true);
     try {
-      const payload = {
-        siteName: name,
-        siteDescription: description,
-        siteEnabled: enabled,
-        queueEnabled,
-        reason: reason.trim(),
-      };
+      const payload = { reason: reason.trim() };
+      if (changes.siteName) payload.siteName = name.trim();
+      if (changes.siteDescription) payload.siteDescription = description.trim();
+      if (canManageSiteStatus && changes.siteEnabled) payload.siteEnabled = enabled;
+      if (canManageSiteStatus && changes.queueEnabled) payload.queueEnabled = queueEnabled;
       await SiteClient.updateSiteInfo(siteId, payload);
       setReason('');
+      setIsSaveConfirmOpen(false);
       await load();
       ToastUtil.success('사이트 관리', '저장 후 적용된 사이트 정보를 확인했습니다.');
     } catch (error) {
@@ -137,6 +162,10 @@ export default function SiteDetailPage() {
     } finally {
       setSaving(false);
     }
+  };
+  const handleSaveConfirmOpenChange = (open) => {
+    setIsSaveConfirmOpen(open);
+    if (!open && !saving) setReason('');
   };
   const rotateApiKey = async () => {
     if (!keyRotationReason.trim()) {
@@ -187,6 +216,35 @@ export default function SiteDetailPage() {
       setIsDeletePending(false);
     }
   };
+  const handleSyncRoomData = async () => {
+    setSyncTarget('room');
+    try {
+      await RoomClient.syncRoomData();
+      ToastUtil.success('운영 데이터 동기화', '대기열 설정을 서버에 즉시 반영했습니다.');
+      setIsRoomSyncDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '대기열 설정 반영에 실패했습니다.');
+    } finally {
+      setSyncTarget(null);
+    }
+  };
+  const handleSyncSiteData = async () => {
+    setSyncTarget('site');
+    try {
+      await SiteClient.syncAllSiteData();
+      ToastUtil.success(
+        '운영 데이터 동기화',
+        isSuperUser ? '모든 사이트 설정을 서버에 즉시 반영했습니다.' : '현재 사이트 설정을 서버에 즉시 반영했습니다.'
+      );
+      setIsSiteSyncDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '사이트 설정 반영에 실패했습니다.');
+    } finally {
+      setSyncTarget(null);
+    }
+  };
   return (
     <div className="w-full bg-neutral-50">
       <div className="max-w-[1080px] p-4 sm:p-6">
@@ -222,16 +280,24 @@ export default function SiteDetailPage() {
                     <Label className="text-base">사이트 ID</Label>
                     <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={site.siteId} />
                   </TextField>
-                  <TextField name="siteName" className="w-full max-w-2xl" isRequired isReadOnly={!canManageSite}>
+                  <TextField name="siteName" className="w-full max-w-2xl" isRequired isReadOnly={!canEditSiteInfo}>
                     <Label className="text-base">사이트명</Label>
-                    <Input className={fieldClass} value={name} onChange={(event) => setName(event.target.value)} />
+                    <Input
+                      className={`${fieldClass} text-base`}
+                      value={name}
+                      maxLength={255}
+                      onChange={(event) => setName(event.target.value)}
+                    />
                     <FieldError>사이트명을 입력해 주세요.</FieldError>
                   </TextField>
-                  <TextField className="w-full max-w-2xl" isReadOnly={!canManageSite}>
+                  <TextField className="w-full max-w-2xl" isReadOnly={!canEditSiteInfo}>
                     <Label className="text-base">사이트 설명</Label>
-                    <Input
-                      className={fieldClass}
+                    <TextArea
+                      className={`${fieldClass} text-base`}
                       value={description}
+                      maxLength={4000}
+                      rows={3}
+                      placeholder="사이트에 대한 설명을 입력해 주세요."
                       onChange={(event) => setDescription(event.target.value)}
                     />
                   </TextField>
@@ -239,29 +305,30 @@ export default function SiteDetailPage() {
               </FormSection>
               <FormSection title="운영 상태">
                 <div className="flex flex-col gap-6">
-                  <div className="flex flex-col gap-2">
-                    <Label className="text-base" isRequired>
-                      사이트 활성/비활성화
-                    </Label>
-                    <Switch
-                      isSelected={enabled}
-                      onChange={setEnabled}
-                      className="group w-full max-w-lg"
-                      isDisabled={!canManageSite}
-                    >
-                      <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
-                        <Switch.Control>
-                          <Switch.Thumb>
-                            <Switch.Icon />
-                          </Switch.Thumb>
-                        </Switch.Control>
-                        <span className="flex min-w-0 flex-col gap-1">
-                          <span className="text-base">{enabledMessage[enabled].title}</span>
-                          <span className="text-sm text-muted">{enabledMessage[enabled].subtitle}</span>
-                        </span>
-                      </Switch.Content>
-                    </Switch>
-                  </div>
+                  {canManageSiteStatus && (
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-base" isRequired>
+                        사이트 활성/비활성화
+                      </Label>
+                      <Switch
+                        isSelected={enabled}
+                        onChange={setEnabled}
+                        className="group w-full max-w-lg"
+                      >
+                        <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                          <Switch.Control>
+                            <Switch.Thumb>
+                              <Switch.Icon />
+                            </Switch.Thumb>
+                          </Switch.Control>
+                          <span className="flex min-w-0 flex-col gap-1">
+                            <span className="text-base">{enabledMessage[enabled].title}</span>
+                            <span className="text-sm text-muted">{enabledMessage[enabled].subtitle}</span>
+                          </span>
+                        </Switch.Content>
+                      </Switch>
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-2">
                     <Label className="text-base" isRequired>
@@ -273,7 +340,7 @@ export default function SiteDetailPage() {
                       className="group w-full max-w-lg"
                       isRequired
                       validationBehavior="aria"
-                      isDisabled={!canManageSite}
+                      isDisabled={!canManageSiteStatus}
                     >
                       <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                         <Switch.Control>
@@ -287,7 +354,7 @@ export default function SiteDetailPage() {
                         </span>
                       </Switch.Content>
                     </Switch>
-                    {!canManageSite && (
+                    {!canManageSiteStatus && (
                       <Description className="text-sm text-muted">
                         대기열 운영 상태는 시스템 설정에서 변경할 수 있습니다.
                       </Description>
@@ -295,19 +362,43 @@ export default function SiteDetailPage() {
                   </div>
                 </div>
               </FormSection>
-              {canManageSite && (
-                <FormSection title="변경 확인">
+              {canEditSiteInfo && (
+                <FormSection title="운영 데이터 동기화">
                   <div className="flex w-full max-w-2xl flex-col gap-4">
-                    <ChangeDiff changes={changes} />
-                    <TextField className="w-full" isRequired>
-                      <Label>변경 사유</Label>
-                      <Input
-                        value={reason}
-                        maxLength={1000}
-                        onChange={(event) => setReason(event.target.value)}
-                        placeholder="변경이 필요한 이유를 입력해 주세요."
-                      />
-                    </TextField>
+                    <Description className="text-sm text-muted">
+                      최근 변경한 서버 설정을 즉시 다시 반영합니다. 동기화 중에는 잠시 기다려 주세요.
+                    </Description>
+                    <div className="flex flex-wrap gap-3">
+                      <ConfirmAlertDialog
+                        title="대기열 설정을 동기화할까요?"
+                        message="모든 대기열 설정을 서버에 즉시 다시 반영합니다."
+                        confirmMessage="대기열 동기화"
+                        isOpen={isRoomSyncDialogOpen}
+                        onConfirm={handleSyncRoomData}
+                        onOpenChange={setIsRoomSyncDialogOpen}
+                      >
+                        <Button type="button" variant="secondary" isPending={syncTarget === 'room'} className="min-h-11">
+                          전체 대기열 설정 동기화
+                        </Button>
+                      </ConfirmAlertDialog>
+
+                      <ConfirmAlertDialog
+                        title={isSuperUser ? '전체 사이트 설정을 동기화할까요?' : '사이트 설정을 동기화할까요?'}
+                        message={
+                          isSuperUser
+                            ? '모든 사이트 설정을 서버에 즉시 다시 반영합니다.'
+                            : '현재 사이트 설정을 서버에 즉시 다시 반영합니다.'
+                        }
+                        confirmMessage={isSuperUser ? '전체 사이트 동기화' : '사이트 동기화'}
+                        isOpen={isSiteSyncDialogOpen}
+                        onConfirm={handleSyncSiteData}
+                        onOpenChange={setIsSiteSyncDialogOpen}
+                      >
+                        <Button type="button" variant="secondary" isPending={syncTarget === 'site'} className="min-h-11">
+                          {isSuperUser ? '전체 사이트 설정 동기화' : '사이트 설정 동기화'}
+                        </Button>
+                      </ConfirmAlertDialog>
+                    </div>
                   </div>
                 </FormSection>
               )}
@@ -371,13 +462,13 @@ export default function SiteDetailPage() {
                   </div>
                 </FormSection>
               )}
-              {canManageSite && (
+              {canEditSiteInfo && (
                 <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
                   <Button
                     type="submit"
                     size="lg"
                     isPending={saving}
-                    isDisabled={Object.keys(changes).length === 0 || !reason.trim()}
+                    isDisabled={Object.keys(changes).length === 0 || saving}
                     fullWidth
                     className="min-h-11"
                   >
@@ -389,6 +480,44 @@ export default function SiteDetailPage() {
           </>
         )}
       </div>
+      <Modal isOpen={isSaveConfirmOpen} onOpenChange={handleSaveConfirmOpenChange}>
+        <Modal.Backdrop>
+          <Modal.Container size="lg">
+            <Modal.Dialog className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+              <Modal.CloseTrigger isDisabled={saving} />
+              <Modal.Header>
+                <Modal.Heading>사이트 정보 변경 확인</Modal.Heading>
+              </Modal.Header>
+              <Modal.Body className="flex flex-col gap-4">
+                <ChangeDiff changes={changes} />
+                <TextField className="w-full" isRequired>
+                  <Label>변경 사유</Label>
+                  <TextArea
+                    value={reason}
+                    maxLength={1000}
+                    rows={4}
+                    onChange={(event) => setReason(event.target.value)}
+                    placeholder="변경이 필요한 이유를 입력해 주세요."
+                  />
+                </TextField>
+              </Modal.Body>
+              <Modal.Footer className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button slot="close" variant="tertiary" isDisabled={saving} className="w-full sm:w-auto">
+                  취소
+                </Button>
+                <Button
+                  onPress={handleSaveConfirmed}
+                  isPending={saving}
+                  isDisabled={!reason.trim() || saving}
+                  className="w-full sm:w-auto"
+                >
+                  변경 적용
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal>
       <Modal isOpen={newApiKey !== null} onOpenChange={closeNewApiKey}>
         <Modal.Backdrop className="z-49">
           <Modal.Container size="sm">

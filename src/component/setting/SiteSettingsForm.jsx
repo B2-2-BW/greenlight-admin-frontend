@@ -1,4 +1,16 @@
-import { Button, Description, Form, Input, Label, Modal, Skeleton, Switch, TextField } from '@heroui/react';
+import {
+  Button,
+  Description,
+  FieldError,
+  Form,
+  Input,
+  Label,
+  Modal,
+  Skeleton,
+  Switch,
+  TextArea,
+  TextField,
+} from '@heroui/react';
 import FormSection from '../common/FormSection.jsx';
 import ConfirmAlertDialog from '../ConfirmAlertDialog.jsx';
 import { useEffect, useMemo, useState } from 'react';
@@ -25,6 +37,8 @@ export default function SiteSettingsForm() {
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
   const [siteInfo, setSiteInfo] = useState({});
 
+  const [editSiteName, setEditSiteName] = useState('');
+  const [editSiteDescription, setEditSiteDescription] = useState('');
   const [editQueueEnabled, setEditQueueEnabled] = useState(true);
   const [reason, setReason] = useState('');
   const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
@@ -35,17 +49,26 @@ export default function SiteSettingsForm() {
   const user = useUserStore((state) => state.user);
   const userRole = user?.role ?? user?.userRole;
   const canSyncRoomData = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
-  const canManageQueue = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
+  const canManageSite = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
   const isSuperUser = userRole === 'SUPER';
   const changes = useMemo(() => {
-    if (!siteInfo?.siteId || Boolean(siteInfo.queueEnabled) === editQueueEnabled) return {};
-    return {
-      queueEnabled: {
-        before: Boolean(siteInfo.queueEnabled),
-        after: editQueueEnabled,
-      },
+    if (!siteInfo?.siteId) return {};
+    const current = {
+      siteName: editSiteName,
+      siteDescription: editSiteDescription,
+      queueEnabled: editQueueEnabled,
     };
-  }, [editQueueEnabled, siteInfo]);
+    const previous = {
+      siteName: siteInfo.siteName ?? '',
+      siteDescription: siteInfo.siteDescription ?? '',
+      queueEnabled: Boolean(siteInfo.queueEnabled),
+    };
+    return Object.fromEntries(
+      Object.keys(current)
+        .filter((field) => current[field] !== previous[field])
+        .map((field) => [field, { before: previous[field], after: current[field] }])
+    );
+  }, [editQueueEnabled, editSiteDescription, editSiteName, siteInfo]);
   useUnsavedChanges(Object.keys(changes).length > 0);
 
   const fetchSiteInfo = async () => {
@@ -56,6 +79,8 @@ export default function SiteSettingsForm() {
       const res = await SiteClient.findSite(me.siteId);
       const data = res.data;
       setSiteInfo(data);
+      setEditSiteName(data?.siteName ?? '');
+      setEditSiteDescription(data?.siteDescription ?? '');
       setEditQueueEnabled(Boolean(data?.queueEnabled));
     } catch (error) {
       console.error('Error fetching siteInfo:', error);
@@ -71,8 +96,12 @@ export default function SiteSettingsForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!canManageQueue) {
-      ToastUtil.error('시스템 설정', '대기열 설정을 변경할 권한이 없습니다.');
+    if (!canManageSite) {
+      ToastUtil.error('시스템 설정', '사이트 설정을 변경할 권한이 없습니다.');
+      return;
+    }
+    if (!editSiteName.trim()) {
+      ToastUtil.error('시스템 설정', '사이트명을 입력해 주세요.');
       return;
     }
     if (Object.keys(changes).length === 0) {
@@ -87,7 +116,11 @@ export default function SiteSettingsForm() {
     setIsSubmitLoading(true);
 
     try {
-      const response = await SiteClient.updateQueueEnabled(siteInfo.siteId, editQueueEnabled, reason.trim());
+      const payload = { reason: reason.trim() };
+      if (changes.siteName) payload.siteName = editSiteName.trim();
+      if (changes.siteDescription) payload.siteDescription = editSiteDescription.trim();
+      if (changes.queueEnabled) payload.queueEnabled = editQueueEnabled;
+      const response = await SiteClient.updateSiteInfo(siteInfo.siteId, payload);
       if (response.status !== 200) {
         throw new Error('failed to create room ' + JSON.stringify(response));
       }
@@ -181,9 +214,44 @@ export default function SiteSettingsForm() {
                   <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={siteInfo?.siteId} />
                 </TextField>
 
-                <TextField name="siteName" type="text" isReadOnly className="w-full max-w-md" variant="default">
+                <TextField
+                  name="siteName"
+                  type="text"
+                  isRequired
+                  isReadOnly={!canManageSite}
+                  className="w-full max-w-md"
+                  variant="default"
+                >
                   <Label className="text-base">사이트명</Label>
-                  <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={siteInfo?.siteName} />
+                  <Input
+                    className={`text-base ring-1 focus:ring-2 ring-neutral-200 ${
+                      canManageSite ? 'focus:ring-accent' : 'bg-neutral-100'
+                    }`}
+                    value={editSiteName}
+                    maxLength={255}
+                    onChange={(event) => setEditSiteName(event.target.value)}
+                  />
+                  <FieldError>사이트명을 입력해 주세요.</FieldError>
+                </TextField>
+
+                <TextField
+                  name="siteDescription"
+                  type="text"
+                  isReadOnly={!canManageSite}
+                  className="w-full max-w-md"
+                  variant="default"
+                >
+                  <Label className="text-base">사이트 설명</Label>
+                  <TextArea
+                    className={`text-base ring-1 focus:ring-2 ring-neutral-200 ${
+                      canManageSite ? 'focus:ring-accent' : 'bg-neutral-100'
+                    }`}
+                    value={editSiteDescription}
+                    maxLength={4000}
+                    rows={3}
+                    placeholder="사이트에 대한 설명을 입력해 주세요."
+                    onChange={(event) => setEditSiteDescription(event.target.value)}
+                  />
                 </TextField>
               </div>
             )}
@@ -206,7 +274,7 @@ export default function SiteSettingsForm() {
                     className="group w-full max-w-lg"
                     isRequired
                     validationBehavior="aria"
-                    isDisabled={!canManageQueue}
+                    isDisabled={!canManageSite}
                   >
                     <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                       <Switch.Control>
@@ -220,7 +288,7 @@ export default function SiteSettingsForm() {
                       </span>
                     </Switch.Content>
                   </Switch>
-                  {!canManageQueue && (
+                  {!canManageSite && (
                     <Description className="text-sm text-muted">
                       일반 사용자는 대기열 운영 상태를 조회할 수 있지만 변경할 수 없습니다.
                     </Description>
@@ -283,7 +351,7 @@ export default function SiteSettingsForm() {
           {/*  </Skeleton>*/}
           {/*</SectionTitle>*/}
         </div>
-        {canManageQueue && (
+        {canManageSite && (
           <div className="sticky bottom-0 z-20 mt-4 w-full rounded-xl bg-white/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
             <Button
               size="lg"

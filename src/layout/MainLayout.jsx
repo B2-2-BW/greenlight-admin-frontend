@@ -65,12 +65,16 @@ export default function MainLayout() {
               path: '/users',
               menuId: 16,
             },
-            {
-              title: '사이트 관리',
-              prependIcon: <ClipboardFilledIcon color="#6b7280" />,
-              path: '/sites',
-              menuId: 17,
-            },
+            ...(isSuper
+              ? [
+                  {
+                    title: '사이트 관리',
+                    prependIcon: <ClipboardFilledIcon color="#6b7280" />,
+                    path: '/sites',
+                    menuId: 17,
+                  },
+                ]
+              : []),
             {
               title: '감사로그',
               prependIcon: <ClipboardFilledIcon color="#6b7280" />,

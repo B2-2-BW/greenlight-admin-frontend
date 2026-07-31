@@ -90,17 +90,17 @@ function App() {
           <Route
             path="/sites"
             element={
-              <AdminRoute>
+              <SuperRoute>
                 <SiteManagementPage />
-              </AdminRoute>
+              </SuperRoute>
             }
           />
           <Route
             path="/sites/:siteId"
             element={
-              <AdminRoute>
+              <SuperRoute>
                 <SiteDetailPage />
-              </AdminRoute>
+              </SuperRoute>
             }
           />
           <Route
