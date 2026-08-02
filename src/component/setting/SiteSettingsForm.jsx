@@ -13,7 +13,7 @@ import {
 } from '@heroui/react';
 import FormSection from '../common/FormSection.jsx';
 import ConfirmAlertDialog from '../ConfirmAlertDialog.jsx';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SiteClient } from '../../api/site/index.js';
 import { RoomClient } from '../../api/room/index.js';
 import { useUserStore } from '../../store/user.jsx';
@@ -47,7 +47,9 @@ export default function SiteSettingsForm() {
   const [syncTarget, setSyncTarget] = useState(null);
 
   const user = useUserStore((state) => state.user);
+  const selectedSiteId = useUserStore((state) => state.selectedSiteId);
   const userRole = user?.role ?? user?.userRole;
+  const siteId = userRole === 'SUPER' ? selectedSiteId || user?.siteId : user?.siteId;
   const canSyncRoomData = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
   const canManageSite = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
   const isSuperUser = userRole === 'SUPER';
@@ -71,12 +73,12 @@ export default function SiteSettingsForm() {
   }, [editQueueEnabled, editSiteDescription, editSiteName, siteInfo]);
   useUnsavedChanges(Object.keys(changes).length > 0);
 
-  const fetchSiteInfo = async () => {
+  const fetchSiteInfo = useCallback(async () => {
     setIsPageLoading(true);
 
     try {
-      const me = useUserStore.getState().user;
-      const res = await SiteClient.findSite(me.siteId);
+      if (!siteId) return;
+      const res = await SiteClient.findSite(siteId);
       const data = res.data;
       setSiteInfo(data);
       setEditSiteName(data?.siteName ?? '');
@@ -87,12 +89,12 @@ export default function SiteSettingsForm() {
     } finally {
       setIsPageLoading(false);
     }
-  };
+  }, [siteId]);
 
   // Location 이동 시 실행
   useEffect(() => {
     fetchSiteInfo();
-  }, []);
+  }, [fetchSiteInfo]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

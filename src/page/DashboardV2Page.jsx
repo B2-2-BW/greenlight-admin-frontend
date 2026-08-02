@@ -62,15 +62,17 @@ export default function DashboardV2Page() {
 
   const navigate = useNavigate();
 
-  const { user } = useUserStore();
+  const { user, selectedSiteId } = useUserStore();
+  const role = user?.userRole ?? user?.role;
+  const siteId = role === 'SUPER' ? selectedSiteId || user?.siteId : user?.siteId;
 
   const fetchRoomList = useCallback(async () => {
-    if (!user?.siteId) {
+    if (!siteId) {
       setIsPageLoading(true);
       return;
     }
 
-    const res = await SiteClient.findSite(user.siteId);
+    const res = await SiteClient.findSite(siteId);
     const siteInfo = res.data;
     const isQueueEnabled = Boolean(siteInfo.queueEnabled);
     setQueueEnabled(isQueueEnabled);
@@ -103,23 +105,20 @@ export default function DashboardV2Page() {
       .finally(() => {
         setIsPageLoading(false);
       });
-  }, [dashboardFilter?.enabled, dashboardFilter?.roomEnvironment, user.siteId]);
+  }, [dashboardFilter?.enabled, dashboardFilter?.roomEnvironment, siteId]);
 
   useEffect(() => {
-    if (!user?.siteId) {
-      return;
-    }
-
     roomVersion.current = '-';
-    const initialFetchId = setTimeout(fetchRoomList, 0);
 
-    const intervalId = setInterval(fetchRoomList, 10_000); // 10초마다
+    const initialFetchId = siteId ? setTimeout(fetchRoomList, 0) : null;
+
+    const intervalId = siteId ? setInterval(fetchRoomList, 10_000) : null; // 10초마다
 
     return () => {
-      clearTimeout(initialFetchId);
-      clearInterval(intervalId);
+      if (initialFetchId) clearTimeout(initialFetchId);
+      if (intervalId) clearInterval(intervalId);
     };
-  }, [user.siteId, dashboardFilter, fetchRoomList]);
+  }, [siteId, dashboardFilter, fetchRoomList]);
 
   const fetchRoomById = useCallback(async (roomId) => {
     const room = await RoomClient.getRoomById(roomId);
@@ -133,7 +132,7 @@ export default function DashboardV2Page() {
   useEffect(() => {
     // 데이터를 가져오는 비동기 함수
     const fetchDashboardDetail = async () => {
-      if (isFetching.current || roomList.length === 0) {
+      if (isFetching.current || roomVersion.current === '-' || roomList.length === 0) {
         return;
       }
       isFetching.current = true;
@@ -166,14 +165,14 @@ export default function DashboardV2Page() {
 
     // 컴포넌트 언마운트 시 인터벌 제거 (메모리 누수 방지)
     return () => clearInterval(intervalId);
-  }, [roomList, dashboardFilter]);
+  }, [roomList, dashboardFilter, siteId]);
 
   const mainRoom = {
     name: '전체 대기열 통합',
     capacity: roomList.reduce((acc, cur) => acc + (cur.capacity || 0), 0),
   };
 
-  if (!user?.siteId || isPageLoading)
+  if (!siteId || isPageLoading)
     return (
       <div className="grid grid-cols-1 gap-4 p-4 md:h-[calc(100vh-128px)] md:grid-cols-[280px_minmax(0,1fr)] md:overflow-hidden">
         <Skeleton className="h-full rounded-lg" />
