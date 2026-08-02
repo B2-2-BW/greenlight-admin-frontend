@@ -19,9 +19,7 @@ import { fromDate, getLocalTimeZone } from '@internationalized/date';
 import { I18nProvider } from '@react-aria/i18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AuditClient } from '../api/audit/index.js';
-import { SiteClient } from '../api/site/index.js';
 import ChangeDiff from '../component/audit/ChangeDiff.jsx';
-import { useUserStore } from '../store/user.jsx';
 import { ToastUtil } from '../util/toastUtil.js';
 
 const PAGE_SIZE = 10;
@@ -34,7 +32,6 @@ const createInitialFilters = () => {
   end.setSeconds(0, 0);
   end.setMinutes(end.getMinutes() + 1);
   return {
-    siteId: '',
     createdBy: '',
     targetType: '',
     action: '',
@@ -143,66 +140,13 @@ function AuditFilterSelect({ id, label, value, onChange, options, isDisabled = f
 }
 
 export default function AuditLogPage() {
-  const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
   const [filters, setFilters] = useState(createInitialFilters);
   const [appliedFilters, setAppliedFilters] = useState(() => ({ ...filters }));
   const [page, setPage] = useState(1);
   const [result, setResult] = useState({ content: [], totalPages: 0, totalElements: 0 });
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [sites, setSites] = useState([]);
-  const [sitesLoading, setSitesLoading] = useState(false);
   const rangeError = getRangeError(filters.dateRange);
-  const siteOptions = useMemo(
-    () => [
-      { id: 'ALL', label: '전체 사이트' },
-      ...sites.map((site) => ({
-        id: site.siteId,
-        label: `${site.siteEnabled ? '' : '(비활성) '}${site.siteName || site.siteId} (${site.siteId})`,
-      })),
-    ],
-    [sites]
-  );
-
-  useEffect(() => {
-    if (role !== 'SUPER') return undefined;
-    const controller = new AbortController();
-    let cancelled = false;
-    const loadSites = async () => {
-      setSitesLoading(true);
-      try {
-        const firstResponse = await SiteClient.getSites({
-          page: 1,
-          size: 100,
-          signal: controller.signal,
-        });
-        const firstPage = firstResponse.data ?? {};
-        const remainingResponses = await Promise.all(
-          Array.from({ length: Math.max(0, (firstPage.totalPages ?? 1) - 1) }, (_, index) =>
-            SiteClient.getSites({ page: index + 2, size: 100, signal: controller.signal })
-          )
-        );
-        if (!cancelled) {
-          setSites([
-            ...(firstPage.content ?? []),
-            ...remainingResponses.flatMap((response) => response.data?.content ?? []),
-          ]);
-        }
-      } catch (error) {
-        if (error.code !== 'ERR_CANCELED') {
-          console.error(error);
-          ToastUtil.error('감사로그', '사이트 목록을 불러오지 못했습니다.');
-        }
-      } finally {
-        if (!cancelled) setSitesLoading(false);
-      }
-    };
-    loadSites();
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [role]);
 
   const load = useCallback(
     (signal) => {
@@ -262,17 +206,7 @@ export default function AuditLogPage() {
         </header>
 
         <Form onSubmit={submit} className="mb-5 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-sm">
-          <div className={`grid w-full gap-3 sm:grid-cols-2 ${role === 'SUPER' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
-            {role === 'SUPER' && (
-              <AuditFilterSelect
-                id="audit-site-id"
-                label="사이트"
-                value={filters.siteId}
-                onChange={(value) => setFilters({ ...filters, siteId: value === 'ALL' ? '' : value })}
-                options={siteOptions}
-                isDisabled={sitesLoading}
-              />
-            )}
+          <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <AuditTextFilter
               id="audit-created-by"
               label="작업자"
