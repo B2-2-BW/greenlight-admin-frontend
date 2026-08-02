@@ -1,22 +1,92 @@
-import { Avatar, Button, Chip, Dropdown } from '@heroui/react';
+import { Avatar, Button, Chip, Dropdown, ListBox, Select } from '@heroui/react';
+import { useCallback, useEffect, useState } from 'react';
 import logo from '/logo.png';
-import { useNavigate } from 'react-router';
+import { matchPath, useNavigate } from 'react-router';
 import { useUserStore } from '../store/user.jsx';
 import { LoginUtil } from '../util/loginUtil.js';
 import { UserClient } from '../api/user/index.js';
 import { ToastUtil } from '../util/toastUtil.js';
 import { ENVIRONMENT_LABEL } from '../client/config.js';
 import { getProfileAppearance } from '../util/profileAppearance.js';
+import { SiteClient } from '../api/site/index.js';
 
 export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
   const navigate = useNavigate();
 
-  const { clearUser } = useUserStore();
+  const { clearUser, setSelectedSiteId } = useUserStore();
 
   const user = useUserStore((s) => s.user);
+  const selectedSiteId = useUserStore((s) => s.selectedSiteId);
+  const [sites, setSites] = useState([]);
+  const [sitesLoading, setSitesLoading] = useState(false);
+  const role = user?.userRole ?? user?.role;
+  const isSuper = role === 'SUPER';
   const siteLabel = user?.siteName || user?.siteId;
   const showSiteId = user?.siteName && user?.siteId && user.siteName !== user.siteId;
   const { profileColor, profileInitials } = getProfileAppearance(user);
+
+  const changeSite = useCallback(
+    (siteId) => {
+      if (!siteId || siteId === useUserStore.getState().selectedSiteId) return;
+
+      setSelectedSiteId(siteId);
+      const pathname = window.location.pathname;
+      if (matchPath('/rooms/:roomId', pathname)) {
+        navigate('/rooms', { replace: true });
+      } else if (matchPath('/users/:userId', pathname)) {
+        navigate('/users', { replace: true });
+      } else {
+        window.location.reload();
+      }
+    },
+    [navigate, setSelectedSiteId]
+  );
+
+  useEffect(() => {
+    if (!isSuper) return undefined;
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const loadSites = async () => {
+      setSitesLoading(true);
+      try {
+        const firstResponse = await SiteClient.getSites({ page: 1, size: 100, signal: controller.signal });
+        const firstPage = firstResponse.data ?? {};
+        const remainingResponses = await Promise.all(
+          Array.from({ length: Math.max(0, (firstPage.totalPages ?? 1) - 1) }, (_, index) =>
+            SiteClient.getSites({ page: index + 2, size: 100, signal: controller.signal })
+          )
+        );
+        if (cancelled) return;
+        const loadedSites = [
+          ...(firstPage.content ?? []),
+          ...remainingResponses.flatMap((response) => response.data?.content ?? []),
+        ];
+        setSites(loadedSites);
+
+        const fallbackSiteId = loadedSites.some((site) => site.siteId === user?.siteId)
+          ? user.siteId
+          : loadedSites[0]?.siteId;
+        const currentSiteId = useUserStore.getState().selectedSiteId;
+        if (!loadedSites.some((site) => site.siteId === currentSiteId) && fallbackSiteId) {
+          changeSite(fallbackSiteId);
+        }
+      } catch (error) {
+        if (error.code !== 'ERR_CANCELED') {
+          console.error(error);
+          ToastUtil.error('사이트 선택', '사이트 목록을 불러오지 못했습니다.');
+        }
+      } finally {
+        if (!cancelled) setSitesLoading(false);
+      }
+    };
+
+    loadSites();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [changeSite, isSuper, user?.siteId]);
 
   const goToHome = () => {
     navigate('/');
@@ -96,7 +166,37 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
                 {ENVIRONMENT_LABEL}
               </Chip>
             )}
-            {siteLabel && (
+            {isSuper ? (
+              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                <div className="hidden h-6 w-px bg-separator sm:block" aria-hidden="true" />
+                <Select
+                  aria-label="운영 사이트"
+                  value={selectedSiteId || user?.siteId || ''}
+                  onChange={changeSite}
+                  isDisabled={sitesLoading || sites.length === 0}
+                  className="w-28 sm:w-56"
+                  variant="secondary"
+                >
+                  <Select.Trigger className="h-10">
+                    <Select.Value>{({ state }) => state.selectedItems[0]?.textValue ?? '사이트 선택'}</Select.Value>
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      {sites.map((site) => {
+                        const label = `${site.siteEnabled ? '' : '(비활성) '}${site.siteName || site.siteId} (${site.siteId})`;
+                        return (
+                          <ListBox.Item key={site.siteId} id={site.siteId} textValue={label}>
+                            {label}
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        );
+                      })}
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
+              </div>
+            ) : siteLabel ? (
               <div className="hidden min-w-0 items-center gap-3 sm:flex">
                 <div className="h-6 w-px bg-separator" aria-hidden="true" />
                 <div className="min-w-0">
@@ -106,7 +206,7 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
                   {showSiteId && <p className="truncate text-xs text-muted">{user.siteId}</p>}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 

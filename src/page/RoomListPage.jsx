@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import RoomListTopContent from '../component/room/RoomListTopContent.jsx';
 import RoomListTable from '../component/room/RoomListTable.jsx';
 import { Chip } from '@heroui/react';
@@ -11,17 +11,20 @@ export default function RoomListPage() {
   const navigate = useNavigate();
   const [queueEnabled, setQueueEnabled] = useState(true);
   const [filters, setFilters] = useState({ search: '', environment: 'ALL', status: 'ALL' });
+  const user = useUserStore((state) => state.user);
+  const selectedSiteId = useUserStore((state) => state.selectedSiteId);
+  const role = user?.userRole ?? user?.role;
+  const siteId = role === 'SUPER' ? selectedSiteId || user?.siteId : user?.siteId;
 
   const onPress = (roomId) => {
     navigate(`/rooms/${roomId}`);
   };
 
-  const fetchSiteInfo = async () => {
-    const me = useUserStore.getState().user;
-    if (!me) {
+  const fetchSiteInfo = useCallback(async () => {
+    if (!siteId) {
       return;
     }
-    SiteClient.findSite(me?.siteId)
+    SiteClient.findSite(siteId)
       .then((res) => {
         if (res.status === 200) {
           setQueueEnabled(Boolean(res.data?.queueEnabled));
@@ -32,12 +35,12 @@ export default function RoomListPage() {
       .catch((err) => {
         console.error('network error while reloading site', err);
       });
-  };
+  }, [siteId]);
 
   useEffect(() => {
     document.title = '대기열 목록 | Greenlight Admin';
     fetchSiteInfo();
-  }, []);
+  }, [fetchSiteInfo]);
 
   return (
     <>

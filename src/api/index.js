@@ -21,6 +21,14 @@ commonAxiosInstance.interceptors.request.use(
     const token = LoginUtil.getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      const { user, selectedSiteId } = useUserStore.getState();
+      const role = user?.userRole ?? user?.role;
+      const siteId = selectedSiteId || user?.siteId;
+      if (role === 'SUPER' && siteId) {
+        config.headers['X-ADMIN-SITE-ID'] = siteId;
+      } else {
+        delete config.headers['X-ADMIN-SITE-ID'];
+      }
     }
     if (typeof window !== 'undefined' && window.location.pathname) {
       config.headers['X-Admin-Source-Path'] = window.location.pathname;

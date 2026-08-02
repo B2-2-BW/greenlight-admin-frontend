@@ -142,6 +142,7 @@ export function DashboardFilterBar() {
 
   const { dashboardFilter, updateDashboardFilter } = usePreferenceStore();
   const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
+  const selectedSiteId = useUserStore((state) => state.selectedSiteId);
   const canManageQueue = role === 'SITE_ADMIN' || role === 'SUPER';
 
   const onRoomEnvironmentChange = useCallback((env) => {
@@ -155,11 +156,12 @@ export function DashboardFilterBar() {
   const handleDisableQueue = async () => {
     try {
       const me = useUserStore.getState().user;
-      if (!canManageQueue || me?.siteId == null) {
+      const siteId = role === 'SUPER' ? selectedSiteId || me?.siteId : me?.siteId;
+      if (!canManageQueue || siteId == null) {
         ToastUtil.error('저장 실패', '권한이 없습니다.');
         return;
       }
-      const response = await SiteClient.updateQueueEnabled(me.siteId, false, disableReason.trim());
+      const response = await SiteClient.updateQueueEnabled(siteId, false, disableReason.trim());
       if (response.status !== 200) {
         throw new Error('failed to create room ' + JSON.stringify(response));
       }

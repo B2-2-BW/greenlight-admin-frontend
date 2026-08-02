@@ -18,7 +18,6 @@ import { EllipsisVertical } from '@gravity-ui/icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { UserClient } from '../../api/user/index.js';
-import { SiteClient } from '../../api/site/index.js';
 import { useUserStore } from '../../store/user.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
 
@@ -122,15 +121,12 @@ function Summary({ statusCounts, status, label, isSelected, onPress }) {
 
 export default function UserListTable() {
   const currentUser = useUserStore((state) => state.user);
-  const isSuper = (currentUser?.userRole ?? currentUser?.role) === 'SUPER';
   const [users, setUsers] = useState([]);
-  const [sites, setSites] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [inputQuery, setInputQuery] = useState('');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [roleFilter, setRoleFilter] = useState('ALL');
-  const [siteFilter, setSiteFilter] = useState('ALL');
   const [page, setPage] = useState(1);
   const [selectedKeys, setSelectedKeys] = useState(new Set());
   const [isEditMode, setIsEditMode] = useState(false);
@@ -147,7 +143,6 @@ export default function UserListTable() {
     query: '',
     status: 'ALL',
     role: 'ALL',
-    siteId: 'ALL',
   });
   const requestGeneration = useRef(0);
   const navigate = useNavigate();
@@ -159,8 +154,7 @@ export default function UserListTable() {
     page !== pageData.page ||
     query !== pageData.query ||
     statusFilter !== pageData.status ||
-    roleFilter !== pageData.role ||
-    siteFilter !== pageData.siteId;
+    roleFilter !== pageData.role;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -171,20 +165,6 @@ export default function UserListTable() {
   }, [inputQuery]);
 
   useEffect(() => {
-    if (!isSuper) return undefined;
-    const controller = new AbortController();
-    SiteClient.getSites({ page: 1, size: 100, signal: controller.signal })
-      .then(({ data = {} }) => setSites(Array.isArray(data.content) ? data.content : []))
-      .catch((error) => {
-        if (error.code !== 'ERR_CANCELED') {
-          console.error(error);
-          ToastUtil.error('사용자 관리', '사이트 필터를 불러오지 못했습니다.');
-        }
-      });
-    return () => controller.abort();
-  }, [isSuper]);
-
-  useEffect(() => {
     const controller = new AbortController();
     const generation = ++requestGeneration.current;
     UserClient.getUsers({
@@ -193,7 +173,6 @@ export default function UserListTable() {
       query,
       status: statusFilter === 'ALL' ? undefined : statusFilter,
       role: roleFilter === 'ALL' ? undefined : roleFilter,
-      siteId: isSuper && siteFilter !== 'ALL' ? siteFilter : undefined,
       signal: controller.signal,
     })
       .then((response) => {
@@ -209,7 +188,6 @@ export default function UserListTable() {
           query,
           status: statusFilter,
           role: roleFilter,
-          siteId: siteFilter,
         });
         if (data.page && data.page !== page) setPage(data.page);
       })
@@ -224,11 +202,11 @@ export default function UserListTable() {
         }
       });
     return () => controller.abort();
-  }, [isSuper, page, query, refreshGeneration, roleFilter, siteFilter, statusFilter]);
+  }, [page, query, refreshGeneration, roleFilter, statusFilter]);
 
   useEffect(() => {
     setSelectedKeys(new Set());
-  }, [page, query, roleFilter, siteFilter, statusFilter]);
+  }, [page, query, roleFilter, statusFilter]);
 
   const selectedUsers = useMemo(
     () => users.filter((user) => selectedKeys.has(user.userId)),
@@ -401,21 +379,6 @@ export default function UserListTable() {
               ...Object.entries(roleLabels).map(([id, label]) => ({ id, label })),
             ]}
           />
-          {isSuper ? (
-            <FilterSelect
-              label="사이트"
-              value={siteFilter}
-              onChange={(value) => {
-                setSiteFilter(value);
-                setPage(1);
-              }}
-              options={[
-                { id: 'ALL', label: '전체 사이트' },
-                ...sites.map((site) => ({ id: site.siteId, label: site.siteName || site.siteId })),
-              ]}
-              className="w-full sm:w-52"
-            />
-          ) : null}
           <div className="flex items-center justify-end gap-2 sm:ml-auto">
             <p className="text-sm text-muted">
               {isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}명`}
