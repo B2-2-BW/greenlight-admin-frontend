@@ -18,7 +18,6 @@ import AccountPage from './page/AccountPage.jsx';
 import UserDetailPage from './page/UserDetailPage.jsx';
 import AdminRoute from './router/AdminRoute.jsx';
 import SuperRoute from './router/SuperRoute.jsx';
-import ForcedPasswordChangeDialog from './component/mypage/ForcedPasswordChangeDialog.jsx';
 import SiteManagementPage from './page/SiteManagementPage.jsx';
 import SiteDetailPage from './page/SiteDetailPage.jsx';
 import QueueStatisticsSkeleton from './component/QueueStatisticsSkeleton.jsx';
@@ -29,7 +28,6 @@ const QueueStatisticsPage = lazy(() => import('./page/QueueStatisticsPage.jsx'))
 function App() {
   return (
     <>
-      <ForcedPasswordChangeDialog />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signin" element={<SigninPage />} />

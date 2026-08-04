@@ -7,6 +7,10 @@ import { UserClient } from '../api/user/index.js';
 import { ToastUtil } from '../util/toastUtil.js';
 import { usePreferenceStore } from '../store/preference.jsx';
 import { useUserStore } from '../store/user.jsx';
+import ForcedPasswordChangeDialog from '../component/mypage/ForcedPasswordChangeDialog.jsx';
+
+const isPasswordResetRequiredResponse = (response) =>
+  response?.status === 403 && response?.data?.message === 'Password reset required.';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -15,6 +19,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberUser, setRememberUser] = useState(false);
   const [errors, setErrors] = useState({});
+  const [passwordResetOpen, setPasswordResetOpen] = useState(false);
+  const [pendingReset, setPendingReset] = useState(null);
   const { updateLoginPreference } = usePreferenceStore();
 
   const { setUser } = useUserStore();
@@ -33,6 +39,13 @@ export default function LoginPage() {
     }
 
     const response = await UserClient.login({ loginId, password, autoLogin: rememberUser });
+
+    // 비밀번호 초기화 필요: 토큰/userStorage에 저장하지 않고 다이얼로그만 표시 (새로고침 시 소멸)
+    if (isPasswordResetRequiredResponse(response)) {
+      setPendingReset({ loginId, currentPassword: password });
+      setPasswordResetOpen(true);
+      return;
+    }
 
     if (response.status === 401 || response.status === 403 || response.status === 404) {
       ToastUtil.error('로그인 실패', response?.data?.detail || '아이디 또는 비밀번호가 잘못되었습니다.');
@@ -58,14 +71,21 @@ export default function LoginPage() {
 
     updateLoginPreference({ autoLogin: rememberUser });
 
-    if (loginResponse.data?.passwordResetRequired) {
-      return;
-    }
-
     const params = new URLSearchParams(search);
     const to = params.get('redirect') || '/'; // redirect가 있다면 해당 url로 없다면 /로 이동
 
     navigate(to);
+  };
+
+  const handlePasswordResetSuccess = () => {
+    setPasswordResetOpen(false);
+    setPendingReset(null);
+    setPassword('');
+  };
+
+  const handlePasswordResetClose = () => {
+    setPasswordResetOpen(false);
+    setPendingReset(null);
   };
 
   useEffect(() => {
@@ -125,6 +145,14 @@ export default function LoginPage() {
 
         <Card.Footer></Card.Footer>
       </Card>
+
+      <ForcedPasswordChangeDialog
+        isOpen={passwordResetOpen}
+        loginId={pendingReset?.loginId ?? ''}
+        initialCurrentPassword={pendingReset?.currentPassword ?? ''}
+        onClose={handlePasswordResetClose}
+        onSuccess={handlePasswordResetSuccess}
+      />
     </main>
   );
 }

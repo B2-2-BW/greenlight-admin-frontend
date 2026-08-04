@@ -43,12 +43,16 @@ commonAxiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // 초기화 필요 계정은 세션을 유지하지 않는다. 토큰/유저 상태를 비우고 로그인으로 보낸다.
     if (
       error.response?.status === 403
       && error.response?.data?.message === 'Password reset required.'
     ) {
-      const currentUser = useUserStore.getState().user ?? {};
-      useUserStore.getState().setUser({ ...currentUser, passwordResetRequired: true });
+      LoginUtil.clearAccessToken();
+      useUserStore.getState().clearUser();
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
       return Promise.reject(error);
     }
 
