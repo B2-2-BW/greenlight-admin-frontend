@@ -23,6 +23,19 @@ const changeMyPassword = async (body) => {
   );
 };
 
+/** 로그인 전 강제 비밀번호 변경 (비인증, 토큰 발급 없음) */
+const changeRequiredPassword = async (body) => {
+  return await publicAxiosInstance.post(`/users/password/change-required`, body, {
+    withCredentials: true,
+  }).then(
+    (response) => response,
+    (error) => {
+      console.error(error);
+      return error.response;
+    }
+  );
+};
+
 const updateMyProfile = (body) => commonAxiosInstance.put('/users/me', body);
 
 const signin = async (body) => {
@@ -74,6 +87,7 @@ const UserClient = {
   me,
   updateMyProfile,
   changeMyPassword,
+  changeRequiredPassword,
   login,
   signin,
   logout,
