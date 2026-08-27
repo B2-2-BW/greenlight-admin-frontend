@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { LoginUtil } from '../util/loginUtil.js';
 import { useUserStore } from '../store/user.jsx';
+import { getEffectiveSiteId } from '../util/siteUtil.js';
 
 const publicAxiosInstance = axios.create({
   baseURL: '/api',
@@ -22,9 +23,8 @@ commonAxiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
       const { user, selectedSiteId } = useUserStore.getState();
-      const role = user?.userRole ?? user?.role;
-      const siteId = selectedSiteId || user?.siteId;
-      if (role === 'SUPER' && siteId) {
+      const siteId = getEffectiveSiteId(user, selectedSiteId);
+      if (siteId) {
         config.headers['X-ADMIN-SITE-ID'] = siteId;
       } else {
         delete config.headers['X-ADMIN-SITE-ID'];

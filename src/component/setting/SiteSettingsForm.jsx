@@ -20,6 +20,7 @@ import { useUserStore } from '../../store/user.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
 import ChangeDiff from '../audit/ChangeDiff.jsx';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges.js';
+import { getEffectiveSiteId } from '../../util/siteUtil.js';
 
 const enabledMessage = {
   true: {
@@ -49,7 +50,7 @@ export default function SiteSettingsForm() {
   const user = useUserStore((state) => state.user);
   const selectedSiteId = useUserStore((state) => state.selectedSiteId);
   const userRole = user?.role ?? user?.userRole;
-  const siteId = userRole === 'SUPER' ? selectedSiteId || user?.siteId : user?.siteId;
+  const siteId = getEffectiveSiteId(user, selectedSiteId);
   const canSyncRoomData = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
   const canManageSite = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
   const isSuperUser = userRole === 'SUPER';

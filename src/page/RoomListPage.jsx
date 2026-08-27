@@ -6,6 +6,7 @@ import { Chip } from '@heroui/react';
 import { TriangleExclamation } from '@gravity-ui/icons';
 import { useUserStore } from '../store/user.jsx';
 import { SiteClient } from '../api/site/index.js';
+import { getEffectiveSiteId } from '../util/siteUtil.js';
 
 export default function RoomListPage() {
   const navigate = useNavigate();
@@ -13,8 +14,7 @@ export default function RoomListPage() {
   const [filters, setFilters] = useState({ search: '', environment: 'ALL', status: 'ALL' });
   const user = useUserStore((state) => state.user);
   const selectedSiteId = useUserStore((state) => state.selectedSiteId);
-  const role = user?.userRole ?? user?.role;
-  const siteId = role === 'SUPER' ? selectedSiteId || user?.siteId : user?.siteId;
+  const siteId = getEffectiveSiteId(user, selectedSiteId);
 
   const onPress = (roomId) => {
     navigate(`/rooms/${roomId}`);

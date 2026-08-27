@@ -6,6 +6,7 @@ import DashboardContext from '../provider/DashboardProvider.jsx';
 import { Button, Skeleton, Surface } from '@heroui/react';
 import { DashboardFilterBar } from '../component/dashboard-v2/DashboardFilterBar.jsx';
 import { useUserStore } from '../store/user.jsx';
+import { getEffectiveSiteId } from '../util/siteUtil.js';
 import { SiteClient } from '../api/site/index.js';
 import { useNavigate } from 'react-router';
 import { FaceSurprise, Magnifier } from '@gravity-ui/icons';
@@ -63,8 +64,7 @@ export default function DashboardV2Page() {
   const navigate = useNavigate();
 
   const { user, selectedSiteId } = useUserStore();
-  const role = user?.userRole ?? user?.role;
-  const siteId = role === 'SUPER' ? selectedSiteId || user?.siteId : user?.siteId;
+  const siteId = getEffectiveSiteId(user, selectedSiteId);
 
   const fetchRoomList = useCallback(async () => {
     if (!siteId) {

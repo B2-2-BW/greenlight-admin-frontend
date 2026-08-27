@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router';
 import { UserClient } from '../../api/user/index.js';
 import { useUserStore } from '../../store/user.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
+import { getVisibleSites } from '../../util/siteUtil.js';
 
 const dataColumns = [
   { name: '사용자', uid: 'user', isRowHeader: true },
@@ -69,6 +70,25 @@ const actionConfig = {
 };
 
 const PAGE_SIZE = 10;
+
+function formatUserSites(user, viewer) {
+  const sites = getVisibleSites(user, viewer);
+  if (sites.length > 0) {
+    return sites.map((site) => site.siteName || site.siteId).join(', ');
+  }
+  return user.siteName || user.siteId || '';
+}
+
+function formatUserSiteIds(user, viewer) {
+  const sites = getVisibleSites(user, viewer);
+  if (sites.length > 0) {
+    return sites.map((site) => site.siteId).join(', ');
+  }
+  if (Array.isArray(user.siteIds) && user.siteIds.length > 0) {
+    return user.siteIds.join(', ');
+  }
+  return user.siteId || '';
+}
 
 function FilterSelect({ label, value, onChange, options, className = 'w-full sm:w-40' }) {
   return (
@@ -296,15 +316,15 @@ export default function UserListTable() {
               {user.userId} · {user.userEmail}
             </span>
             <span className="mt-1 text-xs text-muted sm:hidden">
-              {user.siteName || user.siteId} · {roleLabels[user.userRole] ?? user.userRole}
+              {formatUserSites(user, currentUser)} · {roleLabels[user.userRole] ?? user.userRole}
             </span>
           </div>
         );
       case 'site':
         return (
           <div className="flex flex-col">
-            <span>{user.siteName || user.siteId}</span>
-            <span className="text-xs text-muted">{user.siteId}</span>
+            <span>{formatUserSites(user, currentUser)}</span>
+            <span className="text-xs text-muted">{formatUserSiteIds(user, currentUser)}</span>
           </div>
         );
       case 'role':

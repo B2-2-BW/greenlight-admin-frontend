@@ -19,9 +19,11 @@ import { useNavigate, useParams } from 'react-router';
 import { UserClient } from '../api/user/index.js';
 import { SiteClient } from '../api/site/index.js';
 import FormSection from '../component/common/FormSection.jsx';
+import SiteAccessTable from '../component/user/SiteAccessTable.jsx';
 import { ToastUtil } from '../util/toastUtil.js';
 import { DateUtil } from '../util/dateUtil.jsx';
 import { useUserStore } from '../store/user.jsx';
+import { getVisibleSites, loadGrantableSites } from '../util/siteUtil.js';
 
 const roleLabels = {
   SUPER: '슈퍼유저',
@@ -91,7 +93,17 @@ const reasonActionConfig = {
   },
 };
 
-const getSiteLabel = (site) => `${site.siteEnabled ? '' : '(비활성) '}${site.siteName} (${site.siteId})`;
+const resolveSiteIds = (user) => {
+  if (Array.isArray(user?.siteIds) && user.siteIds.length > 0) {
+    return user.siteIds.filter(Boolean);
+  }
+  return user?.siteId ? [user.siteId] : [];
+};
+
+const grantableSelectedIds = (selectedIds, grantableSites) => {
+  const allowed = new Set(grantableSites.map((site) => site.siteId));
+  return (selectedIds ?? []).filter((siteId) => allowed.has(siteId));
+};
 
 function ReadonlyField({ label, value }) {
   return (
@@ -125,10 +137,10 @@ export default function UserDetailPage() {
   const [actionReason, setActionReason] = useState('');
   const currentUser = useUserStore((state) => state.user);
   const currentUserId = currentUser?.userId;
-  const [approval, setApproval] = useState({ username: '', userEmail: '', siteId: '', userRole: 'USER' });
+  const [approval, setApproval] = useState({ username: '', userEmail: '', siteIds: [], userRole: 'USER' });
   const [sites, setSites] = useState([]);
   const [isSitesLoading, setIsSitesLoading] = useState(false);
-  const [management, setManagement] = useState({ username: '', userEmail: '', siteId: '', userRole: 'USER' });
+  const [management, setManagement] = useState({ username: '', userEmail: '', siteIds: [], userRole: 'USER' });
 
   const fetchUser = useCallback(async () => {
     try {
@@ -138,14 +150,14 @@ export default function UserDetailPage() {
         setApproval({
           username: response.data.username ?? '',
           userEmail: response.data.userEmail ?? '',
-          siteId: response.data.siteId ?? '',
+          siteIds: resolveSiteIds(response.data),
           userRole: response.data.userRole ?? 'USER',
         });
       } else if (response.data.accountStatus === 'ACTIVE' || response.data.accountStatus === 'DISABLED') {
         setManagement({
           username: response.data.username ?? '',
           userEmail: response.data.userEmail ?? '',
-          siteId: response.data.siteId ?? '',
+          siteIds: resolveSiteIds(response.data),
           userRole: response.data.userRole ?? 'USER',
         });
       }
@@ -171,23 +183,8 @@ export default function UserDetailPage() {
     const loadSites = async () => {
       setIsSitesLoading(true);
       try {
-        const firstResponse = await SiteClient.getSites({
-          page: 1,
-          size: 100,
-          signal: controller.signal,
-        });
-        const firstPage = firstResponse.data ?? {};
-        const remainingResponses = await Promise.all(
-          Array.from({ length: Math.max(0, (firstPage.totalPages ?? 1) - 1) }, (_, index) =>
-            SiteClient.getSites({ page: index + 2, size: 100, signal: controller.signal })
-          )
-        );
-        if (!cancelled) {
-          setSites([
-            ...(firstPage.content ?? []),
-            ...remainingResponses.flatMap((response) => response.data?.content ?? []),
-          ]);
-        }
+        const loadedSites = await loadGrantableSites(currentUser, SiteClient.getSites, controller.signal);
+        if (!cancelled) setSites(loadedSites);
       } catch (error) {
         if (error.code === 'ERR_CANCELED') return;
         console.error(error);
@@ -201,7 +198,7 @@ export default function UserDetailPage() {
       cancelled = true;
       controller.abort();
     };
-  }, [currentUser?.userRole, user]);
+  }, [currentUser, user]);
 
   const submitReasonAction = async (event) => {
     event.preventDefault();
@@ -216,13 +213,14 @@ export default function UserDetailPage() {
           ...approval,
           username: approval.username.trim(),
           userEmail: approval.userEmail.trim(),
+          siteIds: grantableSelectedIds(approval.siteIds, sites),
           reason,
         });
         setUser(response.data);
         setManagement({
           username: response.data.username ?? '',
           userEmail: response.data.userEmail ?? '',
-          siteId: response.data.siteId ?? '',
+          siteIds: resolveSiteIds(response.data),
           userRole: response.data.userRole ?? 'USER',
         });
       } else if (actionConfig.action) {
@@ -239,7 +237,7 @@ export default function UserDetailPage() {
           setApproval({
             username: response.data.username ?? '',
             userEmail: response.data.userEmail ?? '',
-            siteId: response.data.siteId ?? '',
+            siteIds: resolveSiteIds(response.data),
             userRole: response.data.userRole ?? 'USER',
           });
         }
@@ -260,18 +258,24 @@ export default function UserDetailPage() {
 
   const updateManagedUser = async (event) => {
     event.preventDefault();
+    const siteIds = grantableSelectedIds(management.siteIds, sites);
+    if (siteIds.length === 0) {
+      ToastUtil.error('계정 정보 저장', '사이트를 하나 이상 선택해 주세요.');
+      return;
+    }
     setIsActionLoading(true);
     try {
       const response = await UserClient.updateManagedUser(userId, {
         ...management,
         username: management.username.trim(),
         userEmail: management.userEmail.trim(),
+        siteIds,
       });
       setUser(response.data);
       setManagement({
         username: response.data.username ?? '',
         userEmail: response.data.userEmail ?? '',
-        siteId: response.data.siteId ?? '',
+        siteIds: resolveSiteIds(response.data),
         userRole: response.data.userRole ?? 'USER',
       });
       ToastUtil.success('계정 정보 저장', '계정 정보를 저장했습니다.');
@@ -285,6 +289,10 @@ export default function UserDetailPage() {
 
   const openApprovalDialog = (event) => {
     event.preventDefault();
+    if (grantableSelectedIds(approval.siteIds, sites).length === 0) {
+      ToastUtil.error('가입 승인', '사이트를 하나 이상 선택해 주세요.');
+      return;
+    }
     openReasonAction('approve');
   };
 
@@ -329,6 +337,8 @@ export default function UserDetailPage() {
   const canManageTarget = user?.userId !== currentUserId && !isSuperUserReadOnly;
   const canSaveManagedUser = ['ACTIVE', 'DISABLED'].includes(user?.accountStatus) && !isSuperUserReadOnly;
   const currentReasonAction = reasonActionConfig[dialogAction] ?? null;
+  const grantableSiteIds = sites.map((site) => site.siteId);
+  const hiddenSiteCount = resolveSiteIds(user).filter((siteId) => !grantableSiteIds.includes(siteId)).length;
 
   const statusContent = (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -522,46 +532,13 @@ export default function UserDetailPage() {
                       />
                       <FieldError>올바른 이메일을 입력해 주세요.</FieldError>
                     </TextField>
-                    <Select
-                      name="siteId"
-                      isRequired
-                      className="w-full max-w-2xl"
-                      aria-label="사이트"
-                      value={approval.siteId}
-                      onChange={(siteId) => setApproval((current) => ({ ...current, siteId }))}
-                      isDisabled={isSitesLoading || currentUser?.userRole === 'SITE_ADMIN'}
-                    >
-                      <Label className="text-base">사이트</Label>
-                      <Select.Trigger className="min-h-11 w-full items-center ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:max-w-64">
-                        <Select.Value>
-                          {() => {
-                            if (isSitesLoading) return '사이트를 불러오는 중...';
-                            const selectedSite = sites.find((site) => site.siteId === approval.siteId);
-                            return selectedSite ? (
-                              <span className={selectedSite.siteEnabled ? undefined : 'text-neutral-400'}>
-                                {getSiteLabel(selectedSite)}
-                              </span>
-                            ) : (
-                              '사이트 선택'
-                            );
-                          }}
-                        </Select.Value>
-                        <Select.Indicator />
-                      </Select.Trigger>
-                      <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
-                        <ListBox>
-                          {sites.map((site) => (
-                            <ListBox.Item key={site.siteId} id={site.siteId} textValue={getSiteLabel(site)}>
-                              <ListBox.ItemIndicator />
-                              <span className={site.siteEnabled ? undefined : 'text-neutral-400'}>
-                                {getSiteLabel(site)}
-                              </span>
-                            </ListBox.Item>
-                          ))}
-                        </ListBox>
-                      </Select.Popover>
-                      <FieldError>사이트를 선택해 주세요.</FieldError>
-                    </Select>
+                    <SiteAccessTable
+                      sites={sites}
+                      selectedIds={approval.siteIds}
+                      onChange={(siteIds) => setApproval((current) => ({ ...current, siteIds }))}
+                      isLoading={isSitesLoading}
+                      hiddenCount={isSitesLoading || sites.length === 0 ? 0 : hiddenSiteCount}
+                    />
                     <Select
                       name="userRole"
                       isRequired
@@ -640,48 +617,17 @@ export default function UserDetailPage() {
                         />
                         <FieldError>올바른 이메일을 입력해 주세요.</FieldError>
                       </TextField>
-                      <Select
-                        name="siteId"
-                        isRequired
-                        className="w-full max-w-2xl"
-                        aria-label="사이트"
-                        value={management.siteId}
-                        onChange={(siteId) => setManagement((current) => ({ ...current, siteId }))}
-                        isDisabled={
-                          isSitesLoading || user.userId === currentUserId || currentUser?.userRole === 'SITE_ADMIN'
-                        }
-                      >
-                        <Label className="text-base">사이트</Label>
-                        <Select.Trigger className="min-h-11 w-full items-center ring-1 focus:ring-2 ring-neutral-200 focus:ring-accent sm:w-64">
-                          <Select.Value>
-                            {() => {
-                              if (isSitesLoading) return '사이트를 불러오는 중...';
-                              const selectedSite = sites.find((site) => site.siteId === management.siteId);
-                              return selectedSite ? (
-                                <span className={selectedSite.siteEnabled ? undefined : 'text-neutral-400'}>
-                                  {getSiteLabel(selectedSite)}
-                                </span>
-                              ) : (
-                                '사이트 선택'
-                              );
-                            }}
-                          </Select.Value>
-                          <Select.Indicator />
-                        </Select.Trigger>
-                        <Select.Popover className="max-w-[calc(100vw-2rem)] w-64" placement="bottom start">
-                          <ListBox>
-                            {sites.map((site) => (
-                              <ListBox.Item key={site.siteId} id={site.siteId} textValue={getSiteLabel(site)}>
-                                <ListBox.ItemIndicator />
-                                <span className={site.siteEnabled ? undefined : 'text-neutral-400'}>
-                                  {getSiteLabel(site)}
-                                </span>
-                              </ListBox.Item>
-                            ))}
-                          </ListBox>
-                        </Select.Popover>
-                        <FieldError>사이트를 선택해 주세요.</FieldError>
-                      </Select>
+                      {user.userId === currentUserId ? (
+                        <SiteAccessTable sites={getVisibleSites(user, currentUser)} selectedIds={resolveSiteIds(user)} readOnly />
+                      ) : (
+                        <SiteAccessTable
+                          sites={sites}
+                          selectedIds={management.siteIds}
+                          onChange={(siteIds) => setManagement((current) => ({ ...current, siteIds }))}
+                          isLoading={isSitesLoading}
+                          hiddenCount={isSitesLoading || sites.length === 0 ? 0 : hiddenSiteCount}
+                        />
+                      )}
                       <Select
                         name="userRole"
                         isRequired
@@ -717,7 +663,11 @@ export default function UserDetailPage() {
                   <>
                     <ReadonlyField label="이름" value={user.username} />
                     <ReadonlyField label="이메일" value={user.userEmail} />
-                    <ReadonlyField label="사이트" value={`${user.siteName ?? ''} (${user.siteId})`} />
+                    <SiteAccessTable
+                      sites={getVisibleSites(user, currentUser)}
+                      selectedIds={resolveSiteIds(user)}
+                      readOnly
+                    />
                     <ReadonlyField label="역할" value={roleLabels[user.userRole] ?? user.userRole} />
                   </>
                 )}
@@ -764,7 +714,10 @@ export default function UserDetailPage() {
                   {dialogAction === 'approve' && (
                     <div className="rounded-xl bg-neutral-100 p-3 text-sm">
                       <p>
-                        사이트: {sites.find((site) => site.siteId === approval.siteId)?.siteName ?? approval.siteId}
+                        사이트:{' '}
+                        {approval.siteIds
+                          .map((siteId) => sites.find((site) => site.siteId === siteId)?.siteName ?? siteId)
+                          .join(', ')}
                         {' · '}역할: {roleLabels[approval.userRole] ?? approval.userRole}
                       </p>
                     </div>

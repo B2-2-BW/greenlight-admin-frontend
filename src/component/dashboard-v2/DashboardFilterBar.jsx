@@ -6,6 +6,7 @@ import { ToastUtil } from '../../util/toastUtil.js';
 import { useUserStore } from '../../store/user.jsx';
 import { useDashboard } from '../../provider/DashboardProvider.jsx';
 import { usePreferenceStore } from '../../store/preference.jsx';
+import { getEffectiveSiteId } from '../../util/siteUtil.js';
 
 const ENVIRONMENTS = [
   { key: 'LIVE', label: 'LIVE' },
@@ -156,7 +157,7 @@ export function DashboardFilterBar() {
   const handleDisableQueue = async () => {
     try {
       const me = useUserStore.getState().user;
-      const siteId = role === 'SUPER' ? selectedSiteId || me?.siteId : me?.siteId;
+      const siteId = getEffectiveSiteId(me, selectedSiteId);
       if (!canManageQueue || siteId == null) {
         ToastUtil.error('저장 실패', '권한이 없습니다.');
         return;

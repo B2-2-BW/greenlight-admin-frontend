@@ -9,6 +9,7 @@ import { ToastUtil } from '../util/toastUtil.js';
 import { ENVIRONMENT_LABEL } from '../client/config.js';
 import { getProfileAppearance } from '../util/profileAppearance.js';
 import { SiteClient } from '../api/site/index.js';
+import { canSwitchSites, getAccessibleSites, getEffectiveSiteId } from '../util/siteUtil.js';
 
 export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
   const navigate = useNavigate();
@@ -21,8 +22,14 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
   const [sitesLoading, setSitesLoading] = useState(false);
   const role = user?.userRole ?? user?.role;
   const isSuper = role === 'SUPER';
-  const siteLabel = user?.siteName || user?.siteId;
-  const showSiteId = user?.siteName && user?.siteId && user.siteName !== user.siteId;
+  const showSiteSwitcher = canSwitchSites(user);
+  const grantedSites = getAccessibleSites(user);
+  const currentSiteId = getEffectiveSiteId(user, selectedSiteId);
+  const currentSite = (isSuper ? sites : grantedSites).find((site) => site.siteId === currentSiteId);
+  const siteLabel = currentSite?.siteName || currentSite?.siteId || user?.siteName || user?.siteId;
+  const showSiteId =
+    Boolean(currentSite?.siteName && currentSite?.siteId && currentSite.siteName !== currentSite.siteId) ||
+    (user?.siteName && user?.siteId && user.siteName !== user.siteId && !currentSite);
   const { profileColor, profileInitials } = getProfileAppearance(user);
 
   const changeSite = useCallback(
@@ -43,50 +50,60 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
   );
 
   useEffect(() => {
-    if (!isSuper) return undefined;
-    const controller = new AbortController();
-    let cancelled = false;
+    if (isSuper) {
+      const controller = new AbortController();
+      let cancelled = false;
 
-    const loadSites = async () => {
-      setSitesLoading(true);
-      try {
-        const firstResponse = await SiteClient.getSites({ page: 1, size: 100, signal: controller.signal });
-        const firstPage = firstResponse.data ?? {};
-        const remainingResponses = await Promise.all(
-          Array.from({ length: Math.max(0, (firstPage.totalPages ?? 1) - 1) }, (_, index) =>
-            SiteClient.getSites({ page: index + 2, size: 100, signal: controller.signal })
-          )
-        );
-        if (cancelled) return;
-        const loadedSites = [
-          ...(firstPage.content ?? []),
-          ...remainingResponses.flatMap((response) => response.data?.content ?? []),
-        ];
-        setSites(loadedSites);
+      const loadSites = async () => {
+        setSitesLoading(true);
+        try {
+          const firstResponse = await SiteClient.getSites({ page: 1, size: 100, signal: controller.signal });
+          const firstPage = firstResponse.data ?? {};
+          const remainingResponses = await Promise.all(
+            Array.from({ length: Math.max(0, (firstPage.totalPages ?? 1) - 1) }, (_, index) =>
+              SiteClient.getSites({ page: index + 2, size: 100, signal: controller.signal })
+            )
+          );
+          if (cancelled) return;
+          const loadedSites = [
+            ...(firstPage.content ?? []),
+            ...remainingResponses.flatMap((response) => response.data?.content ?? []),
+          ];
+          setSites(loadedSites);
 
-        const fallbackSiteId = loadedSites.some((site) => site.siteId === user?.siteId)
-          ? user.siteId
-          : loadedSites[0]?.siteId;
-        const currentSiteId = useUserStore.getState().selectedSiteId;
-        if (!loadedSites.some((site) => site.siteId === currentSiteId) && fallbackSiteId) {
-          changeSite(fallbackSiteId);
+          const fallbackSiteId = loadedSites.some((site) => site.siteId === user?.siteId)
+            ? user.siteId
+            : loadedSites[0]?.siteId;
+          const selectedId = useUserStore.getState().selectedSiteId;
+          if (!loadedSites.some((site) => site.siteId === selectedId) && fallbackSiteId) {
+            changeSite(fallbackSiteId);
+          }
+        } catch (error) {
+          if (error.code !== 'ERR_CANCELED') {
+            console.error(error);
+            ToastUtil.error('사이트 선택', '사이트 목록을 불러오지 못했습니다.');
+          }
+        } finally {
+          if (!cancelled) setSitesLoading(false);
         }
-      } catch (error) {
-        if (error.code !== 'ERR_CANCELED') {
-          console.error(error);
-          ToastUtil.error('사이트 선택', '사이트 목록을 불러오지 못했습니다.');
-        }
-      } finally {
-        if (!cancelled) setSitesLoading(false);
-      }
-    };
+      };
 
-    loadSites();
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [changeSite, isSuper, user?.siteId]);
+      loadSites();
+      return () => {
+        cancelled = true;
+        controller.abort();
+      };
+    }
+
+    const accessible = getAccessibleSites(user);
+    setSites(accessible);
+    const selectedId = useUserStore.getState().selectedSiteId;
+    const nextSiteId = getEffectiveSiteId(user, selectedId);
+    if (nextSiteId && nextSiteId !== selectedId) {
+      changeSite(nextSiteId);
+    }
+    return undefined;
+  }, [changeSite, isSuper, user]);
 
   const goToHome = () => {
     navigate('/');
@@ -166,12 +183,12 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
                 {ENVIRONMENT_LABEL}
               </Chip>
             )}
-            {isSuper ? (
+            {showSiteSwitcher ? (
               <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                 <div className="hidden h-6 w-px bg-separator sm:block" aria-hidden="true" />
                 <Select
                   aria-label="운영 사이트"
-                  value={selectedSiteId || user?.siteId || ''}
+                  value={currentSiteId || ''}
                   onChange={changeSite}
                   isDisabled={sitesLoading || sites.length === 0}
                   className="w-28 sm:w-56"
