@@ -30,10 +30,32 @@ export default function SigninPage() {
 
   const [isSiteVerificationLoading, setIsSiteVerificationLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userIdTaken, setUserIdTaken] = useState(false);
   const [isUserIdChecking, setIsUserIdChecking] = useState(false);
+  const [userIdCheck, setUserIdCheck] = useState(null);
+  const [passwordConfirmTouched, setPasswordConfirmTouched] = useState(false);
   const isSiteVerified = verifiedSiteId !== '' && verifiedSiteId === siteId.trim();
-  const isUserIdFormatValid = USER_ID_PATTERN.test(userId.trim());
+  const trimmedUserId = userId.trim();
+  const isUserIdFormatValid = USER_ID_PATTERN.test(trimmedUserId);
+  const userIdStatus = !trimmedUserId
+    ? 'empty'
+    : !isUserIdFormatValid
+      ? 'invalid'
+      : isUserIdChecking || (userIdCheck != null && userIdCheck.id !== trimmedUserId)
+        ? 'checking'
+        : userIdCheck == null
+          ? 'pending'
+          : userIdCheck.available
+            ? 'available'
+            : 'taken';
+  const isPasswordLongEnough = password.length >= 8;
+  const passwordConfirmError = !passwordConfirm
+    ? passwordConfirmTouched
+      ? '비밀번호 확인은 필수 입력값입니다.'
+      : null
+    : passwordConfirm !== password
+      ? '비밀번호와 비밀번호 확인이 일치하지 않습니다.'
+      : null;
+  const isPasswordConfirmMatched = Boolean(passwordConfirm) && passwordConfirm === password;
 
   const handleSignin = async (e) => {
     e.preventDefault();
@@ -44,10 +66,16 @@ export default function SigninPage() {
 
     const validationErrors = {};
     if (!isSiteVerified) validationErrors.siteId = true;
-    const userIdError = !isUserIdFormatValid || userIdTaken || isUserIdChecking;
+    const userIdError = userIdStatus !== 'available';
     if (userIdError) validationErrors.userId = true;
-    if (!password || password.length < 8) validationErrors.password = true;
-    if (password !== passwordConfirm) validationErrors.passwordConfirm = true;
+    if (!isPasswordLongEnough) validationErrors.password = true;
+    if (!passwordConfirm) {
+      setPasswordConfirmTouched(true);
+      validationErrors.passwordConfirm = true;
+    } else if (passwordConfirm !== password) {
+      setPasswordConfirmTouched(true);
+      validationErrors.passwordConfirm = true;
+    }
     const usernameError = !USERNAME_PATTERN.test(username.trim());
     if (!email.trim()) validationErrors.email = true;
 
@@ -55,8 +83,6 @@ export default function SigninPage() {
       setErrors(validationErrors);
       if (validationErrors.siteId) {
         ToastUtil.error('사이트 코드 확인 필요', '사이트 코드를 입력한 뒤 검증을 완료해 주세요.');
-      } else if (validationErrors.passwordConfirm) {
-        ToastUtil.error('비밀번호 확인', '비밀번호와 비밀번호 확인이 일치하지 않습니다.');
       }
       return;
     }
@@ -84,9 +110,8 @@ export default function SigninPage() {
   };
 
   useEffect(() => {
-    const trimmedUserId = userId.trim();
-    if (!USER_ID_PATTERN.test(trimmedUserId)) {
-      setUserIdTaken(false);
+    if (!isUserIdFormatValid) {
+      setUserIdCheck(null);
       setIsUserIdChecking(false);
       return undefined;
     }
@@ -97,14 +122,13 @@ export default function SigninPage() {
       try {
         const response = await UserClient.checkUserIdAvailable(trimmedUserId, controller.signal);
         if (controller.signal.aborted) return;
-        const available = response.status === 200 && response.data?.available === true;
-        setUserIdTaken(!available);
-        setErrors((previous) =>
-          available ? clearValidationError(previous, 'userId') : { ...previous, userId: true }
-        );
+        setUserIdCheck({
+          id: trimmedUserId,
+          available: response.status === 200 && response.data?.available === true,
+        });
       } catch (error) {
         if (error.code === 'ERR_CANCELED' || controller.signal.aborted) return;
-        setUserIdTaken(false);
+        setUserIdCheck(null);
       } finally {
         if (!controller.signal.aborted) setIsUserIdChecking(false);
       }
@@ -114,7 +138,7 @@ export default function SigninPage() {
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [userId]);
+  }, [isUserIdFormatValid, trimmedUserId]);
 
   const handleSiteIdVerification = async () => {
     setIsSiteVerificationLoading(true);
@@ -205,10 +229,9 @@ export default function SigninPage() {
               value={userId}
               onChange={(value) => {
                 setUserId(value);
-                setUserIdTaken(false);
                 setErrors((previous) => clearValidationError(previous, 'userId'));
               }}
-              pattern={USER_ID_PATTERN.source}
+              isInvalid={userIdStatus === 'invalid' || userIdStatus === 'taken' || errors.userId === true}
               className="w-full max-w-2xl"
               variant="default"
             >
@@ -217,45 +240,71 @@ export default function SigninPage() {
                 className="ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
                 placeholder="로그인에 사용할 아이디를 입력하세요."
               />
-              <Description className="text-sm">
-                {isUserIdChecking
-                  ? '아이디 사용 가능 여부를 확인하는 중입니다.'
-                  : '영문과 숫자만 사용할 수 있습니다.'}
-              </Description>
+              {userIdStatus === 'available' ? (
+                <Description className="text-sm text-green-700">사용할 수 있는 계정입니다.</Description>
+              ) : (
+                <Description className="text-sm">영문과 숫자만 사용할 수 있습니다.</Description>
+              )}
               <FieldError>
-                {userIdTaken
+                {userIdStatus === 'taken'
                   ? '사용할 수 없는 아이디입니다.'
                   : '아이디는 필수이며 영문과 숫자만 사용할 수 있습니다.'}
               </FieldError>
             </TextField>
 
-            <TextField name="password" type="password" isRequired className="w-full max-w-2xl" variant="default">
+            <TextField
+              name="password"
+              type="password"
+              isRequired
+              isInvalid={(password.length > 0 && !isPasswordLongEnough) || errors.password === true}
+              className="w-full max-w-2xl"
+              variant="default"
+            >
               <Label className="text-base">비밀번호</Label>
               <Input
                 className="ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
                 value={password}
-                onChange={(e) => setPassword(e.currentTarget.value)}
+                onChange={(e) => {
+                  setPassword(e.currentTarget.value);
+                  setErrors((previous) => clearValidationError(previous, 'password'));
+                }}
                 placeholder="비밀번호를 입력해주세요."
               />
-              <Description className="text-sm">
-                8자 이상으로, 다른 서비스와 겹치지 않는 비밀번호를 권장합니다.
-              </Description>
+              {isPasswordLongEnough ? (
+                <Description className="text-sm text-green-700">비밀번호가 8자 이상입니다.</Description>
+              ) : (
+                <Description className="text-sm">
+                  8자 이상으로, 다른 서비스와 겹치지 않는 비밀번호를 권장합니다.
+                </Description>
+              )}
               <FieldError>비밀번호는 8자 이상 입력해 주세요.</FieldError>
             </TextField>
 
-            <TextField name="passwordConfirm" type="password" isRequired className="w-full max-w-2xl" variant="default">
+            <TextField
+              name="passwordConfirm"
+              type="password"
+              isRequired
+              isInvalid={Boolean(passwordConfirmError)}
+              className="w-full max-w-2xl"
+              variant="default"
+            >
               <Label className="text-base">비밀번호 확인</Label>
               <Input
                 className="ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
                 value={passwordConfirm}
                 onChange={(e) => {
+                  setPasswordConfirmTouched(true);
                   setPasswordConfirm(e.currentTarget.value);
-                  setErrors((previous) => ({ ...previous, passwordConfirm: null }));
+                  setErrors((previous) => clearValidationError(previous, 'passwordConfirm'));
                 }}
                 placeholder="비밀번호를 한 번 더 입력해주세요."
               />
-              <Description className="text-sm">위에 입력한 비밀번호와 동일하게 입력해 주세요.</Description>
-              <FieldError>비밀번호 확인은 필수 입력값입니다.</FieldError>
+              {isPasswordConfirmMatched ? (
+                <Description className="text-sm text-green-700">비밀번호 확인이 일치합니다.</Description>
+              ) : (
+                <Description className="text-sm">위에 입력한 비밀번호와 동일하게 입력해 주세요.</Description>
+              )}
+              <FieldError>{passwordConfirmError ?? '비밀번호 확인은 필수 입력값입니다.'}</FieldError>
             </TextField>
 
             <div className="flex w-full max-w-2xl flex-col gap-4 sm:flex-row">
@@ -297,7 +346,12 @@ export default function SigninPage() {
               type="submit"
               fullWidth
               isPending={isSubmitting}
-              isDisabled={userIdTaken || isUserIdChecking}
+              isDisabled={
+                userIdStatus === 'taken' ||
+                userIdStatus === 'checking' ||
+                userIdStatus === 'pending' ||
+                userIdStatus === 'invalid'
+              }
             >
               <span className="text-medium">가입 신청하기</span>
             </Button>
