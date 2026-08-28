@@ -185,7 +185,7 @@ export default function MyPageForm() {
       ToastUtil.success('비밀번호 변경', '비밀번호를 변경했습니다.');
     } catch (error) {
       console.error(error);
-      ToastUtil.error('비밀번호 변경', error?.response?.data?.message ?? '비밀번호 변경에 실패했습니다.');
+      ToastUtil.error('비밀번호 변경', error?.response?.data?.detail ?? '비밀번호 변경에 실패했습니다.');
     } finally {
       setIsSubmitLoading(false);
     }

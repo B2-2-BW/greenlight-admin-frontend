@@ -2,21 +2,38 @@ import { Button, Card, Separator, Form, Input, TextField, Label, FieldError, Des
 import { useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import logo from '/logo.png';
+import { SiteClient } from '../api/site/index.js';
 import { UserClient } from '../api/user/index.js';
 import { ToastUtil } from '../util/toastUtil.js';
 
 const USER_ID_PATTERN = /^[A-Za-z0-9]+$/;
 const USERNAME_PATTERN = /^[A-Za-z가-힣]+(?: [A-Za-z가-힣]+)*$/;
 
+const clearValidationError = (previousErrors, fieldName) => {
+  if (!(fieldName in previousErrors)) return previousErrors;
+  const nextErrors = { ...previousErrors };
+  delete nextErrors[fieldName];
+  return nextErrors;
+};
+
 export default function SigninPage() {
   const navigate = useNavigate();
+  const [siteId, setSiteId] = useState('');
+  const [verifiedSiteId, setVerifiedSiteId] = useState('');
+  const [verifiedSiteName, setVerifiedSiteName] = useState('');
   const [userId, setUserId] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState({});
+
+  const [isSiteVerificationLoading, setIsSiteVerificationLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userIdTaken, setUserIdTaken] = useState(false);
+  const [isUserIdChecking, setIsUserIdChecking] = useState(false);
+  const isSiteVerified = verifiedSiteId !== '' && verifiedSiteId === siteId.trim();
+  const isUserIdFormatValid = USER_ID_PATTERN.test(userId.trim());
 
   const handleSignin = async (e) => {
     e.preventDefault();
@@ -26,7 +43,9 @@ export default function SigninPage() {
     }
 
     const validationErrors = {};
-    const userIdError = !USER_ID_PATTERN.test(userId.trim());
+    if (!isSiteVerified) validationErrors.siteId = true;
+    const userIdError = !isUserIdFormatValid || userIdTaken || isUserIdChecking;
+    if (userIdError) validationErrors.userId = true;
     if (!password || password.length < 8) validationErrors.password = true;
     if (password !== passwordConfirm) validationErrors.passwordConfirm = true;
     const usernameError = !USERNAME_PATTERN.test(username.trim());
@@ -34,7 +53,9 @@ export default function SigninPage() {
 
     if (Object.keys(validationErrors).length > 0 || userIdError || usernameError) {
       setErrors(validationErrors);
-      if (validationErrors.passwordConfirm) {
+      if (validationErrors.siteId) {
+        ToastUtil.error('사이트 코드 확인 필요', '사이트 코드를 입력한 뒤 검증을 완료해 주세요.');
+      } else if (validationErrors.passwordConfirm) {
         ToastUtil.error('비밀번호 확인', '비밀번호와 비밀번호 확인이 일치하지 않습니다.');
       }
       return;
@@ -42,6 +63,7 @@ export default function SigninPage() {
 
     setIsSubmitting(true);
     const response = await UserClient.signin({
+      siteId: verifiedSiteId,
       userId: userId.trim(),
       username: username.trim(),
       userEmail: email.trim(),
@@ -55,9 +77,79 @@ export default function SigninPage() {
       return;
     }
 
-    const message =
-      response?.data?.message || '가입 신청에 실패했습니다. 입력 정보를 확인하거나 관리자에게 문의해 주세요.';
-    ToastUtil.error('가입 신청 실패', message);
+    ToastUtil.error(
+      '가입 신청 실패',
+      response?.data?.detail ?? '가입 신청에 실패했습니다. 입력 정보를 확인하거나 관리자에게 문의해 주세요.'
+    );
+  };
+
+  useEffect(() => {
+    const trimmedUserId = userId.trim();
+    if (!USER_ID_PATTERN.test(trimmedUserId)) {
+      setUserIdTaken(false);
+      setIsUserIdChecking(false);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setIsUserIdChecking(true);
+      try {
+        const response = await UserClient.checkUserIdAvailable(trimmedUserId, controller.signal);
+        if (controller.signal.aborted) return;
+        const available = response.status === 200 && response.data?.available === true;
+        setUserIdTaken(!available);
+        setErrors((previous) =>
+          available ? clearValidationError(previous, 'userId') : { ...previous, userId: true }
+        );
+      } catch (error) {
+        if (error.code === 'ERR_CANCELED' || controller.signal.aborted) return;
+        setUserIdTaken(false);
+      } finally {
+        if (!controller.signal.aborted) setIsUserIdChecking(false);
+      }
+    }, 400);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [userId]);
+
+  const handleSiteIdVerification = async () => {
+    setIsSiteVerificationLoading(true);
+
+    const normalizedSiteId = siteId.trim();
+    SiteClient.findSite(normalizedSiteId)
+      .then((response) => {
+        if (
+          response?.status === 200 &&
+          response?.data?.siteId === normalizedSiteId &&
+          response?.data?.siteEnabled === true
+        ) {
+          setVerifiedSiteId(normalizedSiteId);
+          setVerifiedSiteName(response.data.siteName ?? '');
+          setErrors((previous) => clearValidationError(previous, 'siteId'));
+        } else {
+          setVerifiedSiteId('');
+          setVerifiedSiteName('');
+          setErrors((previous) => ({ ...previous, siteId: true }));
+          if (response?.status !== 200 && response?.status !== 404) {
+            ToastUtil.error('사이트 검증 실패', '사이트 검증에 실패하였습니다. 관리자에게 문의해주시기 바랍니다.');
+            console.error('failed to verify siteId', JSON.stringify(response));
+          }
+        }
+      })
+      .finally(() => setIsSiteVerificationLoading(false));
+  };
+
+  const onSiteIdInputChange = (e) => {
+    if (verifiedSiteId.trim().length > 0) {
+      // siteId가 바뀌면 verified는 무조건 초기화
+      setVerifiedSiteId('');
+      setVerifiedSiteName('');
+    }
+    setSiteId(e.target.value);
   };
 
   useEffect(() => {
@@ -80,12 +172,42 @@ export default function SigninPage() {
         </Card.Header>
         <Card.Content className="w-full min-w-0">
           <Form onSubmit={handleSignin} validationErrors={errors} className="flex flex-col gap-4">
+            <TextField name="siteId" type="text" isRequired className="w-full max-w-2xl" variant="default">
+              <Label className="text-base">사이트 코드</Label>
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  className="min-w-0 flex-1 ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
+                  value={siteId}
+                  onChange={onSiteIdInputChange}
+                  placeholder="발급받은 사이트 코드를 입력하세요."
+                />
+                <Button
+                  className="w-full shrink-0 focus-visible:ring-2 focus-visible:ring-accent sm:w-auto"
+                  isPending={isSiteVerificationLoading}
+                  onPress={handleSiteIdVerification}
+                  isDisabled={siteId.trim().length === 0 || isSiteVerified}
+                >
+                  {isSiteVerificationLoading ? '' : isSiteVerified ? '검증완료' : '검증하기'}
+                </Button>
+              </div>
+              <Description className="text-sm">
+                {isSiteVerified
+                  ? `사이트 코드 검증완료${verifiedSiteName ? ` · ${verifiedSiteName}` : ''}`
+                  : '관리자에게 발급받은 사이트 코드를 확인해 주세요.'}
+              </Description>
+              <FieldError>유효하지 않거나 사용할 수 없는 사이트 코드입니다.</FieldError>
+            </TextField>
+
             <TextField
               name="userId"
               type="text"
               isRequired
               value={userId}
-              onChange={setUserId}
+              onChange={(value) => {
+                setUserId(value);
+                setUserIdTaken(false);
+                setErrors((previous) => clearValidationError(previous, 'userId'));
+              }}
               pattern={USER_ID_PATTERN.source}
               className="w-full max-w-2xl"
               variant="default"
@@ -95,8 +217,16 @@ export default function SigninPage() {
                 className="ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
                 placeholder="로그인에 사용할 아이디를 입력하세요."
               />
-              <Description className="text-sm">영문과 숫자만 사용할 수 있습니다.</Description>
-              <FieldError>아이디는 필수이며 영문과 숫자만 사용할 수 있습니다.</FieldError>
+              <Description className="text-sm">
+                {isUserIdChecking
+                  ? '아이디 사용 가능 여부를 확인하는 중입니다.'
+                  : '영문과 숫자만 사용할 수 있습니다.'}
+              </Description>
+              <FieldError>
+                {userIdTaken
+                  ? '사용할 수 없는 아이디입니다.'
+                  : '아이디는 필수이며 영문과 숫자만 사용할 수 있습니다.'}
+              </FieldError>
             </TextField>
 
             <TextField name="password" type="password" isRequired className="w-full max-w-2xl" variant="default">
@@ -140,7 +270,10 @@ export default function SigninPage() {
                 variant="default"
               >
                 <Label className="text-base">이름</Label>
-                <Input className="ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent" placeholder="홍길동" />
+                <Input
+                  className="ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
+                  placeholder="홍길동"
+                />
                 <Description className="text-sm">영문, 한글과 띄어쓰기만 사용할 수 있습니다.</Description>
                 <FieldError>이름은 필수이며 영문, 한글과 띄어쓰기만 사용할 수 있습니다.</FieldError>
               </TextField>
@@ -153,13 +286,19 @@ export default function SigninPage() {
                   onChange={(e) => setEmail(e.currentTarget.value)}
                   placeholder="name@example.com"
                 />
-                <Description className="text-sm">알림 및 주요 안내를 받을 이메일 주소를 입력해 주세요.</Description>
+                <Description className="text-sm">가입 관련 안내를 받을 이메일 주소입니다.</Description>
                 <FieldError>이메일은 필수 입력값입니다.</FieldError>
               </TextField>
             </div>
 
             <Separator />
-            <Button className="h-12" type="submit" fullWidth isPending={isSubmitting}>
+            <Button
+              className="h-12"
+              type="submit"
+              fullWidth
+              isPending={isSubmitting}
+              isDisabled={userIdTaken || isUserIdChecking}
+            >
               <span className="text-medium">가입 신청하기</span>
             </Button>
           </Form>

@@ -48,6 +48,9 @@ const signin = async (body) => {
   );
 };
 
+const checkUserIdAvailable = (userId, signal) =>
+  publicAxiosInstance.get('/users/availability', { params: { userId }, signal });
+
 const issueAccessToken = (params) => {
   return publicAxiosInstance.post('/users/refresh', {}, { params, withCredentials: true });
 };
@@ -90,6 +93,7 @@ const UserClient = {
   changeRequiredPassword,
   login,
   signin,
+  checkUserIdAvailable,
   logout,
   issueAccessToken,
   getUsers,

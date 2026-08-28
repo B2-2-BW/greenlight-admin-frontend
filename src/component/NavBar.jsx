@@ -120,11 +120,11 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
           ToastUtil.success('로그아웃 성공', `정상적으로 로그아웃되었습니다.`);
           navigate('/login');
         } else {
-          ToastUtil.error('로그아웃 실패', `error: ${res.message}`);
+          ToastUtil.error('로그아웃 실패', res?.data?.detail ?? '로그아웃에 실패했습니다.');
         }
       })
       .catch((error) => {
-        ToastUtil.error('로그아웃 실패', `error: ${error}`);
+        ToastUtil.error('로그아웃 실패', error?.response?.data?.detail ?? '로그아웃에 실패했습니다.');
       });
   };
 

@@ -48,11 +48,11 @@ export default function LoginPage() {
     }
 
     if (response.status === 401 || response.status === 403 || response.status === 404) {
-      ToastUtil.error('로그인 실패', response?.data?.detail || '아이디 또는 비밀번호가 잘못되었습니다.');
+      ToastUtil.error('로그인 실패', response?.data?.detail ?? '아이디 또는 비밀번호가 잘못되었습니다.');
       return;
     } else if (!response?.data?.accessToken) {
       console.error('login failed', response);
-      ToastUtil.error('로그인 실패', '잘못된 요청입니다. 관리자에게 문의해주세요. ' + response?.data?.message);
+      ToastUtil.error('로그인 실패', response?.data?.detail ?? '잘못된 요청입니다. 관리자에게 문의해주세요.');
       return;
     }
 
@@ -64,7 +64,7 @@ export default function LoginPage() {
       console.error('fetch failed', loginResponse);
       ToastUtil.error(
         '사용자 정보 조회 실패',
-        '사용자 정보를 불러오는 데에 실패했습니다. 관리자에게 문의해주세요. ' + loginResponse?.data?.message
+        loginResponse?.data?.detail ?? '사용자 정보를 불러오는 데에 실패했습니다. 관리자에게 문의해주세요.'
       );
       return;
     }
