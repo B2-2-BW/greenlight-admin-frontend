@@ -18,6 +18,8 @@ import { ToastUtil } from '../../util/toastUtil.js';
 import { DateUtil } from '../../util/dateUtil.jsx';
 import { useUserStore } from '../../store/user.jsx';
 import { getProfileAppearance, normalizeProfileInitials, PROFILE_COLOR_PRESETS } from '../../util/profileAppearance.js';
+import SiteAccessTable from '../user/SiteAccessTable.jsx';
+import { getAccessibleSites } from '../../util/siteUtil.js';
 
 const roleLabels = {
   SUPER: '슈퍼유저',
@@ -190,7 +192,7 @@ export default function MyPageForm() {
   };
 
   const status = statusConfig[account.accountStatus] ?? { label: account.accountStatus, color: 'default' };
-  const site = account.siteName ? `${account.siteName} (${account.siteId ?? ''})` : (account.siteId ?? '');
+  const accountSites = getAccessibleSites(account);
 
   const statusContent = (
     <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between max-w-2xl">
@@ -314,10 +316,7 @@ export default function MyPageForm() {
                 />
                 <FieldError>이름을 입력해 주세요.</FieldError>
               </TextField>
-              <TextField className="w-full max-w-2xl" isReadOnly variant="default">
-                <Label className="text-base">사이트</Label>
-                <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={site} />
-              </TextField>
+              <SiteAccessTable sites={accountSites} selectedIds={accountSites.map((site) => site.siteId)} readOnly />
               <TextField className="w-full max-w-2xl" isReadOnly variant="default">
                 <Label className="text-base">역할</Label>
                 <Input

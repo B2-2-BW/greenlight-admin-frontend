@@ -1,89 +1,130 @@
-import { KPI_METRICS, ROOM_SUMMARY_METRICS } from './queueStatisticsHelpers.js';
+import { KPI_METRICS, ROOM_SUMMARY_METRICS, summarizeRoomTotals } from './queueStatisticsHelpers.js';
 
-const escapeCsvCell = (value) => {
-  const safeValue = typeof value === 'string' && /^[=+\-@\t\r\n]/.test(value) ? `'${value}` : value;
-  const text = String(safeValue ?? '');
-  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-};
+const DETAIL_METRICS = [
+  { key: 'totalWaiting', label: '대기 인원' },
+  { key: 'totalActive', label: '활성 인원' },
+  { key: 'waitingCount', label: '전체 유입' },
+  { key: 'enteredCount', label: '입장' },
+  { key: 'exitedCount', label: '이탈' },
+  { key: 'cancelledCount', label: '취소' },
+];
 
-const csvRow = (values) => values.map(escapeCsvCell).join(',');
+const TOTAL_FILL = '#D8EEE1';
+
 const boldCell = (value) => ({ value, fontWeight: 'bold' });
 const valueCell = (value) => ({
   value,
   type: typeof value === 'number' ? Number : String,
 });
+const totalCell = (value) => ({
+  ...valueCell(value),
+  fontWeight: 'bold',
+  backgroundColor: TOTAL_FILL,
+});
 
 const formatFileTimestamp = (timestamp) => timestamp.replaceAll(/[-:]/g, '').slice(0, 13);
 
-export const buildQueueStatisticsCsv = ({
-  currentRange,
-  summary,
-  rooms,
-}) => {
-  const rows = [
-    csvRow(['대기열 통계']),
-    csvRow(['현재 기간', currentRange.from, currentRange.to]),
-  ];
-  rows.push('', csvRow(['전체 요약']));
-  rows.push(csvRow(['지표', '현재']));
-  KPI_METRICS.forEach(({ key, label }) => {
-    rows.push(csvRow([label, summary[key]]));
-  });
+const formatExportTimestamp = (timestamp) =>
+  new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  })
+    .format(new Date(timestamp))
+    .replace('T', ' ');
 
-  rows.push('', csvRow(['Room별 요약']));
-  const roomHeader = ['Room ID', 'Room'];
-  ROOM_SUMMARY_METRICS.forEach(({ label }) => {
-    roomHeader.push(label);
-  });
-  rows.push(csvRow(roomHeader));
-  rooms.forEach((room) => {
-    const values = [room.roomId, room.name];
-    ROOM_SUMMARY_METRICS.forEach(({ key }) => {
-      values.push(room[key]);
-    });
-    rows.push(csvRow(values));
-  });
-  return `\uFEFF${rows.join('\r\n')}`;
+const safeString = (value) => {
+  const text = String(value ?? '');
+  return /^[=+\-@\t\r\n]/.test(text) ? `'${text}` : text;
 };
 
-export const downloadQueueStatisticsCsv = (report) => {
-  const csv = buildQueueStatisticsCsv(report);
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `queue-statistics-${formatFileTimestamp(report.currentRange.to)}.csv`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+export const sanitizeSheetName = (name, usedNames = new Set()) => {
+  let base = safeString(name)
+    .replaceAll(/[:\\/?*[\]]/g, '_')
+    .slice(0, 31)
+    .trim();
+  if (!base) base = 'Room';
+  let candidate = base;
+  let index = 2;
+  while (usedNames.has(candidate.toLowerCase())) {
+    const suffix = `-${index}`;
+    candidate = `${base.slice(0, Math.max(1, 31 - suffix.length))}${suffix}`;
+    index += 1;
+  }
+  usedNames.add(candidate.toLowerCase());
+  return candidate;
+};
+
+const buildRoomSummaryRows = (rooms, peaks) => {
+  const header = ['Room ID', 'Room'];
+  ROOM_SUMMARY_METRICS.forEach(({ label }) => header.push(label));
+  const rows = [header.map(boldCell)];
+  rooms.forEach((room) => {
+    const row = [valueCell(safeString(room.roomId)), valueCell(safeString(room.name))];
+    ROOM_SUMMARY_METRICS.forEach(({ key }) => {
+      row.push(valueCell(room[key] ?? 0));
+    });
+    rows.push(row);
+  });
+  if (rooms.length === 0) return rows;
+  const total = summarizeRoomTotals(rooms, peaks);
+  const totalRow = [totalCell(''), totalCell('합계')];
+  ROOM_SUMMARY_METRICS.forEach(({ key }) => {
+    totalRow.push(totalCell(total[key] ?? 0));
+  });
+  rows.push(totalRow);
+  return rows;
+};
+
+const buildSummarySheet = (report) => {
+  const rows = [
+    [boldCell('대기열 통계')],
+    [boldCell('기간'), valueCell(report.currentRange.from), valueCell(report.currentRange.to)],
+    [boldCell('시간 단위'), valueCell(report.windowLabel)],
+    [],
+    ['지표', '값'].map(boldCell),
+  ];
+  KPI_METRICS.forEach(({ key, label }) => {
+    rows.push([valueCell(label), valueCell(report.summary[key] ?? 0)]);
+  });
+  rows.push([]);
+  rows.push([boldCell('대기열 요약')]);
+  rows.push(...buildRoomSummaryRows(report.rooms ?? [], report.summary));
+  return rows;
+};
+
+const buildRoomDetailSheet = (room) => {
+  const header = ['시간'];
+  DETAIL_METRICS.forEach(({ label }) => header.push(label));
+  const rows = [header.map(boldCell)];
+  (room.points ?? []).forEach((point) => {
+    const row = [valueCell(formatExportTimestamp(point.timestamp))];
+    DETAIL_METRICS.forEach(({ key }) => {
+      row.push(valueCell(Number(point[key] ?? 0)));
+    });
+    rows.push(row);
+  });
+  return rows;
+};
+
+export const buildQueueStatisticsWorkbook = (report) => {
+  const usedNames = new Set();
+  const sheets = [{ sheet: sanitizeSheetName('요약', usedNames), data: buildSummarySheet(report) }];
+  (report.series ?? []).forEach((room) => {
+    sheets.push({
+      sheet: sanitizeSheetName(room.name || room.roomId, usedNames),
+      data: buildRoomDetailSheet(room),
+    });
+  });
+  return sheets;
 };
 
 export const downloadQueueStatisticsXlsx = async (report) => {
   const { default: writeXlsxFile } = await import('write-excel-file/browser');
-  const summaryRows = [
-    [boldCell('대기열 통계')],
-    [boldCell('현재 기간'), valueCell(report.currentRange.from), valueCell(report.currentRange.to)],
-  ];
-  summaryRows.push([]);
-  summaryRows.push(['지표', '현재'].map(boldCell));
-  KPI_METRICS.forEach(({ key, label }) => {
-    const row = [valueCell(label), valueCell(report.summary[key])];
-    summaryRows.push(row);
-  });
-
-  const roomHeader = ['Room ID', 'Room'];
-  ROOM_SUMMARY_METRICS.forEach(({ label }) => {
-    roomHeader.push(label);
-  });
-  const roomRows = [roomHeader.map(boldCell)];
-  report.rooms.forEach((room) => {
-    const row = [valueCell(room.roomId), valueCell(room.name)];
-    ROOM_SUMMARY_METRICS.forEach(({ key }) => {
-      row.push(valueCell(room[key]));
-    });
-    roomRows.push(row);
-  });
-
-  await writeXlsxFile([summaryRows, roomRows], {
-    sheets: ['요약', 'Room별 요약'],
-    fileName: `queue-statistics-${formatFileTimestamp(report.currentRange.to)}.xlsx`,
-  });
+  const sheets = buildQueueStatisticsWorkbook(report);
+  await writeXlsxFile(sheets).toFile(`queue-statistics-${formatFileTimestamp(report.currentRange.to)}.xlsx`);
 };

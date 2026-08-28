@@ -3,17 +3,18 @@ const metricKeys = ['totalWaiting', 'totalActive', 'waitingCount', 'enteredCount
 const asNumber = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
 
 export const ROOM_SUMMARY_METRICS = [
-  { key: 'maxWaiting', label: '최대 동시 대기' },
+  { key: 'maxWaiting', label: '최대 대기' },
   { key: 'maxActive', label: '최대 활성' },
-  { key: 'waitingCount', label: '대기 유입' },
+  { key: 'waitingCount', label: '전체 유입' },
   { key: 'enteredCount', label: '입장' },
   { key: 'exitedCount', label: '이탈' },
   { key: 'cancelledCount', label: '취소' },
 ];
 
 export const KPI_METRICS = [
-  { key: 'maxWaiting', label: '최대 동시 대기 인원', unit: '명' },
-  { key: 'waitingCount', label: '대기 유입', unit: '건' },
+  { key: 'waitingCount', label: '전체 유입', unit: '건' },
+  { key: 'maxWaiting', label: '최대 동시 대기', unit: '명' },
+  { key: 'maxActive', label: '최대 체류', unit: '명' },
   { key: 'enteredCount', label: '입장', unit: '건' },
   { key: 'cancelledCount', label: '취소', unit: '건' },
 ];
@@ -34,7 +35,9 @@ export const buildQueueWindows = (series = []) => {
         cancelledCount: 0,
         estimatedWaitTime: null,
       };
-      metricKeys.forEach((key) => { current[key] += asNumber(point[key]); });
+      metricKeys.forEach((key) => {
+        current[key] += asNumber(point[key]);
+      });
       const estimatedWaitTime = Number(point.estimatedWaitTime);
       if (Number.isFinite(estimatedWaitTime) && estimatedWaitTime >= 0) {
         current.estimatedWaitTime = Math.max(current.estimatedWaitTime ?? estimatedWaitTime, estimatedWaitTime);
@@ -50,24 +53,49 @@ export const summarizeQueueStatistics = (series = []) => {
   const windows = buildQueueWindows(series);
   return {
     maxWaiting: Math.max(0, ...windows.map((window) => window.totalWaiting)),
+    maxActive: Math.max(0, ...windows.map((window) => window.totalActive)),
     waitingCount: windows.reduce((sum, window) => sum + window.waitingCount, 0),
     enteredCount: windows.reduce((sum, window) => sum + window.enteredCount, 0),
     cancelledCount: windows.reduce((sum, window) => sum + window.cancelledCount, 0),
   };
 };
 
-export const summarizeRooms = (series = []) => series.map((room) => {
-  const points = room.points ?? [];
-  const sum = (key) => points.reduce((total, point) => total + asNumber(point[key]), 0);
-  const max = (key) => Math.max(0, ...points.map((point) => asNumber(point[key])));
-  return {
-    roomId: room.roomId,
-    name: room.name ?? room.roomId,
-    maxWaiting: max('totalWaiting'),
-    maxActive: max('totalActive'),
-    waitingCount: sum('waitingCount'),
-    enteredCount: sum('enteredCount'),
-    exitedCount: sum('exitedCount'),
-    cancelledCount: sum('cancelledCount'),
-  };
+export const summarizeRooms = (series = []) =>
+  series.map((room) => {
+    const points = room.points ?? [];
+    const sum = (key) => points.reduce((total, point) => total + asNumber(point[key]), 0);
+    const max = (key) => Math.max(0, ...points.map((point) => asNumber(point[key])));
+    return {
+      roomId: room.roomId,
+      name: room.name ?? room.roomId,
+      enabled: room.enabled,
+      maxWaiting: max('totalWaiting'),
+      maxActive: max('totalActive'),
+      waitingCount: sum('waitingCount'),
+      enteredCount: sum('enteredCount'),
+      exitedCount: sum('exitedCount'),
+      cancelledCount: sum('cancelledCount'),
+    };
+  });
+
+export const TOTAL_ROOM_ID = '__total__';
+
+const PEAK_METRICS = new Set(['maxWaiting', 'maxActive']);
+
+export const summarizeRoomTotals = (rooms = [], peaks) => {
+  const total = { roomId: TOTAL_ROOM_ID, name: '합계' };
+  ROOM_SUMMARY_METRICS.forEach(({ key }) => {
+    if (PEAK_METRICS.has(key)) {
+      total[key] = Number.isFinite(Number(peaks?.[key])) ? Number(peaks[key]) : 0;
+      return;
+    }
+    total[key] = rooms.reduce((sum, room) => sum + (Number(room[key]) || 0), 0);
+  });
+  return total;
+};
+
+export const withConcurrentPeaks = (summary, peaks) => ({
+  ...summary,
+  maxWaiting: Number.isFinite(Number(peaks?.maxWaiting)) ? Number(peaks.maxWaiting) : summary.maxWaiting,
+  maxActive: Number.isFinite(Number(peaks?.maxActive)) ? Number(peaks.maxActive) : summary.maxActive,
 });
