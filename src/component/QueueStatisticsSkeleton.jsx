@@ -14,8 +14,8 @@ function SkeletonCard({ className = '' }) {
 export default function QueueStatisticsSkeleton({ includeFilter = true }) {
   const content = (
     <>
-      <section className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="대기열 핵심 지표 로딩 중">
-        {[0, 1, 2, 3].map((item) => (
+      <section className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" aria-label="대기열 핵심 지표 로딩 중">
+        {[0, 1, 2, 3, 4].map((item) => (
           <SkeletonCard key={item} />
         ))}
       </section>
