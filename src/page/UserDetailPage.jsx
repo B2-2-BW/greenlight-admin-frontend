@@ -101,8 +101,8 @@ const resolveSiteIds = (user) => {
 };
 
 const grantableSelectedIds = (selectedIds, grantableSites) => {
-  const allowed = new Set(grantableSites.map((site) => site.siteId));
-  return (selectedIds ?? []).filter((siteId) => allowed.has(siteId));
+  const allowed = new Set(grantableSites.map((site) => site.siteId).filter(Boolean));
+  return (selectedIds ?? []).filter((siteId) => siteId && allowed.has(siteId));
 };
 
 function ReadonlyField({ label, value }) {
@@ -209,11 +209,13 @@ export default function UserDetailPage() {
     setIsActionLoading(true);
     try {
       if (dialogAction === 'approve') {
+        const siteIds = grantableSelectedIds(approval.siteIds, sites);
         const response = await UserClient.approveUser(userId, {
-          ...approval,
           username: approval.username.trim(),
           userEmail: approval.userEmail.trim(),
-          siteIds: grantableSelectedIds(approval.siteIds, sites),
+          siteIds,
+          siteId: siteIds[0],
+          userRole: approval.userRole,
           reason,
         });
         setUser(response.data);

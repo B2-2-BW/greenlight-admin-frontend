@@ -24,7 +24,7 @@ import { getVisibleSites } from '../../util/siteUtil.js';
 
 const dataColumns = [
   { name: '사용자', uid: 'user', isRowHeader: true },
-  { name: '사이트', uid: 'site', className: 'hidden sm:table-cell' },
+  { name: '사이트 권한', uid: 'site', className: 'hidden sm:table-cell' },
   { name: '역할', uid: 'role', className: 'hidden md:table-cell' },
   { name: '계정 상태', uid: 'status' },
 ];
@@ -166,9 +166,7 @@ export default function UserListTable() {
   });
   const requestGeneration = useRef(0);
   const navigate = useNavigate();
-  const columns = isEditMode
-    ? [{ name: '선택', uid: 'selection', className: 'w-12' }, ...dataColumns]
-    : dataColumns;
+  const columns = isEditMode ? [{ name: '선택', uid: 'selection', className: 'w-12' }, ...dataColumns] : dataColumns;
   const isFetching =
     isLoading ||
     page !== pageData.page ||
@@ -228,10 +226,7 @@ export default function UserListTable() {
     setSelectedKeys(new Set());
   }, [page, query, roleFilter, statusFilter]);
 
-  const selectedUsers = useMemo(
-    () => users.filter((user) => selectedKeys.has(user.userId)),
-    [selectedKeys, users]
-  );
+  const selectedUsers = useMemo(() => users.filter((user) => selectedKeys.has(user.userId)), [selectedKeys, users]);
   const disabledSelectionKeys = useMemo(
     () =>
       new Set(
@@ -246,10 +241,7 @@ export default function UserListTable() {
   const canDisable =
     selectedUsers.length > 0 &&
     selectedUsers.every(
-      (user) =>
-        user.accountStatus === 'ACTIVE' &&
-        user.userId !== currentUser?.userId &&
-        user.userRole !== 'SUPER'
+      (user) => user.accountStatus === 'ACTIVE' && user.userId !== currentUser?.userId && user.userRole !== 'SUPER'
     );
 
   const pageItems = useMemo(() => {
@@ -295,10 +287,7 @@ export default function UserListTable() {
       setRefreshGeneration((generation) => generation + 1);
     } catch (error) {
       console.error(error);
-      ToastUtil.error(
-        '일괄 처리 실패',
-        error.response?.data?.detail ?? '선택한 사용자의 상태를 변경하지 못했습니다.'
-      );
+      ToastUtil.error('일괄 처리 실패', error.response?.data?.detail ?? '선택한 사용자의 상태를 변경하지 못했습니다.');
     } finally {
       setIsBulkPending(false);
     }
@@ -370,7 +359,7 @@ export default function UserListTable() {
         <SearchField name="user-search" value={inputQuery} onChange={setInputQuery} variant="secondary">
           <SearchField.Group>
             <SearchField.SearchIcon />
-            <SearchField.Input className="w-full sm:w-[280px]" placeholder="이름, ID, 이메일, 사이트로 검색" />
+            <SearchField.Input className="w-full sm:w-[280px]" placeholder="이름, ID, 이메일로 검색" />
             <SearchField.ClearButton />
           </SearchField.Group>
         </SearchField>
@@ -400,9 +389,7 @@ export default function UserListTable() {
             ]}
           />
           <div className="flex items-center justify-end gap-2 sm:ml-auto">
-            <p className="text-sm text-muted">
-              {isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}명`}
-            </p>
+            <p className="text-sm text-muted">{isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}명`}</p>
             <Button
               size="sm"
               isIconOnly
@@ -459,11 +446,7 @@ export default function UserListTable() {
                     keys === 'all'
                       ? new Set(
                           users
-                            .filter(
-                              (user) =>
-                                user.userRole !== 'SUPER' &&
-                                user.userId !== currentUser?.userId
-                            )
+                            .filter((user) => user.userRole !== 'SUPER' && user.userId !== currentUser?.userId)
                             .map((user) => user.userId)
                         )
                       : new Set([...keys].filter((key) => !disabledSelectionKeys.has(key)))
@@ -474,16 +457,8 @@ export default function UserListTable() {
         >
           <Table.Header columns={columns}>
             {(column) => (
-              <Table.Column
-                id={column.uid}
-                className={column.className}
-                isRowHeader={column.isRowHeader}
-              >
-                {column.uid === 'selection' ? (
-                  <SelectionCheckbox label="현재 페이지 사용자 전체 선택" />
-                ) : (
-                  column.name
-                )}
+              <Table.Column id={column.uid} className={column.className} isRowHeader={column.isRowHeader}>
+                {column.uid === 'selection' ? <SelectionCheckbox label="현재 페이지 사용자 전체 선택" /> : column.name}
               </Table.Column>
             )}
           </Table.Header>
@@ -569,9 +544,7 @@ export default function UserListTable() {
               </Modal.Header>
               <form onSubmit={submitBulkAction}>
                 <Modal.Body className="flex flex-col gap-4">
-                  <p className="text-sm text-muted">
-                    {currentAction?.description(selectedUsers.length)}
-                  </p>
+                  <p className="text-sm text-muted">{currentAction?.description(selectedUsers.length)}</p>
                   <TextField isRequired name="reason">
                     <Label>{currentAction?.reasonLabel}</Label>
                     <TextArea
