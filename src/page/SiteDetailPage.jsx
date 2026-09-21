@@ -142,7 +142,7 @@ export default function SiteDetailPage() {
       .catch((error) => {
         console.error(error);
         if (!cancelled) {
-          ToastUtil.error('알람 발송 기준', '알람 발송 기준을 불러오지 못했습니다.');
+          ToastUtil.error('알림 발송 기준', '알림 발송 기준을 불러오지 못했습니다.');
         }
       })
       .finally(() => {
@@ -203,10 +203,10 @@ export default function SiteDetailPage() {
       setSaving(true);
       try {
         await savePolicy();
-        ToastUtil.success('사이트 관리', '알람 발송 기준을 저장했습니다.');
+        ToastUtil.success('사이트 관리', '알림 발송 기준을 저장했습니다.');
       } catch (error) {
         console.error(error);
-        ToastUtil.error('사이트 관리', error.response?.data?.detail ?? '알람 발송 기준을 저장하지 못했습니다.');
+        ToastUtil.error('사이트 관리', error.response?.data?.detail ?? '알림 발송 기준을 저장하지 못했습니다.');
       } finally {
         setSaving(false);
       }
@@ -325,11 +325,11 @@ export default function SiteDetailPage() {
     setIsPolicySyncing(true);
     try {
       await AlertClient.reloadAlertPolicyCache(siteId);
-      ToastUtil.success('운영 데이터 동기화', '이 사이트 알람 기준을 서버에 즉시 반영했습니다.');
+      ToastUtil.success('운영 데이터 동기화', '이 사이트 알림 기준을 서버에 즉시 반영했습니다.');
       setIsPolicySyncOpen(false);
     } catch (error) {
       console.error(error);
-      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '알람 기준 반영에 실패했습니다.');
+      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '알림 기준 반영에 실패했습니다.');
     } finally {
       setIsPolicySyncing(false);
     }
@@ -338,11 +338,11 @@ export default function SiteDetailPage() {
     setIsPolicyAllSyncing(true);
     try {
       await AlertClient.reloadAllAlertPolicyCache();
-      ToastUtil.success('운영 데이터 동기화', '모든 사이트 알람 기준을 서버에 즉시 반영했습니다.');
+      ToastUtil.success('운영 데이터 동기화', '모든 사이트 알림 기준을 서버에 즉시 반영했습니다.');
       setIsPolicyAllSyncOpen(false);
     } catch (error) {
       console.error(error);
-      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '알람 기준 반영에 실패했습니다.');
+      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '알림 기준 반영에 실패했습니다.');
     } finally {
       setIsPolicyAllSyncing(false);
     }
@@ -488,6 +488,11 @@ export default function SiteDetailPage() {
                     </div>
                   </div>
                 </FormSection>
+
+                <FormSection title="알림 발송 기준">
+                  {isPolicyLoading ? <FieldsSkeleton /> : <AlertPolicyFields policy={policy} setPolicy={setPolicy} />}
+                </FormSection>
+
                 {canEditSiteInfo && (
                   <FormSection title="운영 데이터 동기화">
                     <div className="flex w-full max-w-2xl flex-col gap-4">
@@ -535,7 +540,7 @@ export default function SiteDetailPage() {
                           </Button>
                         </ConfirmAlertDialog>
                         <ConfirmAlertDialog
-                          title="이 사이트 알람 기준을 동기화할까요?"
+                          title="이 사이트 알림 기준을 동기화할까요?"
                           message="저장해 둔 기준을 서버에 즉시 다시 반영합니다. 스케줄러는 다음 확인부터 이 값을 사용합니다."
                           confirmMessage="기준 동기화"
                           isOpen={isPolicySyncOpen}
@@ -543,13 +548,13 @@ export default function SiteDetailPage() {
                           onOpenChange={setIsPolicySyncOpen}
                         >
                           <Button type="button" variant="secondary" className="min-h-11" isPending={isPolicySyncing}>
-                            이 사이트 알람 기준 동기화
+                            이 사이트 알림 기준 동기화
                           </Button>
                         </ConfirmAlertDialog>
                         {isSuperUser && (
                           <ConfirmAlertDialog
-                            title="모든 사이트 알람 기준을 동기화할까요?"
-                            message="모든 사이트의 저장된 알람 기준을 서버에 즉시 다시 반영합니다."
+                            title="모든 사이트 알림 기준을 동기화할까요?"
+                            message="모든 사이트의 저장된 알림 기준을 서버에 즉시 다시 반영합니다."
                             confirmMessage="전체 동기화"
                             isOpen={isPolicyAllSyncOpen}
                             onConfirm={handleSyncAllAlertPolicy}
@@ -561,7 +566,7 @@ export default function SiteDetailPage() {
                               className="min-h-11"
                               isPending={isPolicyAllSyncing}
                             >
-                              모든 사이트 알람 기준 동기화
+                              모든 사이트 알림 기준 동기화
                             </Button>
                           </ConfirmAlertDialog>
                         )}
@@ -569,6 +574,7 @@ export default function SiteDetailPage() {
                     </div>
                   </FormSection>
                 )}
+
                 {role === 'SUPER' && (
                   <FormSection title="API Key">
                     <div className="flex max-w-2xl flex-col gap-4">
@@ -611,9 +617,7 @@ export default function SiteDetailPage() {
                     </div>
                   </FormSection>
                 )}
-                <FormSection title="알람 발송 기준">
-                  {isPolicyLoading ? <FieldsSkeleton /> : <AlertPolicyFields policy={policy} setPolicy={setPolicy} />}
-                </FormSection>
+
                 {role === 'SUPER' && (
                   <FormSection title="사이트 폐기">
                     <div className="flex max-w-2xl flex-col gap-4">
@@ -632,6 +636,7 @@ export default function SiteDetailPage() {
                     </div>
                   </FormSection>
                 )}
+
                 {canEditSiteInfo && (
                   <div
                     className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)]

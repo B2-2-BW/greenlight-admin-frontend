@@ -127,7 +127,7 @@ export default function SiteSettingsForm() {
       .catch((error) => {
         console.error(error);
         if (!cancelled) {
-          ToastUtil.error('알람 발송 기준', '알람 발송 기준을 불러오지 못했습니다.');
+          ToastUtil.error('알림 발송 기준', '알림 발송 기준을 불러오지 못했습니다.');
         }
       })
       .finally(() => {
@@ -163,10 +163,10 @@ export default function SiteSettingsForm() {
       setIsSubmitLoading(true);
       try {
         await savePolicy();
-        ToastUtil.success('시스템 설정', '알람 발송 기준을 저장했습니다.');
+        ToastUtil.success('시스템 설정', '알림 발송 기준을 저장했습니다.');
       } catch (error) {
         console.error(error);
-        ToastUtil.error('시스템 설정', error.response?.data?.detail ?? '알람 발송 기준을 저장하지 못했습니다.');
+        ToastUtil.error('시스템 설정', error.response?.data?.detail ?? '알림 발송 기준을 저장하지 못했습니다.');
       } finally {
         setIsSubmitLoading(false);
       }
@@ -365,6 +365,19 @@ export default function SiteSettingsForm() {
             )}
           </FormSection>
 
+          {canManageSite && (
+            <FormSection title="알림 발송 기준">
+              {isPolicyLoading ? (
+                <div className="flex flex-col gap-6">
+                  <Skeleton className="h-18 w-full max-w-2xl rounded-lg" />
+                  <Skeleton className="h-18 w-full max-w-2xl rounded-lg" />
+                </div>
+              ) : (
+                <AlertPolicyFields policy={policy} setPolicy={setPolicy} />
+              )}
+            </FormSection>
+          )}
+
           {canSyncRoomData && (
             <FormSection title="운영 데이터 동기화">
               <div className="flex flex-col w-full max-w-lg gap-4">
@@ -402,7 +415,7 @@ export default function SiteSettingsForm() {
                     </Button>
                   </ConfirmAlertDialog>
                   <ConfirmAlertDialog
-                    title="이 사이트 알람 기준을 동기화할까요?"
+                    title="이 사이트 알림 기준을 동기화할까요?"
                     message="저장해 둔 기준을 서버에 즉시 다시 반영합니다. 스케줄러는 다음 확인부터 이 값을 사용합니다."
                     confirmMessage="기준 동기화"
                     isOpen={isPolicySyncOpen}
@@ -410,13 +423,13 @@ export default function SiteSettingsForm() {
                       setIsPolicySyncing(true);
                       try {
                         await AlertClient.reloadAlertPolicyCache(siteId);
-                        ToastUtil.success('운영 데이터 동기화', '이 사이트 알람 기준을 서버에 즉시 반영했습니다.');
+                        ToastUtil.success('운영 데이터 동기화', '이 사이트 알림 기준을 서버에 즉시 반영했습니다.');
                         setIsPolicySyncOpen(false);
                       } catch (error) {
                         console.error(error);
                         ToastUtil.error(
                           '운영 데이터 동기화',
-                          error.response?.data?.detail ?? '알람 기준 반영에 실패했습니다.'
+                          error.response?.data?.detail ?? '알림 기준 반영에 실패했습니다.'
                         );
                       } finally {
                         setIsPolicySyncing(false);
@@ -425,26 +438,26 @@ export default function SiteSettingsForm() {
                     onOpenChange={setIsPolicySyncOpen}
                   >
                     <Button variant="secondary" className="min-h-11" isPending={isPolicySyncing}>
-                      이 사이트 알람 기준 동기화
+                      이 사이트 알림 기준 동기화
                     </Button>
                   </ConfirmAlertDialog>
                   {isSuperUser && (
                     <ConfirmAlertDialog
-                      title="모든 사이트 알람 기준을 동기화할까요?"
-                      message="모든 사이트의 저장된 알람 기준을 서버에 즉시 다시 반영합니다."
+                      title="모든 사이트 알림 기준을 동기화할까요?"
+                      message="모든 사이트의 저장된 알림 기준을 서버에 즉시 다시 반영합니다."
                       confirmMessage="전체 동기화"
                       isOpen={isPolicyAllSyncOpen}
                       onConfirm={async () => {
                         setIsPolicyAllSyncing(true);
                         try {
                           await AlertClient.reloadAllAlertPolicyCache();
-                          ToastUtil.success('운영 데이터 동기화', '모든 사이트 알람 기준을 서버에 즉시 반영했습니다.');
+                          ToastUtil.success('운영 데이터 동기화', '모든 사이트 알림 기준을 서버에 즉시 반영했습니다.');
                           setIsPolicyAllSyncOpen(false);
                         } catch (error) {
                           console.error(error);
                           ToastUtil.error(
                             '운영 데이터 동기화',
-                            error.response?.data?.detail ?? '알람 기준 반영에 실패했습니다.'
+                            error.response?.data?.detail ?? '알림 기준 반영에 실패했습니다.'
                           );
                         } finally {
                           setIsPolicyAllSyncing(false);
@@ -453,25 +466,12 @@ export default function SiteSettingsForm() {
                       onOpenChange={setIsPolicyAllSyncOpen}
                     >
                       <Button variant="secondary" className="min-h-11" isPending={isPolicyAllSyncing}>
-                        모든 사이트 알람 기준 동기화
+                        모든 사이트 알림 기준 동기화
                       </Button>
                     </ConfirmAlertDialog>
                   )}
                 </div>
               </div>
-            </FormSection>
-          )}
-
-          {canManageSite && (
-            <FormSection title="알람 발송 기준">
-              {isPolicyLoading ? (
-                <div className="flex flex-col gap-6">
-                  <Skeleton className="h-18 w-full max-w-2xl rounded-lg" />
-                  <Skeleton className="h-18 w-full max-w-2xl rounded-lg" />
-                </div>
-              ) : (
-                <AlertPolicyFields policy={policy} setPolicy={setPolicy} />
-              )}
             </FormSection>
           )}
 
