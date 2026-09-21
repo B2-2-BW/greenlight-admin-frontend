@@ -248,9 +248,7 @@ export default function AlertSettingsForm() {
         ) : (
           <div className={`flex w-full max-w-lg flex-col gap-6 ${hasSavedChannel ? '' : 'opacity-60'}`}>
             <p className="text-sm text-muted">
-              {hasSavedChannel
-                ? '받고 싶은 알람 유형을 켭니다.'
-                : '알림을 받으려면 먼저 수신 채널을 저장해 주세요.'}
+              {hasSavedChannel ? '받고 싶은 알림 유형을 켭니다.' : '알림을 받으려면 먼저 수신 채널을 저장해 주세요.'}
             </p>
             {subscriptions.map((subscription) => {
               const copy = subscriptionCopy(subscription);
