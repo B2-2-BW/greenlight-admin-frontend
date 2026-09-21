@@ -15,6 +15,7 @@ import RoomListPage from './page/RoomListPage.jsx';
 import RoomDetailPage from './page/RoomDetailPage.jsx';
 import DashboardV2Page from './page/DashboardV2Page.jsx';
 import AccountPage from './page/AccountPage.jsx';
+import AlertSettingsPage from './page/AlertSettingsPage.jsx';
 import UserDetailPage from './page/UserDetailPage.jsx';
 import AdminRoute from './router/AdminRoute.jsx';
 import SuperRoute from './router/SuperRoute.jsx';
@@ -110,6 +111,7 @@ function App() {
             }
           />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/alert-settings" element={<AlertSettingsPage />} />
           <Route path="/notfound" element={<NotFoundPage />} />
           <Route path="/forbidden" element={<BadRequestPage />} />
           <Route path="/opps" element={<SomethingWentWrongPage />} />

@@ -16,8 +16,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { SiteClient } from '../api/site/index.js';
 import { RoomClient } from '../api/room/index.js';
+import { AlertClient } from '../api/alert/index.js';
 import FormSection from '../component/common/FormSection.jsx';
+import AlertPolicyFields from '../component/alert/AlertPolicyFields.jsx';
 import ConfirmAlertDialog from '../component/ConfirmAlertDialog.jsx';
+import {
+  alertPolicyPayload,
+  defaultAlertPolicy,
+  isSameAlertPolicy,
+  normalizeAlertPolicy,
+} from '../util/alertPolicy.js';
 import { useUserStore } from '../store/user.jsx';
 import { ToastUtil } from '../util/toastUtil.js';
 import ChangeDiff from '../component/audit/ChangeDiff.jsx';
@@ -44,7 +52,16 @@ const queueEnabledMessage = {
     subtitle: '사이트 전체에 대기열이 적용되지 않고, 즉시 진입이 가능한 상태가 됩니다',
   },
 };
-
+const maintenanceEnabledMessage = {
+  true: {
+    title: '점검 중',
+    subtitle: '사이트가 점검 상태입니다.',
+  },
+  false: {
+    title: '평시',
+    subtitle: '일반 운영 상태입니다.',
+  },
+};
 function FieldsSkeleton() {
   return (
     <div className="flex flex-col gap-6">
@@ -70,6 +87,7 @@ export default function SiteDetailPage() {
   const [description, setDescription] = useState('');
   const [enabled, setEnabled] = useState(false);
   const [queueEnabled, setQueueEnabled] = useState(false);
+  const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [reason, setReason] = useState('');
   const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
   const [isKeyRotationPending, setIsKeyRotationPending] = useState(false);
@@ -83,6 +101,13 @@ export default function SiteDetailPage() {
   const [isRoomSyncDialogOpen, setIsRoomSyncDialogOpen] = useState(false);
   const [isSiteSyncDialogOpen, setIsSiteSyncDialogOpen] = useState(false);
   const [syncTarget, setSyncTarget] = useState(null);
+  const [policy, setPolicy] = useState(defaultAlertPolicy);
+  const [savedPolicy, setSavedPolicy] = useState(defaultAlertPolicy);
+  const [isPolicyLoading, setIsPolicyLoading] = useState(true);
+  const [isPolicySyncOpen, setIsPolicySyncOpen] = useState(false);
+  const [isPolicySyncing, setIsPolicySyncing] = useState(false);
+  const [isPolicyAllSyncOpen, setIsPolicyAllSyncOpen] = useState(false);
+  const [isPolicyAllSyncing, setIsPolicyAllSyncing] = useState(false);
   const load = useCallback(async () => {
     try {
       const { data } = await SiteClient.getManagedSite(siteId);
@@ -91,6 +116,7 @@ export default function SiteDetailPage() {
       setDescription(data.siteDescription ?? '');
       setEnabled(Boolean(data.siteEnabled));
       setQueueEnabled(Boolean(data.queueEnabled));
+      setMaintenanceEnabled(Boolean(data.maintenanceEnabled));
     } catch (error) {
       console.error(error);
       ToastUtil.error('사이트 상세', '사이트 정보를 불러오지 못했습니다.');
@@ -102,6 +128,30 @@ export default function SiteDetailPage() {
     setLoading(true);
     load();
   }, [load]);
+  useEffect(() => {
+    let cancelled = false;
+    setIsPolicyLoading(true);
+    AlertClient.getAlertPolicy(siteId)
+      .then(({ data }) => {
+        if (!cancelled && data) {
+          const nextPolicy = normalizeAlertPolicy(data);
+          setPolicy(nextPolicy);
+          setSavedPolicy(nextPolicy);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+        if (!cancelled) {
+          ToastUtil.error('알람 발송 기준', '알람 발송 기준을 불러오지 못했습니다.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsPolicyLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [siteId]);
   const changes = useMemo(() => {
     if (!site) return {};
     const current = {
@@ -115,29 +165,51 @@ export default function SiteDetailPage() {
     if (canManageSiteStatus) {
       current.siteEnabled = enabled;
       current.queueEnabled = queueEnabled;
+      current.maintenanceEnabled = maintenanceEnabled;
       previous.siteEnabled = Boolean(site.siteEnabled);
       previous.queueEnabled = Boolean(site.queueEnabled);
+      previous.maintenanceEnabled = Boolean(site.maintenanceEnabled);
     }
     return Object.fromEntries(
       Object.keys(current)
         .filter((field) => current[field] !== previous[field])
         .map((field) => [field, { before: previous[field], after: current[field] }])
     );
-  }, [canManageSiteStatus, description, enabled, name, queueEnabled, site]);
-  const isDirty = Object.keys(changes).length > 0;
+  }, [canManageSiteStatus, description, enabled, maintenanceEnabled, name, queueEnabled, site]);
+  const policyDirty = !isSameAlertPolicy(policy, savedPolicy);
+  const isDirty = Object.keys(changes).length > 0 || policyDirty;
   const confirmNavigation = useUnsavedChanges(isDirty);
+  const savePolicy = async () => {
+    const { data } = await AlertClient.updateAlertPolicy(siteId, alertPolicyPayload(policy));
+    const nextPolicy = normalizeAlertPolicy(data);
+    setPolicy(nextPolicy);
+    setSavedPolicy(nextPolicy);
+  };
   const submit = async (event) => {
     event.preventDefault();
     if (!canEditSiteInfo) {
       ToastUtil.error('사이트 관리', '사이트 정보를 변경할 권한이 없습니다.');
       return;
     }
-    if (Object.keys(changes).length === 0) {
+    if (Object.keys(changes).length === 0 && !policyDirty) {
       ToastUtil.error('사이트 관리', '변경된 항목이 없습니다.');
       return;
     }
     if (!name.trim()) {
       ToastUtil.error('사이트 관리', '사이트명을 입력해 주세요.');
+      return;
+    }
+    if (Object.keys(changes).length === 0) {
+      setSaving(true);
+      try {
+        await savePolicy();
+        ToastUtil.success('사이트 관리', '알람 발송 기준을 저장했습니다.');
+      } catch (error) {
+        console.error(error);
+        ToastUtil.error('사이트 관리', error.response?.data?.detail ?? '알람 발송 기준을 저장하지 못했습니다.');
+      } finally {
+        setSaving(false);
+      }
       return;
     }
     setIsSaveConfirmOpen(true);
@@ -151,7 +223,11 @@ export default function SiteDetailPage() {
       if (changes.siteDescription) payload.siteDescription = description.trim();
       if (canManageSiteStatus && changes.siteEnabled) payload.siteEnabled = enabled;
       if (canManageSiteStatus && changes.queueEnabled) payload.queueEnabled = queueEnabled;
+      if (canManageSiteStatus && changes.maintenanceEnabled) payload.maintenanceEnabled = maintenanceEnabled;
       await SiteClient.updateSiteInfo(siteId, payload);
+      if (policyDirty) {
+        await savePolicy();
+      }
       setReason('');
       setIsSaveConfirmOpen(false);
       await load();
@@ -245,6 +321,32 @@ export default function SiteDetailPage() {
       setSyncTarget(null);
     }
   };
+  const handleSyncAlertPolicy = async () => {
+    setIsPolicySyncing(true);
+    try {
+      await AlertClient.reloadAlertPolicyCache(siteId);
+      ToastUtil.success('운영 데이터 동기화', '이 사이트 알람 기준을 서버에 즉시 반영했습니다.');
+      setIsPolicySyncOpen(false);
+    } catch (error) {
+      console.error(error);
+      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '알람 기준 반영에 실패했습니다.');
+    } finally {
+      setIsPolicySyncing(false);
+    }
+  };
+  const handleSyncAllAlertPolicy = async () => {
+    setIsPolicyAllSyncing(true);
+    try {
+      await AlertClient.reloadAllAlertPolicyCache();
+      ToastUtil.success('운영 데이터 동기화', '모든 사이트 알람 기준을 서버에 즉시 반영했습니다.');
+      setIsPolicyAllSyncOpen(false);
+    } catch (error) {
+      console.error(error);
+      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '알람 기준 반영에 실패했습니다.');
+    } finally {
+      setIsPolicyAllSyncing(false);
+    }
+  };
   return (
     <div className="w-full bg-neutral-50">
       <div className="max-w-[1080px] p-4 sm:p-6">
@@ -273,216 +375,284 @@ export default function SiteDetailPage() {
           <p className="py-10 text-center text-sm text-muted">사이트 정보를 찾을 수 없습니다.</p>
         ) : (
           <>
-            <Form className="flex flex-col gap-4" validationBehavior="native" onSubmit={submit}>
-              <FormSection title="사이트 정보">
-                <div className="flex w-full flex-col gap-6">
-                  <TextField className="w-full max-w-2xl" isReadOnly>
-                    <Label className="text-base">사이트 ID</Label>
-                    <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={site.siteId} />
-                  </TextField>
-                  <TextField name="siteName" className="w-full max-w-2xl" isRequired isReadOnly={!canEditSiteInfo}>
-                    <Label className="text-base">사이트명</Label>
-                    <Input
-                      className={`${fieldClass} text-base`}
-                      value={name}
-                      maxLength={255}
-                      onChange={(event) => setName(event.target.value)}
-                    />
-                    <FieldError>사이트명을 입력해 주세요.</FieldError>
-                  </TextField>
-                  <TextField className="w-full max-w-2xl" isReadOnly={!canEditSiteInfo}>
-                    <Label className="text-base">사이트 설명</Label>
-                    <TextArea
-                      className={`${fieldClass} text-base`}
-                      value={description}
-                      maxLength={4000}
-                      rows={3}
-                      placeholder="사이트에 대한 설명을 입력해 주세요."
-                      onChange={(event) => setDescription(event.target.value)}
-                    />
-                  </TextField>
-                </div>
-              </FormSection>
-              <FormSection title="운영 상태">
-                <div className="flex flex-col gap-6">
-                  {canManageSiteStatus && (
+            <div className="flex flex-col gap-4">
+              <Form className="flex flex-col gap-4" validationBehavior="native" onSubmit={submit}>
+                <FormSection title="사이트 정보">
+                  <div className="flex w-full flex-col gap-6">
+                    <TextField className="w-full max-w-2xl" isReadOnly>
+                      <Label className="text-base">사이트 ID</Label>
+                      <Input className="ring-1 focus:ring-2 ring-neutral-200 bg-neutral-100" value={site.siteId} />
+                    </TextField>
+                    <TextField name="siteName" className="w-full max-w-2xl" isRequired isReadOnly={!canEditSiteInfo}>
+                      <Label className="text-base">사이트명</Label>
+                      <Input
+                        className={`${fieldClass} text-base`}
+                        value={name}
+                        maxLength={255}
+                        onChange={(event) => setName(event.target.value)}
+                      />
+                      <FieldError>사이트명을 입력해 주세요.</FieldError>
+                    </TextField>
+                    <TextField className="w-full max-w-2xl" isReadOnly={!canEditSiteInfo}>
+                      <Label className="text-base">사이트 설명</Label>
+                      <TextArea
+                        className={`${fieldClass} text-base`}
+                        value={description}
+                        maxLength={4000}
+                        rows={3}
+                        placeholder="사이트에 대한 설명을 입력해 주세요."
+                        onChange={(event) => setDescription(event.target.value)}
+                      />
+                    </TextField>
+                  </div>
+                </FormSection>
+                <FormSection title="운영 상태">
+                  <div className="flex flex-col gap-6">
+                    {canManageSiteStatus && (
+                      <div className="flex flex-col gap-2">
+                        <Label className="text-base" isRequired>
+                          사이트 활성/비활성화
+                        </Label>
+                        <Switch isSelected={enabled} onChange={setEnabled} className="group w-full max-w-lg">
+                          <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                            <Switch.Control>
+                              <Switch.Thumb>
+                                <Switch.Icon />
+                              </Switch.Thumb>
+                            </Switch.Control>
+                            <span className="flex min-w-0 flex-col gap-1">
+                              <span className="text-base">{enabledMessage[enabled].title}</span>
+                              <span className="text-sm text-muted">{enabledMessage[enabled].subtitle}</span>
+                            </span>
+                          </Switch.Content>
+                        </Switch>
+                      </div>
+                    )}
+
+                    {canManageSiteStatus && (
+                      <div className="flex flex-col gap-2">
+                        <Label className="text-base" isRequired>
+                          사이트 점검
+                        </Label>
+                        <Switch
+                          isSelected={maintenanceEnabled}
+                          onChange={setMaintenanceEnabled}
+                          className="group w-full max-w-lg"
+                        >
+                          <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                            <Switch.Control>
+                              <Switch.Thumb>
+                                <Switch.Icon />
+                              </Switch.Thumb>
+                            </Switch.Control>
+                            <span className="flex min-w-0 flex-col gap-1">
+                              <span className="text-base">{maintenanceEnabledMessage[maintenanceEnabled].title}</span>
+                              <span className="text-sm text-muted">
+                                {maintenanceEnabledMessage[maintenanceEnabled].subtitle}
+                              </span>
+                            </span>
+                          </Switch.Content>
+                        </Switch>
+                      </div>
+                    )}
+
                     <div className="flex flex-col gap-2">
                       <Label className="text-base" isRequired>
-                        사이트 활성/비활성화
+                        대기열 시스템 활성/비활성화
                       </Label>
-                      <Switch isSelected={enabled} onChange={setEnabled} className="group w-full max-w-lg">
-                        <Switch.Content className="flex min-h-20 w-full flex-row-reverse items-center justify-between gap-3 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
+                      <Switch
+                        isSelected={queueEnabled}
+                        onChange={setQueueEnabled}
+                        className="group w-full max-w-lg"
+                        isRequired
+                        validationBehavior="aria"
+                        isDisabled={!canManageSiteStatus}
+                      >
+                        <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
                           <Switch.Control>
                             <Switch.Thumb>
                               <Switch.Icon />
                             </Switch.Thumb>
                           </Switch.Control>
                           <span className="flex min-w-0 flex-col gap-1">
-                            <span className="text-base">{enabledMessage[enabled].title}</span>
-                            <span className="text-sm text-muted">{enabledMessage[enabled].subtitle}</span>
+                            <span className="text-base">{queueEnabledMessage[queueEnabled]?.title}</span>
+                            <span className="text-sm text-muted">{queueEnabledMessage[queueEnabled]?.subtitle}</span>
                           </span>
                         </Switch.Content>
                       </Switch>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col gap-2">
-                    <Label className="text-base" isRequired>
-                      대기열 시스템 활성/비활성화
-                    </Label>
-                    <Switch
-                      isSelected={queueEnabled}
-                      onChange={setQueueEnabled}
-                      className="group w-full max-w-lg"
-                      isRequired
-                      validationBehavior="aria"
-                      isDisabled={!canManageSiteStatus}
-                    >
-                      <Switch.Content className="flex min-h-14 w-full flex-row-reverse items-center justify-between gap-2 rounded-lg border-2 border-default bg-white p-4 hover:bg-neutral-100 group-data-[selected=true]:border-accent">
-                        <Switch.Control>
-                          <Switch.Thumb>
-                            <Switch.Icon />
-                          </Switch.Thumb>
-                        </Switch.Control>
-                        <span className="flex min-w-0 flex-col gap-1">
-                          <span className="text-base">{queueEnabledMessage[queueEnabled]?.title}</span>
-                          <span className="text-sm text-muted">{queueEnabledMessage[queueEnabled]?.subtitle}</span>
-                        </span>
-                      </Switch.Content>
-                    </Switch>
-                    {!canManageSiteStatus && (
-                      <Description className="text-sm text-muted">
-                        대기열 운영 상태는 시스템 설정에서 변경할 수 있습니다.
-                      </Description>
-                    )}
-                  </div>
-                </div>
-              </FormSection>
-              {canEditSiteInfo && (
-                <FormSection title="운영 데이터 동기화">
-                  <div className="flex w-full max-w-2xl flex-col gap-4">
-                    <Description className="text-sm text-muted">
-                      최근 변경한 서버 설정을 즉시 다시 반영합니다. 동기화 중에는 잠시 기다려 주세요.
-                    </Description>
-                    <div className="flex flex-wrap gap-3">
-                      <ConfirmAlertDialog
-                        title="대기열 설정을 동기화할까요?"
-                        message="모든 대기열 설정을 서버에 즉시 다시 반영합니다."
-                        confirmMessage="대기열 동기화"
-                        isOpen={isRoomSyncDialogOpen}
-                        onConfirm={handleSyncRoomData}
-                        onOpenChange={setIsRoomSyncDialogOpen}
-                      >
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          isPending={syncTarget === 'room'}
-                          className="min-h-11"
-                        >
-                          전체 대기열 설정 동기화
-                        </Button>
-                      </ConfirmAlertDialog>
-
-                      <ConfirmAlertDialog
-                        title={isSuperUser ? '전체 사이트 설정을 동기화할까요?' : '사이트 설정을 동기화할까요?'}
-                        message={
-                          isSuperUser
-                            ? '모든 사이트 설정을 서버에 즉시 다시 반영합니다.'
-                            : '현재 사이트 설정을 서버에 즉시 다시 반영합니다.'
-                        }
-                        confirmMessage={isSuperUser ? '전체 사이트 동기화' : '사이트 동기화'}
-                        isOpen={isSiteSyncDialogOpen}
-                        onConfirm={handleSyncSiteData}
-                        onOpenChange={setIsSiteSyncDialogOpen}
-                      >
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          isPending={syncTarget === 'site'}
-                          className="min-h-11"
-                        >
-                          {isSuperUser ? '전체 사이트 설정 동기화' : '사이트 설정 동기화'}
-                        </Button>
-                      </ConfirmAlertDialog>
+                      {!canManageSiteStatus && (
+                        <Description className="text-sm text-muted">
+                          대기열 운영 상태는 시스템 설정에서 변경할 수 있습니다.
+                        </Description>
+                      )}
                     </div>
                   </div>
                 </FormSection>
-              )}
-              {role === 'SUPER' && (
-                <FormSection title="API Key">
-                  <div className="flex max-w-2xl flex-col gap-4">
-                    <Description className="text-sm text-muted">
-                      기존 API Key를 폐기하고 새로운 API Key를 발급합니다.
-                    </Description>
-                    <ConfirmAlertDialog
-                      title="새 API Key를 발급할까요?"
-                      message={
-                        <div className="flex flex-col gap-3">
-                          <p>기존 API Key는 즉시 만료되며 되돌릴 수 없습니다.</p>
-                          <TextField className="w-full" isRequired>
-                            <Label>변경 사유</Label>
-                            <Input
-                              value={keyRotationReason}
-                              maxLength={1000}
-                              onChange={(event) => setKeyRotationReason(event.target.value)}
-                            />
-                          </TextField>
-                        </div>
-                      }
-                      confirmMessage="새 API Key 발급"
-                      isConfirmDisabled={!keyRotationReason.trim()}
-                      isOpen={isKeyRotationConfirmOpen}
-                      onOpenChange={(open) => {
-                        setIsKeyRotationConfirmOpen(open);
-                        if (!open) setKeyRotationReason('');
-                      }}
-                      onConfirm={rotateApiKey}
-                    >
+                {canEditSiteInfo && (
+                  <FormSection title="운영 데이터 동기화">
+                    <div className="flex w-full max-w-2xl flex-col gap-4">
+                      <Description className="text-sm text-muted">
+                        최근 변경한 서버 설정을 즉시 다시 반영합니다. 동기화 중에는 잠시 기다려 주세요.
+                      </Description>
+                      <div className="flex flex-wrap gap-3">
+                        <ConfirmAlertDialog
+                          title="대기열 설정을 동기화할까요?"
+                          message="모든 대기열 설정을 서버에 즉시 다시 반영합니다."
+                          confirmMessage="대기열 동기화"
+                          isOpen={isRoomSyncDialogOpen}
+                          onConfirm={handleSyncRoomData}
+                          onOpenChange={setIsRoomSyncDialogOpen}
+                        >
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            isPending={syncTarget === 'room'}
+                            className="min-h-11"
+                          >
+                            전체 대기열 설정 동기화
+                          </Button>
+                        </ConfirmAlertDialog>
+
+                        <ConfirmAlertDialog
+                          title={isSuperUser ? '전체 사이트 설정을 동기화할까요?' : '사이트 설정을 동기화할까요?'}
+                          message={
+                            isSuperUser
+                              ? '모든 사이트 설정을 서버에 즉시 다시 반영합니다.'
+                              : '현재 사이트 설정을 서버에 즉시 다시 반영합니다.'
+                          }
+                          confirmMessage={isSuperUser ? '전체 사이트 동기화' : '사이트 동기화'}
+                          isOpen={isSiteSyncDialogOpen}
+                          onConfirm={handleSyncSiteData}
+                          onOpenChange={setIsSiteSyncDialogOpen}
+                        >
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            isPending={syncTarget === 'site'}
+                            className="min-h-11"
+                          >
+                            {isSuperUser ? '전체 사이트 설정 동기화' : '사이트 설정 동기화'}
+                          </Button>
+                        </ConfirmAlertDialog>
+                        <ConfirmAlertDialog
+                          title="이 사이트 알람 기준을 동기화할까요?"
+                          message="저장해 둔 기준을 서버에 즉시 다시 반영합니다. 스케줄러는 다음 확인부터 이 값을 사용합니다."
+                          confirmMessage="기준 동기화"
+                          isOpen={isPolicySyncOpen}
+                          onConfirm={handleSyncAlertPolicy}
+                          onOpenChange={setIsPolicySyncOpen}
+                        >
+                          <Button type="button" variant="secondary" className="min-h-11" isPending={isPolicySyncing}>
+                            이 사이트 알람 기준 동기화
+                          </Button>
+                        </ConfirmAlertDialog>
+                        {isSuperUser && (
+                          <ConfirmAlertDialog
+                            title="모든 사이트 알람 기준을 동기화할까요?"
+                            message="모든 사이트의 저장된 알람 기준을 서버에 즉시 다시 반영합니다."
+                            confirmMessage="전체 동기화"
+                            isOpen={isPolicyAllSyncOpen}
+                            onConfirm={handleSyncAllAlertPolicy}
+                            onOpenChange={setIsPolicyAllSyncOpen}
+                          >
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="min-h-11"
+                              isPending={isPolicyAllSyncing}
+                            >
+                              모든 사이트 알람 기준 동기화
+                            </Button>
+                          </ConfirmAlertDialog>
+                        )}
+                      </div>
+                    </div>
+                  </FormSection>
+                )}
+                {role === 'SUPER' && (
+                  <FormSection title="API Key">
+                    <div className="flex max-w-2xl flex-col gap-4">
+                      <Description className="text-sm text-muted">
+                        기존 API Key를 폐기하고 새로운 API Key를 발급합니다.
+                      </Description>
+                      <ConfirmAlertDialog
+                        title="새 API Key를 발급할까요?"
+                        message={
+                          <div className="flex flex-col gap-3">
+                            <p>기존 API Key는 즉시 만료되며 되돌릴 수 없습니다.</p>
+                            <TextField className="w-full" isRequired>
+                              <Label>변경 사유</Label>
+                              <Input
+                                value={keyRotationReason}
+                                maxLength={1000}
+                                onChange={(event) => setKeyRotationReason(event.target.value)}
+                              />
+                            </TextField>
+                          </div>
+                        }
+                        confirmMessage="새 API Key 발급"
+                        isConfirmDisabled={!keyRotationReason.trim()}
+                        isOpen={isKeyRotationConfirmOpen}
+                        onOpenChange={(open) => {
+                          setIsKeyRotationConfirmOpen(open);
+                          if (!open) setKeyRotationReason('');
+                        }}
+                        onConfirm={rotateApiKey}
+                      >
+                        <Button
+                          type="button"
+                          isPending={isKeyRotationPending}
+                          isDisabled={isKeyRotationPending}
+                          className="min-h-11"
+                        >
+                          새 API Key 발급
+                        </Button>
+                      </ConfirmAlertDialog>
+                    </div>
+                  </FormSection>
+                )}
+                <FormSection title="알람 발송 기준">
+                  {isPolicyLoading ? <FieldsSkeleton /> : <AlertPolicyFields policy={policy} setPolicy={setPolicy} />}
+                </FormSection>
+                {role === 'SUPER' && (
+                  <FormSection title="사이트 폐기">
+                    <div className="flex max-w-2xl flex-col gap-4">
+                      <Description className="text-sm text-danger">
+                        사이트를 폐기하면 사이트와 소속 계정 및 대기열이 비활성화됩니다. 이 작업은 복구할 수 없습니다.
+                      </Description>
                       <Button
                         type="button"
-                        isPending={isKeyRotationPending}
-                        isDisabled={isKeyRotationPending}
-                        className="min-h-11"
+                        variant="danger"
+                        className="min-h-11 w-fit"
+                        onPress={() => setIsDeleteOpen(true)}
                       >
-                        새 API Key 발급
+                        <TrashBin className="h-5 w-5" />
+                        사이트 폐기
                       </Button>
-                    </ConfirmAlertDialog>
-                  </div>
-                </FormSection>
-              )}
-              {role === 'SUPER' && (
-                <FormSection title="사이트 폐기">
-                  <div className="flex max-w-2xl flex-col gap-4">
-                    <Description className="text-sm text-danger">
-                      사이트를 폐기하면 사이트와 소속 계정 및 대기열이 비활성화됩니다. 이 기능에서는 복구할 수 없습니다.
-                    </Description>
+                    </div>
+                  </FormSection>
+                )}
+                {canEditSiteInfo && (
+                  <div
+                    className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)]
+                              border-t border-neutral-200 bg-white/95 p-3
+                              pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:bottom-2
+                              sm:mx-0 sm:w-full sm:rounded-xl sm:border-0 sm:p-0"
+                  >
                     <Button
-                      type="button"
-                      variant="danger"
-                      className="min-h-11 w-fit"
-                      onPress={() => setIsDeleteOpen(true)}
+                      type="submit"
+                      className="min-h-12 rounded-2xl sm:min-h-10"
+                      size="lg"
+                      isPending={saving}
+                      isDisabled={!isDirty || saving}
+                      fullWidth
                     >
-                      <TrashBin className="h-5 w-5" />
-                      사이트 폐기
+                      저장하기
                     </Button>
                   </div>
-                </FormSection>
-              )}
-              {canEditSiteInfo && (
-                <div className="sticky bottom-0 z-20 -mx-3 mt-4 w-[calc(100%+1.5rem)] border-t border-neutral-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:bottom-2 sm:mx-0 sm:w-full sm:rounded-xl sm:border-0 sm:p-0">
-                  <Button
-                    type="submit"
-                    className="min-h-12 rounded-2xl sm:min-h-10"
-                    size="lg"
-                    isPending={saving}
-                    isDisabled={Object.keys(changes).length === 0 || saving}
-                    fullWidth
-                  >
-                    저장하기
-                  </Button>
-                </div>
-              )}
-            </Form>
+                )}
+              </Form>
+            </div>
           </>
         )}
       </div>
