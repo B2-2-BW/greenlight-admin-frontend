@@ -12,10 +12,18 @@ import {
   TextField,
 } from '@heroui/react';
 import FormSection from '../common/FormSection.jsx';
+import AlertPolicyFields from '../alert/AlertPolicyFields.jsx';
 import ConfirmAlertDialog from '../ConfirmAlertDialog.jsx';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SiteClient } from '../../api/site/index.js';
 import { RoomClient } from '../../api/room/index.js';
+import { AlertClient } from '../../api/alert/index.js';
+import {
+  alertPolicyPayload,
+  defaultAlertPolicy,
+  isSameAlertPolicy,
+  normalizeAlertPolicy,
+} from '../../util/alertPolicy.js';
 import { useUserStore } from '../../store/user.jsx';
 import { ToastUtil } from '../../util/toastUtil.js';
 import ChangeDiff from '../audit/ChangeDiff.jsx';
@@ -46,6 +54,13 @@ export default function SiteSettingsForm() {
   const [isRoomSyncDialogOpen, setIsRoomSyncDialogOpen] = useState(false);
   const [isSiteSyncDialogOpen, setIsSiteSyncDialogOpen] = useState(false);
   const [syncTarget, setSyncTarget] = useState(null);
+  const [policy, setPolicy] = useState(defaultAlertPolicy);
+  const [savedPolicy, setSavedPolicy] = useState(defaultAlertPolicy);
+  const [isPolicyLoading, setIsPolicyLoading] = useState(true);
+  const [isPolicySyncOpen, setIsPolicySyncOpen] = useState(false);
+  const [isPolicySyncing, setIsPolicySyncing] = useState(false);
+  const [isPolicyAllSyncOpen, setIsPolicyAllSyncOpen] = useState(false);
+  const [isPolicyAllSyncing, setIsPolicyAllSyncing] = useState(false);
 
   const user = useUserStore((state) => state.user);
   const selectedSiteId = useUserStore((state) => state.selectedSiteId);
@@ -72,7 +87,9 @@ export default function SiteSettingsForm() {
         .map((field) => [field, { before: previous[field], after: current[field] }])
     );
   }, [editQueueEnabled, editSiteDescription, editSiteName, siteInfo]);
-  useUnsavedChanges(Object.keys(changes).length > 0);
+  const policyDirty = !isSameAlertPolicy(policy, savedPolicy);
+  const isDirty = Object.keys(changes).length > 0 || policyDirty;
+  useUnsavedChanges(isDirty);
 
   const fetchSiteInfo = useCallback(async () => {
     setIsPageLoading(true);
@@ -96,8 +113,39 @@ export default function SiteSettingsForm() {
   useEffect(() => {
     fetchSiteInfo();
   }, [fetchSiteInfo]);
+  useEffect(() => {
+    if (!siteId) return undefined;
+    let cancelled = false;
+    setIsPolicyLoading(true);
+    AlertClient.getAlertPolicy(siteId)
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        const nextPolicy = normalizeAlertPolicy(data);
+        setPolicy(nextPolicy);
+        setSavedPolicy(nextPolicy);
+      })
+      .catch((error) => {
+        console.error(error);
+        if (!cancelled) {
+          ToastUtil.error('알람 발송 기준', '알람 발송 기준을 불러오지 못했습니다.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsPolicyLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [siteId]);
 
-  const handleSubmit = (e) => {
+  const savePolicy = async () => {
+    const { data } = await AlertClient.updateAlertPolicy(siteId, alertPolicyPayload(policy));
+    const nextPolicy = normalizeAlertPolicy(data);
+    setPolicy(nextPolicy);
+    setSavedPolicy(nextPolicy);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!canManageSite) {
       ToastUtil.error('시스템 설정', '사이트 설정을 변경할 권한이 없습니다.');
@@ -107,8 +155,21 @@ export default function SiteSettingsForm() {
       ToastUtil.error('시스템 설정', '사이트명을 입력해 주세요.');
       return;
     }
-    if (Object.keys(changes).length === 0) {
+    if (Object.keys(changes).length === 0 && !policyDirty) {
       ToastUtil.error('시스템 설정', '변경된 항목이 없습니다.');
+      return;
+    }
+    if (Object.keys(changes).length === 0) {
+      setIsSubmitLoading(true);
+      try {
+        await savePolicy();
+        ToastUtil.success('시스템 설정', '알람 발송 기준을 저장했습니다.');
+      } catch (error) {
+        console.error(error);
+        ToastUtil.error('시스템 설정', error.response?.data?.detail ?? '알람 발송 기준을 저장하지 못했습니다.');
+      } finally {
+        setIsSubmitLoading(false);
+      }
       return;
     }
     setIsSaveConfirmOpen(true);
@@ -126,6 +187,9 @@ export default function SiteSettingsForm() {
       const response = await SiteClient.updateSiteInfo(siteInfo.siteId, payload);
       if (response.status !== 200) {
         throw new Error('failed to create room ' + JSON.stringify(response));
+      }
+      if (policyDirty) {
+        await savePolicy();
       }
       setReason('');
       setIsSaveConfirmOpen(false);
@@ -337,8 +401,77 @@ export default function SiteSettingsForm() {
                       {isSuperUser ? '전체 사이트 설정 동기화' : '사이트 설정 동기화'}
                     </Button>
                   </ConfirmAlertDialog>
+                  <ConfirmAlertDialog
+                    title="이 사이트 알람 기준을 동기화할까요?"
+                    message="저장해 둔 기준을 서버에 즉시 다시 반영합니다. 스케줄러는 다음 확인부터 이 값을 사용합니다."
+                    confirmMessage="기준 동기화"
+                    isOpen={isPolicySyncOpen}
+                    onConfirm={async () => {
+                      setIsPolicySyncing(true);
+                      try {
+                        await AlertClient.reloadAlertPolicyCache(siteId);
+                        ToastUtil.success('운영 데이터 동기화', '이 사이트 알람 기준을 서버에 즉시 반영했습니다.');
+                        setIsPolicySyncOpen(false);
+                      } catch (error) {
+                        console.error(error);
+                        ToastUtil.error(
+                          '운영 데이터 동기화',
+                          error.response?.data?.detail ?? '알람 기준 반영에 실패했습니다.'
+                        );
+                      } finally {
+                        setIsPolicySyncing(false);
+                      }
+                    }}
+                    onOpenChange={setIsPolicySyncOpen}
+                  >
+                    <Button variant="secondary" className="min-h-11" isPending={isPolicySyncing}>
+                      이 사이트 알람 기준 동기화
+                    </Button>
+                  </ConfirmAlertDialog>
+                  {isSuperUser && (
+                    <ConfirmAlertDialog
+                      title="모든 사이트 알람 기준을 동기화할까요?"
+                      message="모든 사이트의 저장된 알람 기준을 서버에 즉시 다시 반영합니다."
+                      confirmMessage="전체 동기화"
+                      isOpen={isPolicyAllSyncOpen}
+                      onConfirm={async () => {
+                        setIsPolicyAllSyncing(true);
+                        try {
+                          await AlertClient.reloadAllAlertPolicyCache();
+                          ToastUtil.success('운영 데이터 동기화', '모든 사이트 알람 기준을 서버에 즉시 반영했습니다.');
+                          setIsPolicyAllSyncOpen(false);
+                        } catch (error) {
+                          console.error(error);
+                          ToastUtil.error(
+                            '운영 데이터 동기화',
+                            error.response?.data?.detail ?? '알람 기준 반영에 실패했습니다.'
+                          );
+                        } finally {
+                          setIsPolicyAllSyncing(false);
+                        }
+                      }}
+                      onOpenChange={setIsPolicyAllSyncOpen}
+                    >
+                      <Button variant="secondary" className="min-h-11" isPending={isPolicyAllSyncing}>
+                        모든 사이트 알람 기준 동기화
+                      </Button>
+                    </ConfirmAlertDialog>
+                  )}
                 </div>
               </div>
+            </FormSection>
+          )}
+
+          {canManageSite && (
+            <FormSection title="알람 발송 기준">
+              {isPolicyLoading ? (
+                <div className="flex flex-col gap-6">
+                  <Skeleton className="h-18 w-full max-w-2xl rounded-lg" />
+                  <Skeleton className="h-18 w-full max-w-2xl rounded-lg" />
+                </div>
+              ) : (
+                <AlertPolicyFields policy={policy} setPolicy={setPolicy} />
+              )}
             </FormSection>
           )}
 
@@ -360,7 +493,7 @@ export default function SiteSettingsForm() {
               type="submit"
               className="min-h-12 rounded-2xl sm:min-h-10"
               isPending={isSubmitLoading}
-              isDisabled={Object.keys(changes).length === 0 || isSubmitLoading}
+              isDisabled={!isDirty || isSubmitLoading}
               fullWidth
             >
               저장하기
