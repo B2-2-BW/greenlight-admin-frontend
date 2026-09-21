@@ -17,9 +17,9 @@ const SUBSCRIPTION_HINT = {
     true: '대기인원이 기준을 넘으면 알림을 받습니다.',
     false: '대기인원 알림을 받지 않습니다.',
   },
-  SITE_DISABLED: {
-    true: '사이트가 비활성화되면 알림을 받습니다.',
-    false: '사이트 비활성화 알림을 받지 않습니다.',
+  QUEUE_DISABLED: {
+    true: '사이트 대기열을 끄거나 켜면 알림을 받습니다.',
+    false: '사이트 대기열 비활성화 알림을 받지 않습니다.',
   },
   SITE_MAINTENANCE: {
     true: '사이트 점검이 시작되거나 끝나면 알림을 받습니다.',
@@ -31,8 +31,8 @@ const SUBSCRIPTION_HINT = {
   },
 };
 
-const REMOVED_ALERTNAMES = new Set(['ACTIVE_USERS', 'VISITOR_SURGE', 'SCHEDULER_FAILED', 'SCHEDULER_STOPPED']);
-const REMOVED_LABELS = new Set(['활성사용자', '접속자 급증', '스케줄러 실패', '스케줄러 중단/기동']);
+const REMOVED_ALERTNAMES = new Set(['ACTIVE_USERS', 'VISITOR_SURGE', 'SCHEDULER_FAILED', 'SCHEDULER_STOPPED', 'SITE_DISABLED']);
+const REMOVED_LABELS = new Set(['활성사용자', '접속자 급증', '스케줄러 실패', '스케줄러 중단/기동', '사이트 비활성화']);
 
 function visibleSubscriptions(items) {
   return (items ?? []).filter((item) => {
