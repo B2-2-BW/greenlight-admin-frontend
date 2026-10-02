@@ -271,6 +271,13 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
                   <Dropdown.Item id="account" className="min-h-11 sm:min-h-9" onPress={() => navigate('/account')}>
                     계정관리
                   </Dropdown.Item>
+                  <Dropdown.Item
+                    id="alert-settings"
+                    className="min-h-11 sm:min-h-9"
+                    onPress={() => navigate('/alert-settings')}
+                  >
+                    알림 설정
+                  </Dropdown.Item>
                 </Dropdown.Section>
                 <Dropdown.Section aria-label="Logout">
                   <Dropdown.Item onPress={handleLogout} id="logout" variant="danger" className="min-h-11 sm:min-h-9">

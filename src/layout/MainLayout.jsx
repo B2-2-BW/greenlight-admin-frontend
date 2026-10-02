@@ -3,6 +3,7 @@ import NavBar from '../component/NavBar.jsx';
 import { Outlet, useLocation } from 'react-router';
 import { useEffect, useState } from 'react';
 import {
+  BellFilledIcon,
   CalendarIcon,
   ClipboardFilledIcon,
   ExternalLinkIcon,
@@ -56,6 +57,12 @@ export default function MainLayout() {
         prependIcon: <SettingsFilledIcon color="#6b7280" />,
         path: '/settings',
         menuId: 15,
+      },
+      {
+        title: '알림 설정',
+        prependIcon: <BellFilledIcon color="#6b7280" />,
+        path: '/alert-settings',
+        menuId: 21,
       },
       ...(canManageUsers
         ? [

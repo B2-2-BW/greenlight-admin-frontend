@@ -5,6 +5,7 @@ const labels = {
   siteDescription: '사이트 설명',
   siteEnabled: '사이트 활성 상태',
   queueEnabled: '대기열 운영 상태',
+  maintenanceEnabled: '사이트 점검 상태',
   apiKeyRotated: 'API Key',
   deleted: '폐기 상태',
   name: '대기열명',

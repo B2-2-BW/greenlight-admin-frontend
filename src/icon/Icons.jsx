@@ -312,6 +312,21 @@ export const ClipboardFilledIcon = ({ color = '#000000', size = 24 }) => {
   );
 };
 
+export const BellFilledIcon = ({ color = '#000000', size = 24 }) => {
+  return (
+    <svg width={`${size}px`} height={`${size}px`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M12 3.25c-3.176 0-5.75 2.351-5.75 5.25v2.586c0 .464-.184.909-.513 1.237l-1.47 1.47A1.75 1.75 0 0 0 5.75 16.75h12.5a1.75 1.75 0 0 0 1.483-2.657l-1.47-1.47a1.75 1.75 0 0 1-.513-1.237V8.5c0-2.899-2.574-5.25-5.75-5.25Z"
+        fill={color}
+      />
+      <path
+        d="M9.75 17.75a2.25 2.25 0 0 0 4.5 0h-4.5Z"
+        fill={color}
+      />
+    </svg>
+  );
+};
+
 export const SquareChartFilledIcon = ({ color = '#000000', size = 24 }) => {
   return (
     <svg width={`${size}px`} height={`${size}px`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
