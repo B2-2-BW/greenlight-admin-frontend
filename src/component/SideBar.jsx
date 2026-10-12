@@ -1,9 +1,32 @@
 import SideBarMenuList from './SideBarMenuList.jsx';
 import SideBarMenuListItem from './SideBarMenuListItem.jsx';
 import { useLocation } from 'react-router';
-import { Separator } from '@heroui/react';
 
-export default function SideBar({ menuLists, currentMenuId, externalMenuList, isOpen = false, onClose }) {
+function SideBarSection({ title, items, pathname, onClose }) {
+  if (!items?.length) return null;
+
+  return (
+    <section>
+      <h2 className="mb-1 px-2 text-xs font-medium text-neutral-400">{title}</h2>
+      <SideBarMenuList>
+        {items.map((menu) => (
+          <SideBarMenuListItem
+            key={menu.menuId}
+            path={menu.path}
+            id={menu.menuId}
+            active={!menu.newtab && (pathname === menu.path || pathname.startsWith(`${menu.path}/`))}
+            title={menu.title}
+            prepend={menu.prependIcon}
+            newtab={menu.newtab}
+            onNavigate={onClose}
+          />
+        ))}
+      </SideBarMenuList>
+    </section>
+  );
+}
+
+export default function SideBar({ sections, pinnedSection, isOpen = false, onClose }) {
   const { pathname } = useLocation();
 
   return (
@@ -26,45 +49,28 @@ export default function SideBar({ menuLists, currentMenuId, externalMenuList, is
         }`}
         aria-label="주요 메뉴"
       >
-        <div className="flex h-full flex-col justify-between overflow-y-auto bg-neutral-50 px-3 py-4 shadow-xl lg:shadow-none">
-          <div>
-            {menuLists.map((menuList, idx) => (
-              <div key={idx}>
-                <SideBarMenuList>
-                  {menuList.map((menu) => (
-                    <SideBarMenuListItem
-                      key={menu.menuId}
-                      path={menu.path}
-                      id={menu.menuId}
-                      active={pathname === menu.path || pathname.startsWith(menu.path + '/')}
-                      title={menu.title}
-                      prepend={menu.prependIcon}
-                      onNavigate={onClose}
-                    />
-                  ))}
-                  <li aria-hidden="true">
-                    <Separator className="my-4 border-t border-neutral-300" />
-                  </li>
-                </SideBarMenuList>
-              </div>
+        <div className="flex h-full flex-col overflow-y-auto bg-neutral-50 px-3 py-4 shadow-xl lg:shadow-none">
+          <div className="flex flex-col gap-6">
+            {sections.map((section) => (
+              <SideBarSection
+                key={section.title}
+                title={section.title}
+                items={section.items}
+                pathname={pathname}
+                onClose={onClose}
+              />
             ))}
           </div>
-          <div>
-            <SideBarMenuList>
-              {externalMenuList.map((menu) => (
-                <SideBarMenuListItem
-                  key={menu.menuId}
-                  id={menu.menuId}
-                  path={menu.path}
-                  active={currentMenuId === menu.menuId}
-                  title={menu.title}
-                  prepend={menu.prependIcon}
-                  newtab
-                  onNavigate={onClose}
-                />
-              ))}
-            </SideBarMenuList>
-          </div>
+          {pinnedSection?.items?.length ? (
+            <div className="mt-auto pt-6">
+              <SideBarSection
+                title={pinnedSection.title}
+                items={pinnedSection.items}
+                pathname={pathname}
+                onClose={onClose}
+              />
+            </div>
+          ) : null}
         </div>
       </aside>
     </>

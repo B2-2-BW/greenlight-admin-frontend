@@ -479,7 +479,7 @@ export default function UserListTable() {
       </Table>
 
       {!isFetching && users.length === 0 && (
-        <div className="py-10 text-center text-sm text-muted">조건에 맞는 사용자가 없습니다.</div>
+        <div className="py-10 text-center text-sm text-muted">검색된 사용자가 없습니다.</div>
       )}
       {pageData.totalPages > 1 && (
         <Pagination className="justify-center" aria-label="사용자 목록 페이지">

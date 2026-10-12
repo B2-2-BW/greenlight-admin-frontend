@@ -345,7 +345,7 @@ export default function AuditLogPage() {
             </Table.Content>
           </Table>
           {!loading && rows.length === 0 && (
-            <p className="p-8 text-center text-sm text-muted">조건에 맞는 데이터가 없습니다.</p>
+            <p className="p-8 text-center text-sm text-muted">검색된 데이터가 없습니다.</p>
           )}
         </div>
         {result.totalPages > 1 && (

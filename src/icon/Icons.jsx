@@ -327,6 +327,43 @@ export const BellFilledIcon = ({ color = '#000000', size = 24 }) => {
   );
 };
 
+export const PauseFilledIcon = ({ color = '#000000', size = 24 }) => {
+  return (
+    <svg width={`${size}px`} height={`${size}px`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="9" fill={color} />
+      <path d="M9.25 8.25h2v7.5h-2v-7.5Zm3.5 0h2v7.5h-2v-7.5Z" fill="#ffffff" />
+    </svg>
+  );
+};
+
+export const DocumentFilledIcon = ({ color = '#000000', size = 24 }) => {
+  return (
+    <svg width={`${size}px`} height={`${size}px`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M6 2.75h7.9L19.75 8.6V19.5A2.25 2.25 0 0 1 17.5 21.75h-11.5A2.25 2.25 0 0 1 3.75 19.5V5A2.25 2.25 0 0 1 6 2.75Z"
+        fill={color}
+      />
+      <path d="M13.75 2.9V8.1h5.2" fill="#ffffff" fillOpacity="0.35" />
+      <path d="M7.75 12.25h8.5v1.5h-8.5v-1.5Zm0 3.25h6.25v1.5H7.75v-1.5Z" fill="#ffffff" />
+    </svg>
+  );
+};
+
+export const ActivityFilledIcon = ({ color = '#000000', size = 24 }) => {
+  return (
+    <svg width={`${size}px`} height={`${size}px`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="18" height="18" rx="5" fill={color} />
+      <path
+        d="M5.5 12h2.8l1.5-3.2 2.5 6.4 1.5-3.2H18.5"
+        stroke="#ffffff"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+};
+
 export const SquareChartFilledIcon = ({ color = '#000000', size = 24 }) => {
   return (
     <svg width={`${size}px`} height={`${size}px`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
