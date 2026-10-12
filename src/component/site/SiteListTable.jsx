@@ -89,14 +89,20 @@ export default function SiteListTable() {
           </SearchField.Group>
         </SearchField>
         <div className="flex items-center justify-between gap-3 sm:justify-end">
-          <p className="text-sm text-muted sm:text-right">{isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}개`}</p>
+          <p className="text-sm text-muted sm:text-right">
+            {isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}개`}
+          </p>
           {isSuper && <Button onPress={() => setIsCreateOpen(true)}>사이트 생성</Button>}
         </div>
       </div>
       <Table>
         <Table.Content aria-label="사이트 목록" onRowAction={(key) => navigate(`/sites/${key}`)}>
           <Table.Header columns={columns}>
-            {(column) => <Table.Column id={column.uid} className={column.className}>{column.name}</Table.Column>}
+            {(column) => (
+              <Table.Column id={column.uid} className={column.className}>
+                {column.name}
+              </Table.Column>
+            )}
           </Table.Header>
           <Table.Body>
             <Table.Collection items={sites}>
@@ -108,7 +114,9 @@ export default function SiteListTable() {
                         <div className="flex flex-col">
                           <span className="font-medium">{site.siteName}</span>
                           <span className="text-xs text-muted">{site.siteId}</span>
-                          <span className="mt-1 text-xs text-muted sm:hidden">{site.siteDescription || '설명 없음'}</span>
+                          <span className="mt-1 text-xs text-muted sm:hidden">
+                            {site.siteDescription || '설명 없음'}
+                          </span>
                         </div>
                       ) : column.uid === 'description' ? (
                         site.siteDescription || '-'
@@ -126,14 +134,15 @@ export default function SiteListTable() {
         </Table.Content>
       </Table>
       {!isFetching && sites.length === 0 && (
-        <div className="py-10 text-center text-sm text-muted">조건에 맞는 사이트가 없습니다.</div>
+        <div className="py-10 text-center text-sm text-muted">검색된 사이트가 없습니다.</div>
       )}
       {pageData.totalPages > 1 && (
         <Pagination className="justify-center" aria-label="사이트 목록 페이지">
           <Pagination.Summary className="hidden sm:block">{`${(pageData.page - 1) * pageData.size + 1}-${Math.min(pageData.page * pageData.size, pageData.totalElements)} / ${pageData.totalElements}개`}</Pagination.Summary>
           <Pagination.Content>
             <Pagination.Item>
-              <Pagination.Previous aria-label="이전 페이지"
+              <Pagination.Previous
+                aria-label="이전 페이지"
                 isDisabled={isFetching || pageData.page === 1}
                 onPress={() => setPage((value) => Math.max(1, value - 1))}
               >
@@ -158,11 +167,13 @@ export default function SiteListTable() {
               )
             )}
             <Pagination.Item>
-              <Pagination.Next aria-label="다음 페이지"
+              <Pagination.Next
+                aria-label="다음 페이지"
                 isDisabled={isFetching || pageData.page === pageData.totalPages}
                 onPress={() => setPage((value) => Math.min(pageData.totalPages, value + 1))}
               >
-                <span className="hidden sm:inline">다음 </span><Pagination.NextIcon />
+                <span className="hidden sm:inline">다음 </span>
+                <Pagination.NextIcon />
               </Pagination.Next>
             </Pagination.Item>
           </Pagination.Content>
@@ -183,13 +194,17 @@ export default function SiteListTable() {
           <Modal.Container size="sm">
             <Modal.Dialog>
               <Modal.CloseTrigger />
-              <Modal.Header><Modal.Heading>사이트 API Key</Modal.Heading></Modal.Header>
+              <Modal.Header>
+                <Modal.Heading>사이트 API Key</Modal.Heading>
+              </Modal.Header>
               <Modal.Body className="flex flex-col gap-3">
                 <p className="text-sm text-danger">이 화면을 닫으면 API Key를 다시 확인할 수 없습니다.</p>
                 <Input isReadOnly value={createdSite?.apiKey ?? ''} className="font-mono text-sm" />
               </Modal.Body>
               <Modal.Footer className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <Button slot="close" variant="tertiary" className="w-full sm:w-auto">닫기</Button>
+                <Button slot="close" variant="tertiary" className="w-full sm:w-auto">
+                  닫기
+                </Button>
                 <Button
                   className="w-full sm:w-auto"
                   onPress={async () => {

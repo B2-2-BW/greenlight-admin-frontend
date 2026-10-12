@@ -4,12 +4,12 @@ import RoomStatusChip from './RoomStatusChip.jsx';
 import { RoomClient } from '../../api/room/index.js';
 
 const columns = [
-  { name: 'ID', uid: 'roomId' },
+  { name: 'ID', uid: 'roomId', className: 'hidden md:table-cell' },
   { name: '대기열', uid: 'name' },
-  { name: '환경', uid: 'roomEnvironment' },
+  { name: '환경', uid: 'roomEnvironment', className: 'hidden md:table-cell' },
   { name: '상태', uid: 'enabled' },
-  { name: '최대 사용자', uid: 'capacity' },
-  { name: '초당 진입', uid: 'maxTrafficPerSecond' },
+  { name: '최대 사용자', uid: 'capacity', className: 'hidden md:table-cell' },
+  { name: '초당 진입', uid: 'maxTrafficPerSecond', className: 'hidden md:table-cell' },
 ];
 
 const environmentLabels = { LIVE: '운영', DEV: '개발' };
@@ -94,79 +94,75 @@ export default function RoomListTable({ onPress, filters }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted">{isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}개`}</p>
-      <div className="hidden md:block">
-        {!isLoading && rooms.length === 0 ? (
-          <div className="flex min-h-40 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-4 text-center text-sm text-muted">
-            조건에 맞는 대기열이 없습니다.
-          </div>
-        ) : (
-          <Table aria-label="대기열 목록">
-            <Table.Content onRowAction={onPress}>
-              <Table.Header columns={columns}>
-                {(column) => (
-                  <Table.Column id={column.uid} isRowHeader={column.uid === 'roomId'}>
-                    {column.name}
-                  </Table.Column>
-                )}
-              </Table.Header>
-              <Table.Body>
-                {isLoading ? (
-                  <Table.LoadMore isLoading>
-                    <Table.LoadMoreContent>
-                      <Spinner color="accent" size="md" />
-                    </Table.LoadMoreContent>
-                  </Table.LoadMore>
-                ) : (
-                  <Table.Collection items={rooms}>
-                    {(room) => (
-                      <Table.Row id={room.roomId} className="cursor-pointer">
-                        {columns.map((column) => (
-                          <Table.Cell key={column.uid}>{renderCell(room, column.uid)}</Table.Cell>
-                        ))}
-                      </Table.Row>
-                    )}
-                  </Table.Collection>
-                )}
-              </Table.Body>
-            </Table.Content>
-          </Table>
-        )}
-      </div>
-      <div className="flex flex-col gap-3 md:hidden" aria-label="대기열 목록">
-        {isLoading && (
-          <div className="flex min-h-40 items-center justify-center rounded-2xl border border-neutral-200 bg-white">
-            <Spinner color="accent" size="md" />
-          </div>
-        )}
-        {!isLoading &&
-          rooms.map((room) => (
-            <button
-              key={room.roomId}
-              type="button"
-              className="min-h-28 w-full rounded-2xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition-colors active:bg-neutral-100"
-              onClick={() => onPress(room.roomId)}
-            >
-              <span className="flex min-w-0 items-start justify-between gap-3">
-                <span className="min-w-0">
-                  <span className="block truncate text-base font-semibold">{room.name}</span>
-                  <span className="mt-0.5 block truncate text-xs text-muted">{room.roomId}</span>
-                </span>
-                <RoomStatusChip enabled={room.enabled} />
-              </span>
-              <span className="mt-3 block truncate text-sm text-muted">{room.description || '설명 없음'}</span>
-              <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                <span>{environmentLabels[room.roomEnvironment] ?? room.roomEnvironment}</span>
-                <span>최대 {room.capacity ?? '-'}명</span>
-                <span>초당 {room.maxTrafficPerSecond ?? 0}명</span>
-              </span>
-            </button>
-          ))}
+      <div className={!isLoading && rooms.length === 0 ? undefined : 'hidden md:block'}>
+        <Table aria-label="대기열 목록">
+          <Table.Content onRowAction={onPress}>
+            <Table.Header columns={columns}>
+              {(column) => (
+                <Table.Column id={column.uid} className={column.className} isRowHeader={column.uid === 'roomId'}>
+                  {column.name}
+                </Table.Column>
+              )}
+            </Table.Header>
+            <Table.Body>
+              {isLoading ? (
+                <Table.LoadMore isLoading>
+                  <Table.LoadMoreContent>
+                    <Spinner color="accent" size="md" />
+                  </Table.LoadMoreContent>
+                </Table.LoadMore>
+              ) : (
+                <Table.Collection items={rooms}>
+                  {(room) => (
+                    <Table.Row id={room.roomId} className="cursor-pointer">
+                      {columns.map((column) => (
+                        <Table.Cell key={column.uid} className={column.className}>
+                          {renderCell(room, column.uid)}
+                        </Table.Cell>
+                      ))}
+                    </Table.Row>
+                  )}
+                </Table.Collection>
+              )}
+            </Table.Body>
+          </Table.Content>
+        </Table>
         {!isLoading && rooms.length === 0 && (
-          <div className="flex min-h-40 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-4 text-center text-sm text-muted">
-            조건에 맞는 대기열이 없습니다.
-          </div>
+          <div className="py-10 text-center text-sm text-muted">검색된 대기열이 없습니다.</div>
         )}
       </div>
+      {(isLoading || rooms.length > 0) && (
+        <div className="flex flex-col gap-3 md:hidden" aria-label="대기열 목록">
+          {isLoading && (
+            <div className="flex min-h-40 items-center justify-center rounded-2xl border border-neutral-200 bg-white">
+              <Spinner color="accent" size="md" />
+            </div>
+          )}
+          {!isLoading &&
+            rooms.map((room) => (
+              <button
+                key={room.roomId}
+                type="button"
+                className="min-h-28 w-full rounded-2xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition-colors active:bg-neutral-100"
+                onClick={() => onPress(room.roomId)}
+              >
+                <span className="flex min-w-0 items-start justify-between gap-3">
+                  <span className="min-w-0">
+                    <span className="block truncate text-base font-semibold">{room.name}</span>
+                    <span className="mt-0.5 block truncate text-xs text-muted">{room.roomId}</span>
+                  </span>
+                  <RoomStatusChip enabled={room.enabled} />
+                </span>
+                <span className="mt-3 block truncate text-sm text-muted">{room.description || '설명 없음'}</span>
+                <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <span>{environmentLabels[room.roomEnvironment] ?? room.roomEnvironment}</span>
+                  <span>최대 {room.capacity ?? '-'}명</span>
+                  <span>초당 {room.maxTrafficPerSecond ?? 0}명</span>
+                </span>
+              </button>
+            ))}
+        </div>
+      )}
       {pageData.totalPages > 1 && (
         <>
           <Pagination className="hidden justify-center md:flex" aria-label="대기열 목록 페이지">
