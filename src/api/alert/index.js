@@ -18,6 +18,47 @@ const reloadAlertPolicyCache = (siteId) => commonAxiosInstance.post(`/sites/${si
 
 const reloadAllAlertPolicyCache = () => commonAxiosInstance.post('/alert-policy/cache');
 
+const getAlertLogs = ({
+  page = 1,
+  size = 10,
+  status,
+  systemCode,
+  siteId,
+  from,
+  to,
+  signal,
+} = {}) =>
+  commonAxiosInstance.get('/alert-logs', {
+    params: {
+      page,
+      size,
+      platform: true,
+      ...(status ? { status } : {}),
+      ...(systemCode ? { systemCode } : {}),
+      ...(siteId ? { siteId } : {}),
+      ...(from ? { from } : {}),
+      ...(to ? { to } : {}),
+    },
+    signal,
+  });
+
+const getAlertSilences = ({ page = 1, size = 10, systemCode, status, signal } = {}) =>
+  commonAxiosInstance.get('/alert-silences', {
+    params: {
+      page,
+      size,
+      ...(systemCode ? { systemCode } : {}),
+      ...(status ? { status } : {}),
+    },
+    signal,
+  });
+
+const createAlertSilence = (body) => commonAxiosInstance.post('/alert-silences', body);
+
+const updateAlertSilence = (silenceId, body) => commonAxiosInstance.put(`/alert-silences/${silenceId}`, body);
+
+const cancelAlertSilence = (silenceId) => commonAxiosInstance.post(`/alert-silences/${silenceId}/cancel`);
+
 export const AlertClient = {
   getMySubscriptions,
   updateMySubscriptions,
@@ -27,4 +68,9 @@ export const AlertClient = {
   updateAlertPolicy,
   reloadAlertPolicyCache,
   reloadAllAlertPolicyCache,
+  getAlertLogs,
+  getAlertSilences,
+  createAlertSilence,
+  updateAlertSilence,
+  cancelAlertSilence,
 };
