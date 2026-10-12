@@ -13,10 +13,8 @@ import {
 } from '@heroui/react';
 import FormSection from '../common/FormSection.jsx';
 import AlertPolicyFields from '../alert/AlertPolicyFields.jsx';
-import ConfirmAlertDialog from '../ConfirmAlertDialog.jsx';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SiteClient } from '../../api/site/index.js';
-import { RoomClient } from '../../api/room/index.js';
 import { AlertClient } from '../../api/alert/index.js';
 import {
   alertPolicyPayload,
@@ -51,24 +49,15 @@ export default function SiteSettingsForm() {
   const [editQueueEnabled, setEditQueueEnabled] = useState(true);
   const [reason, setReason] = useState('');
   const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
-  const [isRoomSyncDialogOpen, setIsRoomSyncDialogOpen] = useState(false);
-  const [isSiteSyncDialogOpen, setIsSiteSyncDialogOpen] = useState(false);
-  const [syncTarget, setSyncTarget] = useState(null);
   const [policy, setPolicy] = useState(defaultAlertPolicy);
   const [savedPolicy, setSavedPolicy] = useState(defaultAlertPolicy);
   const [isPolicyLoading, setIsPolicyLoading] = useState(true);
-  const [isPolicySyncOpen, setIsPolicySyncOpen] = useState(false);
-  const [isPolicySyncing, setIsPolicySyncing] = useState(false);
-  const [isPolicyAllSyncOpen, setIsPolicyAllSyncOpen] = useState(false);
-  const [isPolicyAllSyncing, setIsPolicyAllSyncing] = useState(false);
 
   const user = useUserStore((state) => state.user);
   const selectedSiteId = useUserStore((state) => state.selectedSiteId);
   const userRole = user?.role ?? user?.userRole;
   const siteId = getEffectiveSiteId(user, selectedSiteId);
-  const canSyncRoomData = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
   const canManageSite = userRole === 'SITE_ADMIN' || userRole === 'SUPER';
-  const isSuperUser = userRole === 'SUPER';
   const changes = useMemo(() => {
     if (!siteInfo?.siteId) return {};
     const current = {
@@ -148,25 +137,25 @@ export default function SiteSettingsForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!canManageSite) {
-      ToastUtil.error('시스템 설정', '사이트 설정을 변경할 권한이 없습니다.');
+      ToastUtil.error('사이트 설정', '사이트 설정을 변경할 권한이 없습니다.');
       return;
     }
     if (!editSiteName.trim()) {
-      ToastUtil.error('시스템 설정', '사이트명을 입력해 주세요.');
+      ToastUtil.error('사이트 설정', '사이트명을 입력해 주세요.');
       return;
     }
     if (Object.keys(changes).length === 0 && !policyDirty) {
-      ToastUtil.error('시스템 설정', '변경된 항목이 없습니다.');
+      ToastUtil.error('사이트 설정', '변경된 항목이 없습니다.');
       return;
     }
     if (Object.keys(changes).length === 0) {
       setIsSubmitLoading(true);
       try {
         await savePolicy();
-        ToastUtil.success('시스템 설정', '알림 발송 기준을 저장했습니다.');
+        ToastUtil.success('사이트 설정', '알림 발송 기준을 저장했습니다.');
       } catch (error) {
         console.error(error);
-        ToastUtil.error('시스템 설정', error.response?.data?.detail ?? '알림 발송 기준을 저장하지 못했습니다.');
+        ToastUtil.error('사이트 설정', error.response?.data?.detail ?? '알림 발송 기준을 저장하지 못했습니다.');
       } finally {
         setIsSubmitLoading(false);
       }
@@ -194,10 +183,10 @@ export default function SiteSettingsForm() {
       setReason('');
       setIsSaveConfirmOpen(false);
       await fetchSiteInfo();
-      ToastUtil.success('시스템 설정', '성공적으로 저장했습니다.');
+      ToastUtil.success('사이트 설정', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error.response);
-      ToastUtil.error('시스템 설정', error.response?.data?.detail ?? '저장에 실패했습니다.');
+      ToastUtil.error('사이트 설정', error.response?.data?.detail ?? '저장에 실패했습니다.');
     } finally {
       setIsSubmitLoading(false);
     }
@@ -206,45 +195,6 @@ export default function SiteSettingsForm() {
   const handleSaveConfirmOpenChange = (open) => {
     setIsSaveConfirmOpen(open);
     if (!open && !isSubmitLoading) setReason('');
-  };
-
-  const handleSyncRoomData = async () => {
-    if (!canSyncRoomData) {
-      ToastUtil.error('운영 데이터 동기화', '대기열 설정을 동기화할 권한이 없습니다.');
-      return;
-    }
-    setSyncTarget('room');
-    try {
-      await RoomClient.syncRoomData();
-      ToastUtil.success('운영 데이터 동기화', '대기열 설정을 서버에 즉시 반영했습니다.');
-      setIsRoomSyncDialogOpen(false);
-    } catch (error) {
-      console.error(error);
-      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '대기열 설정 반영에 실패했습니다.');
-    } finally {
-      setSyncTarget(null);
-    }
-  };
-
-  const handleSyncAllSiteData = async () => {
-    if (!canSyncRoomData) {
-      ToastUtil.error('운영 데이터 동기화', '사이트 설정을 동기화할 권한이 없습니다.');
-      return;
-    }
-    setSyncTarget('site');
-    try {
-      await SiteClient.syncAllSiteData();
-      ToastUtil.success(
-        '운영 데이터 동기화',
-        isSuperUser ? '모든 사이트 설정을 서버에 즉시 반영했습니다.' : '현재 사이트 설정을 서버에 즉시 반영했습니다.'
-      );
-      setIsSiteSyncDialogOpen(false);
-    } catch (error) {
-      console.error(error);
-      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '사이트 설정 반영에 실패했습니다.');
-    } finally {
-      setSyncTarget(null);
-    }
   };
 
   return (
@@ -378,103 +328,6 @@ export default function SiteSettingsForm() {
             </FormSection>
           )}
 
-          {canSyncRoomData && (
-            <FormSection title="운영 데이터 동기화">
-              <div className="flex flex-col w-full max-w-lg gap-4">
-                <Description className="text-sm text-muted">
-                  최근 변경한 서버 설정을 즉시 다시 반영합니다. 동기화 중에는 잠시 기다려 주세요.
-                </Description>
-                <div className="flex flex-wrap gap-3">
-                  <ConfirmAlertDialog
-                    title="대기열 설정을 동기화할까요?"
-                    message="모든 대기열 설정을 서버에 즉시 다시 반영합니다."
-                    confirmMessage="대기열 동기화"
-                    isOpen={isRoomSyncDialogOpen}
-                    onConfirm={handleSyncRoomData}
-                    onOpenChange={setIsRoomSyncDialogOpen}
-                  >
-                    <Button variant="secondary" isPending={syncTarget === 'room'} className="min-h-11">
-                      전체 대기열 설정 동기화
-                    </Button>
-                  </ConfirmAlertDialog>
-
-                  <ConfirmAlertDialog
-                    title={isSuperUser ? '전체 사이트 설정을 동기화할까요?' : '사이트 설정을 동기화할까요?'}
-                    message={
-                      isSuperUser
-                        ? '모든 사이트 설정을 서버에 즉시 다시 반영합니다.'
-                        : '현재 사이트 설정을 서버에 즉시 다시 반영합니다.'
-                    }
-                    confirmMessage={isSuperUser ? '전체 사이트 동기화' : '사이트 동기화'}
-                    isOpen={isSiteSyncDialogOpen}
-                    onConfirm={handleSyncAllSiteData}
-                    onOpenChange={setIsSiteSyncDialogOpen}
-                  >
-                    <Button variant="secondary" isPending={syncTarget === 'site'} className="min-h-11">
-                      {isSuperUser ? '전체 사이트 설정 동기화' : '사이트 설정 동기화'}
-                    </Button>
-                  </ConfirmAlertDialog>
-                  <ConfirmAlertDialog
-                    title="이 사이트 알림 기준을 동기화할까요?"
-                    message="저장해 둔 기준을 서버에 즉시 다시 반영합니다. 스케줄러는 다음 확인부터 이 값을 사용합니다."
-                    confirmMessage="기준 동기화"
-                    isOpen={isPolicySyncOpen}
-                    onConfirm={async () => {
-                      setIsPolicySyncing(true);
-                      try {
-                        await AlertClient.reloadAlertPolicyCache(siteId);
-                        ToastUtil.success('운영 데이터 동기화', '이 사이트 알림 기준을 서버에 즉시 반영했습니다.');
-                        setIsPolicySyncOpen(false);
-                      } catch (error) {
-                        console.error(error);
-                        ToastUtil.error(
-                          '운영 데이터 동기화',
-                          error.response?.data?.detail ?? '알림 기준 반영에 실패했습니다.'
-                        );
-                      } finally {
-                        setIsPolicySyncing(false);
-                      }
-                    }}
-                    onOpenChange={setIsPolicySyncOpen}
-                  >
-                    <Button variant="secondary" className="min-h-11" isPending={isPolicySyncing}>
-                      이 사이트 알림 기준 동기화
-                    </Button>
-                  </ConfirmAlertDialog>
-                  {isSuperUser && (
-                    <ConfirmAlertDialog
-                      title="모든 사이트 알림 기준을 동기화할까요?"
-                      message="모든 사이트의 저장된 알림 기준을 서버에 즉시 다시 반영합니다."
-                      confirmMessage="전체 동기화"
-                      isOpen={isPolicyAllSyncOpen}
-                      onConfirm={async () => {
-                        setIsPolicyAllSyncing(true);
-                        try {
-                          await AlertClient.reloadAllAlertPolicyCache();
-                          ToastUtil.success('운영 데이터 동기화', '모든 사이트 알림 기준을 서버에 즉시 반영했습니다.');
-                          setIsPolicyAllSyncOpen(false);
-                        } catch (error) {
-                          console.error(error);
-                          ToastUtil.error(
-                            '운영 데이터 동기화',
-                            error.response?.data?.detail ?? '알림 기준 반영에 실패했습니다.'
-                          );
-                        } finally {
-                          setIsPolicyAllSyncing(false);
-                        }
-                      }}
-                      onOpenChange={setIsPolicyAllSyncOpen}
-                    >
-                      <Button variant="secondary" className="min-h-11" isPending={isPolicyAllSyncing}>
-                        모든 사이트 알림 기준 동기화
-                      </Button>
-                    </ConfirmAlertDialog>
-                  )}
-                </div>
-              </div>
-            </FormSection>
-          )}
-
           {/*<SectionTitle title="활성사용자/세션 유지시간">*/}
           {/*  <Skeleton className="rounded-lg w-full" isLoaded={!isPageLoading}>*/}
           {/*    <div className="flex flex-col w-full gap-6">*/}
@@ -508,7 +361,7 @@ export default function SiteSettingsForm() {
             <Modal.Dialog className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
               <Modal.CloseTrigger />
               <Modal.Header>
-                <Modal.Heading>시스템 설정 변경 확인</Modal.Heading>
+                <Modal.Heading>사이트 설정 변경 확인</Modal.Heading>
               </Modal.Header>
               <Modal.Body className="flex flex-col gap-4">
                 <ChangeDiff changes={changes} />
