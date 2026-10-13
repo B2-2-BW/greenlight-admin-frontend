@@ -37,7 +37,7 @@ function MetricFields({ title, compare, threshold, onCompareChange, onThresholdC
         </NumberField>
       </div>
       <Description className="text-sm text-muted">
-        {isPercent ? '해당 대기열 수용인원 대비 비율입니다.' : '이 인원 이상이면 알림을 보냅니다.'}
+        {isPercent ? '설정된 비율을 초과할 때 알림을 발송합니다.' : '설정된 인원을 초과할 때 알림을 발송합니다.'}
       </Description>
     </div>
   );
@@ -64,7 +64,7 @@ export default function AlertPolicyFields({ policy, setPolicy }) {
           onChange={(event) => update({ forTicks: Number(event.target.value) })}
         />
         <Description className="text-sm text-muted">
-          3초마다 한 번 확인합니다. 2면 약 6초 동안 기준을 넘어야 첫 알림을 보냅니다.
+          설정된 횟수만큼 연속으로 기준을 초과할 때 알림을 발송합니다
         </Description>
       </TextField>
       <TextField className="w-full">

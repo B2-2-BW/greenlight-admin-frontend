@@ -23,6 +23,8 @@ import SiteManagementPage from './page/SiteManagementPage.jsx';
 import SiteDetailPage from './page/SiteDetailPage.jsx';
 import QueueStatisticsSkeleton from './component/QueueStatisticsSkeleton.jsx';
 import AuditLogPage from './page/AuditLogPage.jsx';
+import AlertLogPage from './page/AlertLogPage.jsx';
+import AlertSilencePage from './page/AlertSilencePage.jsx';
 
 const QueueStatisticsPage = lazy(() => import('./page/QueueStatisticsPage.jsx'));
 
@@ -112,6 +114,15 @@ function App() {
           />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/alert-settings" element={<AlertSettingsPage />} />
+          <Route
+            path="/alert-logs"
+            element={(
+              <SuperRoute>
+                <AlertLogPage />
+              </SuperRoute>
+            )}
+          />
+          <Route path="/alert-silences" element={<AlertSilencePage />} />
           <Route path="/notfound" element={<NotFoundPage />} />
           <Route path="/forbidden" element={<BadRequestPage />} />
           <Route path="/opps" element={<SomethingWentWrongPage />} />

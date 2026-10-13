@@ -168,10 +168,10 @@ export function DashboardFilterBar() {
       }
       await fetchRoomList();
       setDisableReason('');
-      ToastUtil.success('시스템 설정', '성공적으로 저장했습니다.');
+      ToastUtil.success('사이트 설정', '성공적으로 저장했습니다.');
     } catch (error) {
       console.error(error.response);
-      ToastUtil.error('시스템 설정', error.response?.data?.detail ?? '저장에 실패했습니다.');
+      ToastUtil.error('사이트 설정', error.response?.data?.detail ?? '저장에 실패했습니다.');
     } finally {
       // TODO loading..?
     }

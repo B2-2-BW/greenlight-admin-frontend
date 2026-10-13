@@ -15,7 +15,6 @@ import { ArrowLeft, TrashBin } from '@gravity-ui/icons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { SiteClient } from '../api/site/index.js';
-import { RoomClient } from '../api/room/index.js';
 import { AlertClient } from '../api/alert/index.js';
 import FormSection from '../component/common/FormSection.jsx';
 import AlertPolicyFields from '../component/alert/AlertPolicyFields.jsx';
@@ -98,16 +97,9 @@ export default function SiteDetailPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [deleteReason, setDeleteReason] = useState('');
   const [isDeletePending, setIsDeletePending] = useState(false);
-  const [isRoomSyncDialogOpen, setIsRoomSyncDialogOpen] = useState(false);
-  const [isSiteSyncDialogOpen, setIsSiteSyncDialogOpen] = useState(false);
-  const [syncTarget, setSyncTarget] = useState(null);
   const [policy, setPolicy] = useState(defaultAlertPolicy);
   const [savedPolicy, setSavedPolicy] = useState(defaultAlertPolicy);
   const [isPolicyLoading, setIsPolicyLoading] = useState(true);
-  const [isPolicySyncOpen, setIsPolicySyncOpen] = useState(false);
-  const [isPolicySyncing, setIsPolicySyncing] = useState(false);
-  const [isPolicyAllSyncOpen, setIsPolicyAllSyncOpen] = useState(false);
-  const [isPolicyAllSyncing, setIsPolicyAllSyncing] = useState(false);
   const load = useCallback(async () => {
     try {
       const { data } = await SiteClient.getManagedSite(siteId);
@@ -292,61 +284,6 @@ export default function SiteDetailPage() {
       setIsDeletePending(false);
     }
   };
-  const handleSyncRoomData = async () => {
-    setSyncTarget('room');
-    try {
-      await RoomClient.syncRoomData();
-      ToastUtil.success('운영 데이터 동기화', '대기열 설정을 서버에 즉시 반영했습니다.');
-      setIsRoomSyncDialogOpen(false);
-    } catch (error) {
-      console.error(error);
-      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '대기열 설정 반영에 실패했습니다.');
-    } finally {
-      setSyncTarget(null);
-    }
-  };
-  const handleSyncSiteData = async () => {
-    setSyncTarget('site');
-    try {
-      await SiteClient.syncAllSiteData();
-      ToastUtil.success(
-        '운영 데이터 동기화',
-        isSuperUser ? '모든 사이트 설정을 서버에 즉시 반영했습니다.' : '현재 사이트 설정을 서버에 즉시 반영했습니다.'
-      );
-      setIsSiteSyncDialogOpen(false);
-    } catch (error) {
-      console.error(error);
-      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '사이트 설정 반영에 실패했습니다.');
-    } finally {
-      setSyncTarget(null);
-    }
-  };
-  const handleSyncAlertPolicy = async () => {
-    setIsPolicySyncing(true);
-    try {
-      await AlertClient.reloadAlertPolicyCache(siteId);
-      ToastUtil.success('운영 데이터 동기화', '이 사이트 알림 기준을 서버에 즉시 반영했습니다.');
-      setIsPolicySyncOpen(false);
-    } catch (error) {
-      console.error(error);
-      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '알림 기준 반영에 실패했습니다.');
-    } finally {
-      setIsPolicySyncing(false);
-    }
-  };
-  const handleSyncAllAlertPolicy = async () => {
-    setIsPolicyAllSyncing(true);
-    try {
-      await AlertClient.reloadAllAlertPolicyCache();
-      ToastUtil.success('운영 데이터 동기화', '모든 사이트 알림 기준을 서버에 즉시 반영했습니다.');
-      setIsPolicyAllSyncOpen(false);
-    } catch (error) {
-      console.error(error);
-      ToastUtil.error('운영 데이터 동기화', error.response?.data?.detail ?? '알림 기준 반영에 실패했습니다.');
-    } finally {
-      setIsPolicyAllSyncing(false);
-    }
-  };
   return (
     <div className="w-full bg-neutral-50">
       <div className="max-w-[1080px] p-4 sm:p-6">
@@ -482,7 +419,7 @@ export default function SiteDetailPage() {
                       </Switch>
                       {!canManageSiteStatus && (
                         <Description className="text-sm text-muted">
-                          대기열 운영 상태는 시스템 설정에서 변경할 수 있습니다.
+                          대기열 운영 상태는 사이트 설정에서 변경할 수 있습니다.
                         </Description>
                       )}
                     </div>
@@ -492,88 +429,6 @@ export default function SiteDetailPage() {
                 <FormSection title="알림 발송 기준">
                   {isPolicyLoading ? <FieldsSkeleton /> : <AlertPolicyFields policy={policy} setPolicy={setPolicy} />}
                 </FormSection>
-
-                {canEditSiteInfo && (
-                  <FormSection title="운영 데이터 동기화">
-                    <div className="flex w-full max-w-2xl flex-col gap-4">
-                      <Description className="text-sm text-muted">
-                        최근 변경한 서버 설정을 즉시 다시 반영합니다. 동기화 중에는 잠시 기다려 주세요.
-                      </Description>
-                      <div className="flex flex-wrap gap-3">
-                        <ConfirmAlertDialog
-                          title="대기열 설정을 동기화할까요?"
-                          message="모든 대기열 설정을 서버에 즉시 다시 반영합니다."
-                          confirmMessage="대기열 동기화"
-                          isOpen={isRoomSyncDialogOpen}
-                          onConfirm={handleSyncRoomData}
-                          onOpenChange={setIsRoomSyncDialogOpen}
-                        >
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            isPending={syncTarget === 'room'}
-                            className="min-h-11"
-                          >
-                            전체 대기열 설정 동기화
-                          </Button>
-                        </ConfirmAlertDialog>
-
-                        <ConfirmAlertDialog
-                          title={isSuperUser ? '전체 사이트 설정을 동기화할까요?' : '사이트 설정을 동기화할까요?'}
-                          message={
-                            isSuperUser
-                              ? '모든 사이트 설정을 서버에 즉시 다시 반영합니다.'
-                              : '현재 사이트 설정을 서버에 즉시 다시 반영합니다.'
-                          }
-                          confirmMessage={isSuperUser ? '전체 사이트 동기화' : '사이트 동기화'}
-                          isOpen={isSiteSyncDialogOpen}
-                          onConfirm={handleSyncSiteData}
-                          onOpenChange={setIsSiteSyncDialogOpen}
-                        >
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            isPending={syncTarget === 'site'}
-                            className="min-h-11"
-                          >
-                            {isSuperUser ? '전체 사이트 설정 동기화' : '사이트 설정 동기화'}
-                          </Button>
-                        </ConfirmAlertDialog>
-                        <ConfirmAlertDialog
-                          title="이 사이트 알림 기준을 동기화할까요?"
-                          message="저장해 둔 기준을 서버에 즉시 다시 반영합니다. 스케줄러는 다음 확인부터 이 값을 사용합니다."
-                          confirmMessage="기준 동기화"
-                          isOpen={isPolicySyncOpen}
-                          onConfirm={handleSyncAlertPolicy}
-                          onOpenChange={setIsPolicySyncOpen}
-                        >
-                          <Button type="button" variant="secondary" className="min-h-11" isPending={isPolicySyncing}>
-                            이 사이트 알림 기준 동기화
-                          </Button>
-                        </ConfirmAlertDialog>
-                        {isSuperUser && (
-                          <ConfirmAlertDialog
-                            title="모든 사이트 알림 기준을 동기화할까요?"
-                            message="모든 사이트의 저장된 알림 기준을 서버에 즉시 다시 반영합니다."
-                            confirmMessage="전체 동기화"
-                            isOpen={isPolicyAllSyncOpen}
-                            onConfirm={handleSyncAllAlertPolicy}
-                            onOpenChange={setIsPolicyAllSyncOpen}
-                          >
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="min-h-11"
-                              isPending={isPolicyAllSyncing}
-                            >
-                              모든 사이트 알림 기준 동기화
-                            </Button>
-                          </ConfirmAlertDialog>
-                        )}
-                      </div>
-                    </div>
-                  </FormSection>
-                )}
 
                 {role === 'SUPER' && (
                   <FormSection title="API Key">
