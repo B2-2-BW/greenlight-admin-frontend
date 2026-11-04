@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DragDropProvider } from '@dnd-kit/react';
+import { isSortable } from '@dnd-kit/react/sortable';
 import PipeCard from '../component/dashboard-v2/PipeCard.jsx';
+import SortablePipeCard from '../component/dashboard-v2/SortablePipeCard.jsx';
 import { DashboardClient } from '../api/dashboard/index.js';
 import { RoomClient } from '../api/room/index.js';
 import DashboardContext from '../provider/DashboardProvider.jsx';
-import { Button, Skeleton, Surface } from '@heroui/react';
+import { Button, Skeleton, Spinner, Surface } from '@heroui/react';
 import { DashboardFilterBar } from '../component/dashboard-v2/DashboardFilterBar.jsx';
 import { useUserStore } from '../store/user.jsx';
 import { getEffectiveSiteId } from '../util/siteUtil.js';
@@ -11,6 +14,12 @@ import { SiteClient } from '../api/site/index.js';
 import { useNavigate } from 'react-router';
 import { FaceSurprise, Magnifier } from '@gravity-ui/icons';
 import { usePreferenceStore } from '../store/preference.jsx';
+import {
+  DEFAULT_DASHBOARD_SORT,
+  getDashboardSortKey,
+  reorderDashboardRooms,
+  sortDashboardRooms,
+} from '../util/dashboardSort.js';
 
 const calculateSummary = (result) => {
   if (result?.detail == null) {
@@ -46,13 +55,31 @@ const calculateSummary = (result) => {
   );
 };
 
+function DashboardOverlay({ children }) {
+  return (
+    <div className="absolute h-[calc(100vh-68px)] w-full z-12 top-0 left-0 flex items-center justify-center bg-white/40 dark:bg-neutral-950/60 backdrop-blur-xs">
+      <Surface className="flex flex-col items-center gap-5 px-8 py-8 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-sm max-w-sm w-[calc(100%-2rem)]">
+        {children}
+      </Surface>
+    </div>
+  );
+}
+
 export default function DashboardV2Page() {
   const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isInitialLoadError, setIsInitialLoadError] = useState(false);
+  const [connectionErrors, setConnectionErrors] = useState({ rooms: false, metrics: false });
+  const hasLoadedDashboard = useRef(false);
 
   const [roomList, setRoomList] = useState([]);
-  const [queueEnabled, setQueueEnabled] = useState(false);
+  const [queueEnabled, setQueueEnabled] = useState(null);
 
-  const { dashboardFilter, updateDashboardFilter } = usePreferenceStore();
+  const {
+    dashboardFilter,
+    updateDashboardFilter,
+    dashboardSort: sortPreferences,
+    updateDashboardSort,
+  } = usePreferenceStore();
 
   const [dashboardTraffic, setDashboardTraffic] = useState({});
 
@@ -65,6 +92,32 @@ export default function DashboardV2Page() {
 
   const { user, selectedSiteId } = useUserStore();
   const siteId = getEffectiveSiteId(user, selectedSiteId);
+  const sortKey = getDashboardSortKey(user?.userId, siteId, dashboardFilter.roomEnvironment);
+  const dashboardSort = sortPreferences[sortKey] ?? DEFAULT_DASHBOARD_SORT;
+  const sortedRooms = useMemo(() => sortDashboardRooms(roomList, dashboardSort), [roomList, dashboardSort]);
+
+  const changeSortMode = (mode) => {
+    updateDashboardSort(sortKey, {
+      mode,
+      ...(mode === 'custom' && dashboardSort.roomIds.length === 0
+        ? { roomIds: sortedRooms.map((room) => room.roomId) }
+        : {}),
+    });
+  };
+
+  const handleDragEnd = ({ operation, canceled }) => {
+    const { source, target } = operation;
+    if (canceled || !target || !isSortable(source) || source.initialIndex === source.index) return;
+    updateDashboardSort(sortKey, {
+      mode: 'custom',
+      roomIds: reorderDashboardRooms(
+        dashboardSort.roomIds,
+        sortedRooms.map((room) => room.roomId),
+        source.initialIndex,
+        source.index
+      ),
+    });
+  };
 
   const fetchRoomList = useCallback(async () => {
     if (!siteId) {
@@ -72,39 +125,54 @@ export default function DashboardV2Page() {
       return;
     }
 
-    const res = await SiteClient.findSite(siteId);
-    const siteInfo = res.data;
-    const isQueueEnabled = Boolean(siteInfo.queueEnabled);
-    setQueueEnabled(isQueueEnabled);
-    if (!isQueueEnabled || dashboardFilter?.enabled.length === 0) {
-      setRoomList([]);
+    try {
+      const res = await SiteClient.findSite(siteId);
+      if (res?.status !== 200 || typeof res.data?.queueEnabled !== 'boolean') {
+        throw new Error('Failed to fetch site information.');
+      }
+
+      const isQueueEnabled = res.data.queueEnabled;
+      setQueueEnabled(isQueueEnabled);
+      if (!isQueueEnabled || dashboardFilter?.enabled.length === 0) {
+        setRoomList([]);
+        hasLoadedDashboard.current = true;
+        setIsInitialLoadError(false);
+        setConnectionErrors({ rooms: false, metrics: false });
+        return;
+      }
+
+      const param = {
+        version: roomVersion.current,
+        roomEnvironment: dashboardFilter?.roomEnvironment,
+      };
+
+      if (dashboardFilter?.enabled.length === 1) {
+        param.enabled = dashboardFilter?.enabled.includes('true');
+      }
+
+      const roomResponse = await RoomClient.getRoomList(param);
+      if (!Array.isArray(roomResponse.data)) {
+        throw new Error('Failed to fetch room list.');
+      }
+      roomVersion.current = roomResponse.headers['room-version'] ?? '0';
+      setRoomList(roomResponse.data);
+      hasLoadedDashboard.current = true;
+      setIsInitialLoadError(false);
+      setConnectionErrors((current) => ({
+        rooms: false,
+        metrics: roomResponse.data.length > 0 && current.metrics,
+      }));
+    } catch (error) {
+      if ((error.response?.status ?? error.status) === 304) {
+        setConnectionErrors((current) => ({ ...current, rooms: false }));
+      } else {
+        console.error('Polling error:', error);
+        setIsInitialLoadError(!hasLoadedDashboard.current);
+        setConnectionErrors((current) => ({ ...current, rooms: true }));
+      }
+    } finally {
       setIsPageLoading(false);
-      return;
     }
-
-    const param = {
-      version: roomVersion.current,
-      roomEnvironment: dashboardFilter?.roomEnvironment,
-    };
-
-    if (dashboardFilter?.enabled.length === 1) {
-      param.enabled = dashboardFilter?.enabled.includes('true'); // 'true'를 포함하고 있으면 enabled = true, 아니면 false. length가 2라면 둘 다 선택되었으므로 null
-    }
-
-    RoomClient.getRoomList(param)
-      .then((res) => {
-        const data = res.data;
-        roomVersion.current = res.headers['room-version'];
-        setRoomList(data);
-      })
-      .catch((error) => {
-        if (error.status !== 304) {
-          console.error('Polling error:', error);
-        }
-      })
-      .finally(() => {
-        setIsPageLoading(false);
-      });
   }, [dashboardFilter?.enabled, dashboardFilter?.roomEnvironment, siteId]);
 
   useEffect(() => {
@@ -121,8 +189,13 @@ export default function DashboardV2Page() {
   }, [siteId, dashboardFilter, fetchRoomList]);
 
   const fetchRoomById = useCallback(async (roomId) => {
-    const room = await RoomClient.getRoomById(roomId);
-    setRoomList((prev) => prev.map((r) => (r.roomId === roomId ? { ...room } : r)));
+    try {
+      const room = await RoomClient.getRoomById(roomId);
+      setRoomList((prev) => prev.map((r) => (r.roomId === roomId ? { ...room } : r)));
+    } catch (error) {
+      setConnectionErrors((current) => ({ ...current, rooms: true }));
+      throw error;
+    }
   }, []);
 
   useEffect(() => {
@@ -145,10 +218,14 @@ export default function DashboardV2Page() {
 
           result.summary = calculateSummary(result);
           setDashboardTraffic(result);
+          setConnectionErrors((current) => ({ ...current, metrics: false }));
         })
         .catch((error) => {
-          if (error.status !== 304) {
+          if ((error.response?.status ?? error.status) === 304) {
+            setConnectionErrors((current) => ({ ...current, metrics: false }));
+          } else {
             console.error('Polling error:', error);
+            setConnectionErrors((current) => ({ ...current, metrics: true }));
           }
         })
         .finally(() => {
@@ -171,6 +248,7 @@ export default function DashboardV2Page() {
     name: '전체 대기열 통합',
     capacity: roomList.reduce((acc, cur) => acc + (cur.capacity || 0), 0),
   };
+  const isReconnecting = connectionErrors.rooms || connectionErrors.metrics;
 
   if (!siteId || isPageLoading)
     return (
@@ -193,34 +271,56 @@ export default function DashboardV2Page() {
           fetchRoomById,
           dashboardFilter,
           updateDashboardFilter,
+          dashboardSort,
+          changeSortMode,
         }}
       >
-        <div className="relative min-w-0">
-          {!queueEnabled && (
-            <div className="absolute h-[calc(100vh-68px)] w-full z-12 top-0 left-0 flex items-center justify-center bg-white/40 dark:bg-neutral-950/60 backdrop-blur-xs">
-              <Surface className="flex flex-col items-center gap-5 px-8 py-8 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xl max-w-sm w-[calc(100%-2rem)]">
-                {/* Icon container */}
-                <div className="w-12 h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-                  <FaceSurprise width={26} height={26} className="text-neutral-500 dark:text-neutral-400" />
-                </div>
+        <div className="relative min-w-0 min-h-[calc(100vh-68px)]">
+          {isInitialLoadError ? (
+            <DashboardOverlay>
+              <div className="w-12 h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                <FaceSurprise width={26} height={26} className="text-neutral-500 dark:text-neutral-400" />
+              </div>
+              <p className="text-lg font-semibold text-neutral-800 dark:text-neutral-100 tracking-tight leading-snug text-center">
+                사이트 정보를 불러오지 못했습니다
+              </p>
+              <Button size="md" onPress={fetchRoomList}>
+                다시 불러오기
+              </Button>
+            </DashboardOverlay>
+          ) : isReconnecting ? (
+            <DashboardOverlay>
+              <Spinner color="accent" size="lg" aria-label="연결중입니다..." />
+              <p
+                role="status"
+                className="text-lg font-semibold text-neutral-800 dark:text-neutral-100 tracking-tight leading-snug text-center"
+              >
+                연결중입니다...
+              </p>
+            </DashboardOverlay>
+          ) : queueEnabled === false ? (
+            <DashboardOverlay>
+              {/* Icon container */}
+              <div className="w-12 h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                <FaceSurprise width={26} height={26} className="text-neutral-500 dark:text-neutral-400" />
+              </div>
 
-                {/* Message */}
-                <div className="flex flex-col items-center gap-2 text-center">
-                  <p className="text-lg font-semibold text-neutral-800 dark:text-neutral-100 tracking-tight leading-snug">
-                    대기열 시스템이 비활성화되어 있습니다
-                  </p>
-                  <p className="text-base text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                    설정에서 대기열 시스템을 활성화해 주세요.
-                  </p>
-                </div>
+              {/* Message */}
+              <div className="flex flex-col items-center gap-2 text-center">
+                <p className="text-lg font-semibold text-neutral-800 dark:text-neutral-100 tracking-tight leading-snug">
+                  대기열 시스템이 비활성화되어 있습니다
+                </p>
+                <p className="text-base text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                  설정에서 대기열 시스템을 활성화해 주세요.
+                </p>
+              </div>
 
-                {/* CTA */}
-                <Button size="md" onPress={() => navigate('/settings')}>
-                  설정 변경하러 가기
-                </Button>
-              </Surface>
-            </div>
-          )}
+              {/* CTA */}
+              <Button size="md" onPress={() => navigate('/settings')}>
+                설정 변경하러 가기
+              </Button>
+            </DashboardOverlay>
+          ) : null}
 
           <div className="flex flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-baseline sm:gap-4">
             <div className="shrink-0 whitespace-nowrap text-3xl font-bold">대시보드</div>
@@ -228,7 +328,7 @@ export default function DashboardV2Page() {
               <DashboardFilterBar />
             </div>
           </div>
-          {roomList.length === 0 ? (
+          {isInitialLoadError ? null : roomList.length === 0 ? (
             <div className="flex flex-col items-center justify-center mt-10">
               <Magnifier className="h-12 w-12 mb-4" />
               <h2 className="transition-all fade-up fade-up-3 text-xl font-semibold tracking-tight text-[#191919] mb-2">
@@ -250,17 +350,21 @@ export default function DashboardV2Page() {
                 />
               </section>
 
-              <section className="grid auto-rows-[400px] gap-4 md:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] md:overflow-y-auto md:pr-2.5">
-                {roomList.map((room) => (
-                  <PipeCard
-                    key={room.roomId}
-                    mode="compact"
-                    room={room}
-                    trafficData={dashboardTraffic?.detail?.[room.roomId]}
-                    emitSignal={dashboardTraffic?.version}
-                  />
-                ))}
-              </section>
+              <DragDropProvider onDragEnd={handleDragEnd}>
+                <section className="grid auto-rows-[400px] gap-4 md:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] md:overflow-y-auto md:pr-2.5">
+                  {sortedRooms.map((room, index) => (
+                    <SortablePipeCard
+                      key={room.roomId}
+                      room={room}
+                      index={index}
+                      group={sortKey}
+                      disabled={isReconnecting}
+                      trafficData={dashboardTraffic?.detail?.[room.roomId]}
+                      emitSignal={dashboardTraffic?.version}
+                    />
+                  ))}
+                </section>
+              </DragDropProvider>
             </div>
           )}
         </div>
