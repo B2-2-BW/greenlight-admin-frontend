@@ -405,7 +405,7 @@ export default function RoomDetailForm({ onPressBack }) {
             <Alert.Content>
               <Alert.Title>{errorTitle}</Alert.Title>
               <Alert.Description>
-                저장 기능이 차단되었습니다. 다시 조회하거나 대기열 목록으로 이동해 주세요.
+                다시 시도해주세요
               </Alert.Description>
             </Alert.Content>
           </Alert>

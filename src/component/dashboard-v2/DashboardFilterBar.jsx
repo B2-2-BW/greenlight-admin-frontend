@@ -1,12 +1,24 @@
 import { useCallback, useState } from 'react';
-import { AlertDialog, Button, Dropdown, Input, Label, ListBox, Select, Tabs, TextField, useOverlayState } from '@heroui/react';
-import { Funnel, Gear, Power } from '@gravity-ui/icons';
+import {
+  AlertDialog,
+  Button,
+  Dropdown,
+  Input,
+  Label,
+  ListBox,
+  Select,
+  Tabs,
+  TextField,
+  useOverlayState,
+} from '@heroui/react';
+import { ChevronDown, Funnel, Gear, Power } from '@gravity-ui/icons';
 import { SiteClient } from '../../api/site/index.js';
 import { ToastUtil } from '../../util/toastUtil.js';
 import { useUserStore } from '../../store/user.jsx';
 import { useDashboard } from '../../provider/DashboardProvider.jsx';
 import { usePreferenceStore } from '../../store/preference.jsx';
 import { getEffectiveSiteId } from '../../util/siteUtil.js';
+import { DASHBOARD_SORT_OPTIONS } from '../../util/dashboardSort.js';
 
 const ENVIRONMENTS = [
   { key: 'LIVE', label: 'LIVE' },
@@ -99,16 +111,10 @@ function DisableQueueAlert({ isOpen, onOpenChange, onConfirm, reason, onReasonCh
               <AlertDialog.Heading>정말로 전체 대기열을 비활성화 하시겠습니까?</AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body>
-              <p>
-                이후 신규 티켓 발급 요청은 대기 없이 통과합니다. 이미 발급된 티켓에는 즉시 적용되지 않습니다.
-              </p>
+              <p>이후 신규 티켓 발급 요청은 대기 없이 통과합니다. 이미 발급된 티켓에는 즉시 적용되지 않습니다.</p>
               <TextField className="mt-4 w-full" isRequired>
                 <Label>변경 사유</Label>
-                <Input
-                  value={reason}
-                  maxLength={1000}
-                  onChange={(event) => onReasonChange(event.target.value)}
-                />
+                <Input value={reason} maxLength={1000} onChange={(event) => onReasonChange(event.target.value)} />
               </TextField>
             </AlertDialog.Body>
             <AlertDialog.Footer>
@@ -126,7 +132,7 @@ function DisableQueueAlert({ isOpen, onOpenChange, onConfirm, reason, onReasonCh
   );
 }
 
-const dashboardSettings = [
+const queueManagementActions = [
   {
     key: 'disable-queue',
     textValue: '전체 대기열 비활성화',
@@ -139,16 +145,20 @@ export function DashboardFilterBar() {
   const disableQueueAlertState = useOverlayState();
   const [disableReason, setDisableReason] = useState('');
 
-  const { fetchRoomList } = useDashboard();
+  const { fetchRoomList, dashboardSort, changeSortMode } = useDashboard();
+  const sortLabel = DASHBOARD_SORT_OPTIONS.find(({ key }) => key === dashboardSort.mode)?.label ?? '사용자 지정';
 
   const { dashboardFilter, updateDashboardFilter } = usePreferenceStore();
   const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
   const selectedSiteId = useUserStore((state) => state.selectedSiteId);
   const canManageQueue = role === 'SITE_ADMIN' || role === 'SUPER';
 
-  const onRoomEnvironmentChange = useCallback((env) => {
-    updateDashboardFilter({ roomEnvironment: env });
-  }, [updateDashboardFilter]);
+  const onRoomEnvironmentChange = useCallback(
+    (env) => {
+      updateDashboardFilter({ roomEnvironment: env });
+    },
+    [updateDashboardFilter]
+  );
 
   // const onTagChange = (tagList) => {
   //   console.log('onTagChange', tagList);
@@ -184,7 +194,7 @@ export function DashboardFilterBar() {
   //   onTagChange(keys);
   // };
 
-  const handleDashboardSetting = (action) => {
+  const handleQueueManagement = (action) => {
     if (action === 'disable-queue') {
       disableQueueAlertState.setOpen(true);
     }
@@ -213,30 +223,61 @@ export function DashboardFilterBar() {
         <EnabledFilterSelect value={dashboardFilter?.enabled} onChange={updateDashboardFilter} />
       </div>
 
-      {canManageQueue && (
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
         <Dropdown>
-          <Button aria-label="dashboard-bar-settings" slot="trigger" variant="tertiary" className="text-base">
-            <Gear />
-            대시보드 설정
+          <Button
+            aria-label={`대기열 정렬: ${sortLabel}`}
+            slot="trigger"
+            variant="secondary"
+            className="text-base"
+          >
+            {sortLabel}
+            <ChevronDown aria-hidden="true" width={14} height={14} />
           </Button>
 
-          <Dropdown.Popover>
-            <Dropdown.Menu onAction={handleDashboardSetting}>
-              {dashboardSettings.map((setting) => (
-                <Dropdown.Item
-                  id={setting.key}
-                  key={setting.key}
-                  textValue={setting.textValue}
-                  variant={setting.variant || 'primary'}
-                >
-                  {setting.icon && <setting.icon className={setting.variant ? `text-${setting.variant}` : ''} />}
-                  <Label className="text-base">{setting.textValue}</Label>
+          <Dropdown.Popover placement="bottom end">
+            <Dropdown.Menu
+              aria-label="대기열 정렬"
+              selectionMode="single"
+              disallowEmptySelection
+              selectedKeys={new Set([dashboardSort.mode])}
+              onAction={(mode) => changeSortMode(String(mode))}
+            >
+              {DASHBOARD_SORT_OPTIONS.map(({ key, label }) => (
+                <Dropdown.Item id={key} key={key} textValue={label}>
+                  <Label className="text-base">{label}</Label>
+                  <Dropdown.ItemIndicator />
                 </Dropdown.Item>
               ))}
             </Dropdown.Menu>
           </Dropdown.Popover>
         </Dropdown>
-      )}
+
+        {canManageQueue && (
+          <Dropdown>
+            <Button aria-label="대기열 관리" slot="trigger" variant="tertiary" className="text-base">
+              <Gear />
+              대기열 관리
+            </Button>
+
+            <Dropdown.Popover placement="bottom end">
+              <Dropdown.Menu aria-label="대기열 관리" selectionMode="none" onAction={handleQueueManagement}>
+                {queueManagementActions.map((action) => (
+                  <Dropdown.Item
+                    id={action.key}
+                    key={action.key}
+                    textValue={action.textValue}
+                    variant={action.variant || 'primary'}
+                  >
+                    {action.icon && <action.icon className={action.variant ? `text-${action.variant}` : ''} />}
+                    <Label className="text-base">{action.textValue}</Label>
+                  </Dropdown.Item>
+                ))}
+              </Dropdown.Menu>
+            </Dropdown.Popover>
+          </Dropdown>
+        )}
+      </div>
 
       {/* 구분선 */}
       {/*<ToggleButton isSelected={isSelected} onChange={setIsSelected}>*/}

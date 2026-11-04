@@ -5,19 +5,7 @@ import { DateUtil } from '../../util/dateUtil.jsx';
 import { useNavigate } from 'react-router';
 import Funnel2 from './Funnel2.jsx';
 import Wave from './Wave.jsx';
-
-const getCapacityLabelBackgroundColor = (status) => {
-  switch (status) {
-    case '폭주':
-      return '';
-    case '혼잡':
-      return '';
-    case '원활':
-      return '';
-    default:
-      return '';
-  }
-};
+import { getWaitingQueueStatus } from '../../util/dashboardStatus.js';
 
 const getColorFromRoomCapacityRate = (rate) => {
   if (rate == null || isNaN(rate)) {
@@ -37,39 +25,23 @@ const statusColorMap = {
   바로입장: { labelColor: '#FFFFFF', color: '#089345', backgroundColor: '#089345', heroUi: 'success' },
   폭주: { labelColor: '#FFFFFF', color: '#ea0052', backgroundColor: '#ea0052', heroUi: 'danger' },
   혼잡: { labelColor: '#000000', color: '#ec7d00', backgroundColor: '#F5A524', heroUi: 'warning' },
-  원활: { labelColor: '#FFFFFF', color: '#20814C', backgroundColor: '#20814C', heroUi: 'primary' },
+  원활: { labelColor: '#FFFFFF', color: '#20814C', backgroundColor: '#20814C', heroUi: 'accent' },
 };
 const getHeroUiColorFromStatus = (stat) => {
   return statusColorMap[stat] ? statusColorMap[stat].heroUi : 'default';
 };
 
-const getHexColorFromStatus = (stat) => {
-  return statusColorMap[stat] ? statusColorMap[stat].hex : '#D4D4D8';
-};
-
 const getQueueStatusChip = (stat) => {
   return (
-    <Chip size="lg" color={getHeroUiColorFromStatus(stat)} variant="soft" className="min-w-16 min-h-4 text-center">
-      {stat}
+    <Chip
+      size="lg"
+      color={getHeroUiColorFromStatus(stat)}
+      variant="soft"
+      className="shrink-0 min-w-12 min-h-4 justify-center whitespace-nowrap text-center"
+    >
+      <Chip.Label className="whitespace-nowrap">{stat}</Chip.Label>
     </Chip>
   );
-};
-
-const getWaitingQueueStatus = (waitTime) => {
-  if (waitTime < 0) {
-    return '진입불가';
-  }
-  if (waitTime >= 600) {
-    return '폭주';
-  } else if (waitTime >= 10) {
-    return '혼잡';
-  } else if (waitTime > 0) {
-    return '원활';
-  } else if (waitTime === 0) {
-    return '바로입장';
-  } else {
-    return '-';
-  }
 };
 
 const getRoomStatusFromCapacityRate = (rate) => {
@@ -83,6 +55,9 @@ const getRoomStatusFromCapacityRate = (rate) => {
 };
 
 const calculateFunnelParam = (n) => {
+  if (!Number.isFinite(n) || n <= 0) {
+    return { quantity: 0, duration: 0, delay: 0.1 };
+  }
   // N < 30
   if (n < 30) {
     return {
@@ -131,7 +106,7 @@ const calculateFunnelParam = (n) => {
  * @param {Object} data - 데이터 객체
  * @param {ReactNode} children - { inflow, wave, outflow } 슬롯
  */
-export default function PipeCard({ mode = 'compact', room, trafficData, emitSignal }) {
+export default function PipeCard({ mode = 'compact', room, trafficData, emitSignal, dragHandle }) {
   const navigate = useNavigate();
   const isMain = mode === 'main';
 
@@ -145,7 +120,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
   exitedCount.quantity *= 2;
   exitedCount.duration /= 2;
 
-  const roomCapacityRate = trafficData?.totalActive ? trafficData.totalActive / room.capacity : 0;
+  const roomCapacityRate = room.capacity > 0 ? (trafficData?.totalActive ?? 0) / room.capacity : 0;
 
   const queueStatus = getWaitingQueueStatus(trafficData?.estimatedWaitTime);
   const waveColor = getColorFromRoomCapacityRate(roomCapacityRate);
@@ -156,28 +131,29 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
       className={`rounded-xl bg-white flex flex-col shadow-background-secondary shadow-lg relative transition-transform ${isMain ? 'border-accent h-[400px] min-h-[400px] md:h-full md:min-h-0 border-2' : 'border-neutral-200 h-[400px] min-w-0 w-full border'}`}
     >
       <div className="p-2 flex justify-between items-center gap-2 border-b w-full">
+        {!isMain && dragHandle}
         {/* 좌측 영역: 이름 + 상태 칩 */}
         <div className="flex items-center min-w-0 flex-1">
           {isMain ? (
             <div className="truncate text-base">{room?.name}</div>
           ) : (
             // 2. Room name과 Chip을 붙이기 위해 gap-1.5 사용, 자식 요소 말줄임을 위해 min-w-0 필수
-            <div className="flex items-baseline gap-1.5 min-w-0 w-full">
+            <div className="flex items-center gap-1.5 min-w-0 w-full">
               {/* 4 & 5. 말줄임표(ellipse) 처리 및 Tooltip 적용 */}
               <Tooltip showArrow={true} delay={100}>
                 <Button
-                  className="shrink min-w-0 px-1 justify-start h-auto py-1"
+                  className="h-8 md:h-8 w-fit min-w-0 max-w-full grow-0 shrink items-center justify-start px-1 py-0"
                   variant="ghost"
                   onPress={() => navigateToRoomDetail(room.roomId)}
                 >
-                  <span className="text-base truncate block w-full text-left px-1">{room?.name}</span>
+                  <span className="text-base leading-6 truncate block min-w-0 text-left px-1">{room?.name}</span>
                 </Button>
                 <Tooltip.Content className="text-base">{room?.name}</Tooltip.Content>
               </Tooltip>
 
               {/* 2. 상태 칩 영역 (shrink-0으로 공간 찌그러짐 방지) */}
 
-              <div className={`shrink-0 mb-1 min-w-18 rounded-full ${queueStatus === '폭주' ? 'glow-pulse' : ''}`}>
+              <div className={`shrink-0 whitespace-nowrap rounded-full ${queueStatus === '폭주' ? 'glow-pulse' : ''}`}>
                 {queueStatus !== '-' && getQueueStatusChip(queueStatus)}
               </div>
             </div>
@@ -193,7 +169,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
         <div className={`w-full flex justify-center relative ${isMain ? 'h-[60px] md:h-[120px]' : 'h-[60px]'}`}>
           {/* 진입 속도 (Simple Label) */}
           <div className={styles.flowRateLabel} style={{ top: -10 }}>
-            <span className={styles.icon}>⬇</span> {trafficData?.waitingRate.toFixed(1)}/s
+            <span className={styles.icon}>⬇</span> {trafficData?.waitingRate?.toFixed(1) ?? '-'}/s
           </div>
           {/* Emitter Container */}
           <div className={styles.emitterPipe}>
@@ -224,7 +200,9 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
                   className={`ml-1 font-bold ${isMain ? 'text-lg' : 'text-base'}`}
                   style={{ color: statusColorMap[queueStatus]?.color }}
                 >
-                  {DateUtil.toMMSS(trafficData?.estimatedWaitTime)}
+                  {Number.isFinite(trafficData?.estimatedWaitTime)
+                    ? DateUtil.toMMSS(trafficData.estimatedWaitTime)
+                    : '-'}
                 </span>
               </div>
               <div>
@@ -258,7 +236,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
           <div className={`${styles.tankContainer} ${isMain ? styles.mainTankContainer : ''}`}>
             {/* Wave Component */}
             <div className={styles.waveWrapper}>
-              <Wave color={waveColor} height={roomCapacityRate * 100} amplitude={1.5} speed={0.03} />
+              <Wave color={waveColor} height={Math.min(100, roomCapacityRate * 100)} amplitude={1.5} speed={0.03} />
             </div>
 
             {/* Center Overlay */}
@@ -307,7 +285,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
 
           {/* 이탈 속도 (Simple Label) */}
           <div className={styles.flowRateLabel} style={{ bottom: -5 }}>
-            <span className={styles.icon}>⬇</span> {trafficData?.exitedRate.toFixed(1)}/s
+            <span className={styles.icon}>⬇</span> {trafficData?.exitedRate?.toFixed(1) ?? '-'}/s
           </div>
         </div>
       </div>
