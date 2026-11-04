@@ -547,7 +547,7 @@ export default function QueueStatisticsPage() {
       {!isLoading && !error && availableRooms.length === 0 ? (
         <Alert status="neutral">
           <Alert.Content>
-            <Alert.Title>통계를 조회할 LIVE 대기열이 없습니다</Alert.Title>
+            <Alert.Title>선택한 기간에 통계 데이터가 없습니다</Alert.Title>
           </Alert.Content>
         </Alert>
       ) : null}
