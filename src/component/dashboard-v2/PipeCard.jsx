@@ -22,7 +22,7 @@ const getColorFromRoomCapacityRate = (rate) => {
 
 const statusColorMap = {
   진입불가: { labelColor: '#FFFFFF', color: '#D4D4D8', backgroundColor: '#D4D4D8', heroUi: 'default' },
-  바로입장: { labelColor: '#FFFFFF', color: '#089345', backgroundColor: '#089345', heroUi: 'success' },
+  즉시: { labelColor: '#FFFFFF', color: '#089345', backgroundColor: '#089345', heroUi: 'success' },
   폭주: { labelColor: '#FFFFFF', color: '#ea0052', backgroundColor: '#ea0052', heroUi: 'danger' },
   혼잡: { labelColor: '#000000', color: '#ec7d00', backgroundColor: '#F5A524', heroUi: 'warning' },
   원활: { labelColor: '#FFFFFF', color: '#20814C', backgroundColor: '#20814C', heroUi: 'accent' },
