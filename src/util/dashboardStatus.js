@@ -4,5 +4,5 @@ export function getWaitingQueueStatus(waitTime) {
   if (waitTime >= 600) return '폭주';
   if (waitTime >= 10) return '혼잡';
   if (waitTime > 0) return '원활';
-  return '바로입장';
+  return '즉시';
 }
