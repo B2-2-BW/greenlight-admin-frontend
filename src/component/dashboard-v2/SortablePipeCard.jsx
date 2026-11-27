@@ -1,7 +1,15 @@
 import { useSortable } from '@dnd-kit/react/sortable';
 import PipeCard from './PipeCard.jsx';
 
-export default function SortablePipeCard({ room, index, group, disabled, trafficData, emitSignal }) {
+export default function SortablePipeCard({
+  room,
+  index,
+  group,
+  disabled,
+  trafficData,
+  emitSignal,
+  isMetricsReconnecting,
+}) {
   const { ref, handleRef, isDragSource } = useSortable({ id: room.roomId, index, group, disabled });
 
   return (
@@ -10,6 +18,7 @@ export default function SortablePipeCard({ room, index, group, disabled, traffic
         room={room}
         trafficData={trafficData}
         emitSignal={emitSignal}
+        isMetricsReconnecting={isMetricsReconnecting}
         dragHandle={
           <button
             ref={handleRef}

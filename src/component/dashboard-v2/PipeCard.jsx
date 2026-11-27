@@ -1,5 +1,5 @@
 import styles from './PipeCard.module.css';
-import { Button, Chip, Tooltip } from '@heroui/react';
+import { Button, Chip, Spinner, Tooltip } from '@heroui/react';
 import QuickSetting from './QuickSetting.jsx';
 import { DateUtil } from '../../util/dateUtil.jsx';
 import { useNavigate } from 'react-router';
@@ -22,7 +22,7 @@ const getColorFromRoomCapacityRate = (rate) => {
 
 const statusColorMap = {
   진입불가: { labelColor: '#FFFFFF', color: '#D4D4D8', backgroundColor: '#D4D4D8', heroUi: 'default' },
-  즉시: { labelColor: '#FFFFFF', color: '#089345', backgroundColor: '#089345', heroUi: 'success' },
+  바로입장: { labelColor: '#FFFFFF', color: '#089345', backgroundColor: '#089345', heroUi: 'success' },
   폭주: { labelColor: '#FFFFFF', color: '#ea0052', backgroundColor: '#ea0052', heroUi: 'danger' },
   혼잡: { labelColor: '#000000', color: '#ec7d00', backgroundColor: '#F5A524', heroUi: 'warning' },
   원활: { labelColor: '#FFFFFF', color: '#20814C', backgroundColor: '#20814C', heroUi: 'accent' },
@@ -100,15 +100,33 @@ const calculateFunnelParam = (n) => {
   return { quantity, duration, delay };
 };
 
+const formatRate = (rate) => (Number.isFinite(rate) ? `${rate.toFixed(1)}/s` : '-');
+
+function PipeCardBody({ isInactive, children }) {
+  if (!isInactive) {
+    return <div className={`${styles.pipeBody} isolate`}>{children}</div>;
+  }
+
+  return (
+    <div className="relative isolate flex flex-1 flex-col overflow-hidden rounded-b-xl">
+      <div className={`${styles.pipeBody} opacity-50 blur-[2px]`} inert>
+        {children}
+      </div>
+      <p className="absolute inset-0 grid place-items-center text-lg font-semibold text-neutral-700">비활성</p>
+    </div>
+  );
+}
+
 /**
  * PipeCard
  * @param {string} mode - 'main' | 'compact' (기본값 compact)
  * @param {Object} data - 데이터 객체
  * @param {ReactNode} children - { inflow, wave, outflow } 슬롯
  */
-export default function PipeCard({ mode = 'compact', room, trafficData, emitSignal, dragHandle }) {
+export default function PipeCard({ mode = 'compact', room, trafficData, emitSignal, dragHandle, isMetricsReconnecting }) {
   const navigate = useNavigate();
   const isMain = mode === 'main';
+  const isInactive = !isMain && room?.enabled === false;
 
   const navigateToRoomDetail = (roomId) => {
     navigate(`/rooms/${roomId}`);
@@ -120,11 +138,13 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
   exitedCount.quantity *= 2;
   exitedCount.duration /= 2;
 
-  const roomCapacityRate = room.capacity > 0 ? (trafficData?.totalActive ?? 0) / room.capacity : 0;
+  const roomCapacityRate = Number.isFinite(trafficData?.totalActive) && room.capacity > 0
+    ? trafficData.totalActive / room.capacity
+    : undefined;
 
   const queueStatus = getWaitingQueueStatus(trafficData?.estimatedWaitTime);
   const waveColor = getColorFromRoomCapacityRate(roomCapacityRate);
-  const roomStatus = getRoomStatusFromCapacityRate(roomCapacityRate);
+  const roomStatus = roomCapacityRate == null ? undefined : getRoomStatusFromCapacityRate(roomCapacityRate);
 
   return (
     <div
@@ -152,10 +172,11 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
               </Tooltip>
 
               {/* 2. 상태 칩 영역 (shrink-0으로 공간 찌그러짐 방지) */}
-
-              <div className={`shrink-0 whitespace-nowrap rounded-full ${queueStatus === '폭주' ? 'glow-pulse' : ''}`}>
-                {queueStatus !== '-' && getQueueStatusChip(queueStatus)}
-              </div>
+              {!isInactive && (
+                <div className={`shrink-0 whitespace-nowrap rounded-full ${queueStatus === '폭주' ? 'glow-pulse' : ''}`}>
+                  {queueStatus !== '-' && getQueueStatusChip(queueStatus)}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -164,12 +185,22 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
         <div className="shrink-0">{!isMain && <QuickSetting room={room} />}</div>
       </div>
 
-      <div className={styles.pipeBody}>
+      <PipeCardBody isInactive={isInactive}>
+        {!isInactive && isMetricsReconnecting && (
+          <div
+            className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-b-xl bg-white/80"
+            role={isMain ? 'status' : undefined}
+            aria-hidden={isMain ? undefined : true}
+          >
+            <Spinner color="accent" size="lg" aria-hidden="true" />
+            <p className="font-semibold text-neutral-800">연결중입니다...</p>
+          </div>
+        )}
         {/* 2. 초당 진입 파이프 */}
         <div className={`w-full flex justify-center relative ${isMain ? 'h-[60px] md:h-[120px]' : 'h-[60px]'}`}>
           {/* 진입 속도 (Simple Label) */}
           <div className={styles.flowRateLabel} style={{ top: -10 }}>
-            <span className={styles.icon}>⬇</span> {trafficData?.waitingRate?.toFixed(1) ?? '-'}/s
+            <span className={styles.icon}>⬇</span> {formatRate(trafficData?.waitingRate)}
           </div>
           {/* Emitter Container */}
           <div className={styles.emitterPipe}>
@@ -208,7 +239,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
               <div>
                 <span>대기</span>
                 <span className={`ml-1 font-bold ${isMain ? 'text-lg' : 'text-base'}`}>
-                  {trafficData?.totalWaiting?.toLocaleString()}
+                  {trafficData?.totalWaiting?.toLocaleString() ?? '-'}
                 </span>
               </div>
             </div>
@@ -236,7 +267,9 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
           <div className={`${styles.tankContainer} ${isMain ? styles.mainTankContainer : ''}`}>
             {/* Wave Component */}
             <div className={styles.waveWrapper}>
-              <Wave color={waveColor} height={Math.min(100, roomCapacityRate * 100)} amplitude={1.5} speed={0.03} />
+              {roomCapacityRate != null && (
+                <Wave color={waveColor} height={Math.min(100, roomCapacityRate * 100)} amplitude={1.5} speed={0.03} />
+              )}
             </div>
 
             {/* Center Overlay */}
@@ -244,7 +277,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
               {/* 현재수 / 최대수 라인 */}
               <div className="flex items-baseline justify-center gap-1 tabular-nums">
                 <span className="font-bold text-[#1e293b]" style={{ fontSize: isMain ? '1.7rem' : '1.4rem' }}>
-                  {trafficData?.totalActive?.toLocaleString()}
+                  {trafficData?.totalActive?.toLocaleString() ?? '-'}
                 </span>
                 <span className="font-medium text-[#64748b]" style={{ fontSize: isMain ? '1.2rem' : '1rem' }}>
                   / {room.capacity?.toLocaleString()}
@@ -261,7 +294,7 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
                     color: statusColorMap[roomStatus]?.labelColor,
                   }}
                 >
-                  {Math.round(roomCapacityRate * 100)}% Full
+                  {roomCapacityRate == null ? '-' : `${Math.round(roomCapacityRate * 100)}% Full`}
                 </span>
               </div>
             </div>
@@ -285,10 +318,10 @@ export default function PipeCard({ mode = 'compact', room, trafficData, emitSign
 
           {/* 이탈 속도 (Simple Label) */}
           <div className={styles.flowRateLabel} style={{ bottom: -5 }}>
-            <span className={styles.icon}>⬇</span> {trafficData?.exitedRate?.toFixed(1) ?? '-'}/s
+            <span className={styles.icon}>⬇</span> {formatRate(trafficData?.exitedRate)}
           </div>
         </div>
-      </div>
+      </PipeCardBody>
     </div>
   );
 }

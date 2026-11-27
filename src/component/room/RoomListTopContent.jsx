@@ -36,7 +36,7 @@ function FilterSelect({ label, value, onChange, options }) {
   );
 }
 
-export default function RoomListTopContent({ filters, onFiltersChange }) {
+export default function RoomListTopContent({ filters, onFiltersChange, isBulkEditing, onToggleBulkEdit }) {
   const navigate = useNavigate();
   const role = useUserStore((state) => state.user?.userRole ?? state.user?.role);
   const canManageRooms = role === 'SITE_ADMIN' || role === 'SUPER';
@@ -82,8 +82,22 @@ export default function RoomListTopContent({ filters, onFiltersChange }) {
             options={statusOptions}
           />
           {canManageRooms && (
-            <Button className="col-span-2 w-full sm:w-auto" onPress={() => navigate('/rooms/new')}>
+            <Button
+              className="col-span-2 w-full sm:w-auto"
+              isDisabled={isBulkEditing}
+              onPress={() => navigate('/rooms/new')}
+            >
               대기열 추가
+            </Button>
+          )}
+          {canManageRooms && onToggleBulkEdit && (
+            <Button
+              className="col-span-2 w-full sm:w-auto"
+              variant={isBulkEditing ? 'primary' : 'secondary'}
+              aria-pressed={isBulkEditing}
+              onPress={onToggleBulkEdit}
+            >
+              일괄 수정
             </Button>
           )}
         </div>
