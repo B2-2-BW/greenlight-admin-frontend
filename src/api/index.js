@@ -29,6 +29,9 @@ commonAxiosInstance.interceptors.request.use(
       } else {
         delete config.headers['X-ADMIN-SITE-ID'];
       }
+    } else {
+      delete config.headers.Authorization;
+      delete config.headers['X-ADMIN-SITE-ID'];
     }
     if (typeof window !== 'undefined' && window.location.pathname) {
       config.headers['X-Admin-Source-Path'] = window.location.pathname;
@@ -48,24 +51,26 @@ commonAxiosInstance.interceptors.response.use(
       error.response?.status === 403
       && error.response?.data?.message === 'Password reset required.'
     ) {
-      LoginUtil.clearAccessToken();
-      useUserStore.getState().clearUser();
-      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+      LoginUtil.handleAuthFailure();
       return Promise.reject(error);
     }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401
+      && error.response?.data?.code === 'ACCESS_TOKEN_EXPIRED'
+      && originalRequest
+      && !originalRequest._retry
+    ) {
       originalRequest._retry = true;
       try {
-        await LoginUtil.issueAndSetAccessToken();
+        const currentToken = LoginUtil.getAccessToken();
+        if (!currentToken || originalRequest.headers?.Authorization === `Bearer ${currentToken}`) {
+          await LoginUtil.issueAndSetAccessToken(originalRequest.rotateRefresh);
+        }
         return commonAxiosInstance(originalRequest);
       } catch (err) {
         if (err?.response?.status === 401 || err?.response?.status === 403) {
-          LoginUtil.clearAccessToken();
-          useUserStore.getState().clearUser();
-          window.location.href = '/login';
+          LoginUtil.handleAuthFailure();
         }
         return Promise.reject(err);
       }
