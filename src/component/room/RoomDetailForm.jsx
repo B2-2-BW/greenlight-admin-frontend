@@ -595,7 +595,7 @@ export default function RoomDetailForm({ onPressBack }) {
                     variant="primary"
                     isRequired
                   >
-                    <Label className="text-base">최대 사용자수</Label>
+                    <Label className="text-base">최대 수용 인원</Label>
                     <NumberField.Group className="w-full max-w-48 ring-1 focus-within:ring-2 ring-neutral-200 focus-within:ring-accent sm:w-40">
                       <NumberField.DecrementButton />
                       <NumberField.Input />

@@ -7,8 +7,8 @@ const getRoomById = async (roomId) => {
 };
 
 // 액션그룹 리스트 정보 조회
-const getRoomList = async (query) => {
-  return commonAxiosInstance.get(`/rooms`, { params: query });
+const getRoomList = async (query, { rotateRefresh } = {}) => {
+  return commonAxiosInstance.get(`/rooms`, { params: query, rotateRefresh });
 };
 
 const getRoomPage = async ({ signal, ...params }) => {
@@ -21,6 +21,8 @@ const createRoom = async (data) => {
 const updateRoomById = async (roomId, data) => {
   return commonAxiosInstance.put(`/rooms/${roomId}`, data);
 };
+
+const bulkUpdateRooms = (data) => commonAxiosInstance.patch('/rooms/bulk', data);
 
 const deleteRoomById = async (roomId) => {
   return commonAxiosInstance.delete(`/rooms/${roomId}`);
@@ -36,6 +38,7 @@ const RoomClient = {
   getRoomPage,
   createRoom,
   updateRoomById,
+  bulkUpdateRooms,
   deleteRoomById,
   syncRoomData,
 };

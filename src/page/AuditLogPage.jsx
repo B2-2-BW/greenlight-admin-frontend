@@ -154,7 +154,7 @@ export default function AuditLogPage() {
         .then(({ data }) => setResult(data))
         .catch((error) => {
           if (error.code !== 'ERR_CANCELED') {
-            ToastUtil.error('감사로그', error.response?.data?.detail ?? '감사로그를 불러오지 못했습니다.');
+            ToastUtil.error('감사로그', error.response?.data?.message ?? '감사로그를 불러오지 못했습니다.');
           }
         })
         .finally(() => {

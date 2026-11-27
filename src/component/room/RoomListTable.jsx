@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pagination, Spinner, Table } from '@heroui/react';
+import { Checkbox, Pagination, Spinner, Table } from '@heroui/react';
 import RoomStatusChip from './RoomStatusChip.jsx';
 import { RoomClient } from '../../api/room/index.js';
 
@@ -8,21 +8,58 @@ const columns = [
   { name: '대기열', uid: 'name' },
   { name: '환경', uid: 'roomEnvironment', className: 'hidden md:table-cell' },
   { name: '상태', uid: 'enabled' },
-  { name: '최대 사용자', uid: 'capacity', className: 'hidden md:table-cell' },
-  { name: '초당 진입', uid: 'maxTrafficPerSecond', className: 'hidden md:table-cell' },
+  { name: '최대 수용 인원', uid: 'capacity', className: 'hidden md:table-cell' },
+  { name: '초당 유입량', uid: 'maxTrafficPerSecond', className: 'hidden md:table-cell' },
 ];
 
 const environmentLabels = { LIVE: '운영', DEV: '개발' };
 const PAGE_SIZE = 10;
+const bulkColumns = [{ uid: 'selection', className: 'w-12' }, ...columns];
 
-export default function RoomListTable({ onPress, filters }) {
+function SelectionCheckbox(props) {
+  return (
+    <Checkbox {...props}>
+      <Checkbox.Content>
+        <Checkbox.Control>
+          <Checkbox.Indicator />
+        </Checkbox.Control>
+      </Checkbox.Content>
+    </Checkbox>
+  );
+}
+
+function RoomCardContent({ room }) {
+  return (
+    <>
+      <span className="flex min-w-0 items-start justify-between gap-3">
+        <span className="min-w-0">
+          <span className="block truncate text-base font-semibold">{room.name}</span>
+          <span className="mt-0.5 block truncate text-xs text-muted">{room.roomId}</span>
+        </span>
+        <RoomStatusChip enabled={room.enabled} />
+      </span>
+      <span className="mt-3 block truncate text-sm text-muted">{room.description || '설명 없음'}</span>
+      <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <span>{environmentLabels[room.roomEnvironment] ?? room.roomEnvironment}</span>
+        <span>최대 수용 인원 {room.capacity ?? '-'}명</span>
+        <span>초당 유입량 {room.maxTrafficPerSecond ?? 0}명/초</span>
+      </span>
+    </>
+  );
+}
+
+const cardClassName = 'min-h-28 w-full rounded-2xl border border-neutral-200 bg-white p-4 text-left shadow-sm';
+
+export default function RoomListTable({ onPress, filters, isBulkEditing, selectedRooms, onSelectionChange, refreshVersion }) {
   const [rooms, setRooms] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loadedRefreshVersion, setLoadedRefreshVersion] = useState(null);
   const [page, setPage] = useState(1);
   const [pageData, setPageData] = useState({ page: 1, size: PAGE_SIZE, totalElements: 0, totalPages: 0 });
   const requestGeneration = useRef(0);
   const { search: query, environment, status } = filters;
-  const isFetching = isLoading || page !== pageData.page;
+  const isFetching = loadedRefreshVersion !== refreshVersion || page !== pageData.page;
+  const tableColumns = isBulkEditing ? bulkColumns : columns;
+  const visibleSelectedKeys = new Set(rooms.filter((room) => selectedRooms.has(room.roomId)).map((room) => room.roomId));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -51,12 +88,13 @@ export default function RoomListTable({ onPress, filters }) {
         if (error.code === 'ERR_CANCELED' || generation !== requestGeneration.current) return;
         console.error('Failed to load rooms:', error);
         setRooms([]);
+        setPageData((current) => ({ ...current, page }));
       })
       .finally(() => {
-        if (generation === requestGeneration.current) setIsLoading(false);
+        if (!controller.signal.aborted && generation === requestGeneration.current) setLoadedRefreshVersion(refreshVersion);
       });
     return () => controller.abort();
-  }, [page, query, environment, status]);
+  }, [page, query, environment, status, refreshVersion]);
 
   const pageItems = useMemo(() => {
     const total = pageData.totalPages;
@@ -94,18 +132,28 @@ export default function RoomListTable({ onPress, filters }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted">{isFetching ? '불러오는 중…' : `총 ${pageData.totalElements}개`}</p>
-      <div className={!isLoading && rooms.length === 0 ? undefined : 'hidden md:block'}>
-        <Table aria-label="대기열 목록">
-          <Table.Content onRowAction={onPress}>
-            <Table.Header columns={columns}>
+      <div className={!isFetching && rooms.length === 0 ? undefined : 'hidden md:block'}>
+        <Table>
+          <Table.Content
+            key={isBulkEditing ? 'edit' : 'view'}
+            aria-label="대기열 목록"
+            selectionMode={isBulkEditing ? 'multiple' : 'none'}
+            selectionBehavior="toggle"
+            selectedKeys={isBulkEditing ? visibleSelectedKeys : undefined}
+            onSelectionChange={isBulkEditing && !isFetching ? (keys) => onSelectionChange(rooms, keys) : undefined}
+            onRowAction={isBulkEditing ? undefined : onPress}
+          >
+            <Table.Header columns={tableColumns}>
               {(column) => (
                 <Table.Column id={column.uid} className={column.className} isRowHeader={column.uid === 'roomId'}>
-                  {column.name}
+                  {column.uid === 'selection' ? (
+                    <SelectionCheckbox slot="selection" aria-label="현재 페이지 대기열 전체 선택" isDisabled={isFetching || rooms.length === 0} />
+                  ) : column.name}
                 </Table.Column>
               )}
             </Table.Header>
             <Table.Body>
-              {isLoading ? (
+              {isFetching ? (
                 <Table.LoadMore isLoading>
                   <Table.LoadMoreContent>
                     <Spinner color="accent" size="md" />
@@ -115,9 +163,11 @@ export default function RoomListTable({ onPress, filters }) {
                 <Table.Collection items={rooms}>
                   {(room) => (
                     <Table.Row id={room.roomId} className="cursor-pointer">
-                      {columns.map((column) => (
+                      {tableColumns.map((column) => (
                         <Table.Cell key={column.uid} className={column.className}>
-                          {renderCell(room, column.uid)}
+                          {column.uid === 'selection' ? (
+                            <SelectionCheckbox slot="selection" aria-label={`${room.name} 선택`} />
+                          ) : renderCell(room, column.uid)}
                         </Table.Cell>
                       ))}
                     </Table.Row>
@@ -127,39 +177,43 @@ export default function RoomListTable({ onPress, filters }) {
             </Table.Body>
           </Table.Content>
         </Table>
-        {!isLoading && rooms.length === 0 && (
+        {!isFetching && rooms.length === 0 && (
           <div className="py-10 text-center text-sm text-muted">검색된 대기열이 없습니다.</div>
         )}
       </div>
-      {(isLoading || rooms.length > 0) && (
+      {(isFetching || rooms.length > 0) && (
         <div className="flex flex-col gap-3 md:hidden" aria-label="대기열 목록">
-          {isLoading && (
+          {isFetching && (
             <div className="flex min-h-40 items-center justify-center rounded-2xl border border-neutral-200 bg-white">
               <Spinner color="accent" size="md" />
             </div>
           )}
-          {!isLoading &&
+          {!isFetching &&
             rooms.map((room) => (
-              <button
-                key={room.roomId}
-                type="button"
-                className="min-h-28 w-full rounded-2xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition-colors active:bg-neutral-100"
-                onClick={() => onPress(room.roomId)}
-              >
-                <span className="flex min-w-0 items-start justify-between gap-3">
-                  <span className="min-w-0">
-                    <span className="block truncate text-base font-semibold">{room.name}</span>
-                    <span className="mt-0.5 block truncate text-xs text-muted">{room.roomId}</span>
-                  </span>
-                  <RoomStatusChip enabled={room.enabled} />
-                </span>
-                <span className="mt-3 block truncate text-sm text-muted">{room.description || '설명 없음'}</span>
-                <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                  <span>{environmentLabels[room.roomEnvironment] ?? room.roomEnvironment}</span>
-                  <span>최대 {room.capacity ?? '-'}명</span>
-                  <span>초당 {room.maxTrafficPerSecond ?? 0}명</span>
-                </span>
-              </button>
+              isBulkEditing ? (
+                <label
+                  key={room.roomId}
+                  className={`${cardClassName} flex cursor-pointer items-start gap-3 transition-colors has-checked:border-accent has-checked:bg-accent/5`}
+                >
+                  <input
+                    type="checkbox"
+                    aria-label={`${room.name} 선택`}
+                    className="mt-1 size-4 shrink-0 accent-accent"
+                    checked={selectedRooms.has(room.roomId)}
+                    onChange={(event) => onSelectionChange([room], new Set(event.currentTarget.checked ? [room.roomId] : []))}
+                  />
+                  <span className="min-w-0 flex-1"><RoomCardContent room={room} /></span>
+                </label>
+              ) : (
+                <button
+                  key={room.roomId}
+                  type="button"
+                  className={`${cardClassName} transition-colors active:bg-neutral-100`}
+                  onClick={() => onPress(room.roomId)}
+                >
+                  <RoomCardContent room={room} />
+                </button>
+              )
             ))}
         </div>
       )}

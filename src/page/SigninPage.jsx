@@ -2,7 +2,6 @@ import { Button, Card, Separator, Form, Input, TextField, Label, FieldError, Des
 import { useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import logo from '/logo.png';
-import { SiteClient } from '../api/site/index.js';
 import { UserClient } from '../api/user/index.js';
 import { ToastUtil } from '../util/toastUtil.js';
 
@@ -18,9 +17,6 @@ const clearValidationError = (previousErrors, fieldName) => {
 
 export default function SigninPage() {
   const navigate = useNavigate();
-  const [siteId, setSiteId] = useState('');
-  const [verifiedSiteId, setVerifiedSiteId] = useState('');
-  const [verifiedSiteName, setVerifiedSiteName] = useState('');
   const [userId, setUserId] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -28,12 +24,10 @@ export default function SigninPage() {
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState({});
 
-  const [isSiteVerificationLoading, setIsSiteVerificationLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUserIdChecking, setIsUserIdChecking] = useState(false);
   const [userIdCheck, setUserIdCheck] = useState(null);
   const [passwordConfirmTouched, setPasswordConfirmTouched] = useState(false);
-  const isSiteVerified = verifiedSiteId !== '' && verifiedSiteId === siteId.trim();
   const trimmedUserId = userId.trim();
   const isUserIdFormatValid = USER_ID_PATTERN.test(trimmedUserId);
   const userIdStatus = !trimmedUserId
@@ -65,7 +59,6 @@ export default function SigninPage() {
     }
 
     const validationErrors = {};
-    if (!isSiteVerified) validationErrors.siteId = true;
     const userIdError = userIdStatus !== 'available';
     if (userIdError) validationErrors.userId = true;
     if (!isPasswordLongEnough) validationErrors.password = true;
@@ -81,15 +74,11 @@ export default function SigninPage() {
 
     if (Object.keys(validationErrors).length > 0 || userIdError || usernameError) {
       setErrors(validationErrors);
-      if (validationErrors.siteId) {
-        ToastUtil.error('사이트 코드 확인 필요', '사이트 코드를 입력한 뒤 검증을 완료해 주세요.');
-      }
       return;
     }
 
     setIsSubmitting(true);
     const response = await UserClient.signin({
-      siteId: verifiedSiteId,
       userId: userId.trim(),
       username: username.trim(),
       userEmail: email.trim(),
@@ -140,42 +129,6 @@ export default function SigninPage() {
     };
   }, [isUserIdFormatValid, trimmedUserId]);
 
-  const handleSiteIdVerification = async () => {
-    setIsSiteVerificationLoading(true);
-
-    const normalizedSiteId = siteId.trim();
-    SiteClient.findSite(normalizedSiteId)
-      .then((response) => {
-        if (
-          response?.status === 200 &&
-          response?.data?.siteId === normalizedSiteId &&
-          response?.data?.siteEnabled === true
-        ) {
-          setVerifiedSiteId(normalizedSiteId);
-          setVerifiedSiteName(response.data.siteName ?? '');
-          setErrors((previous) => clearValidationError(previous, 'siteId'));
-        } else {
-          setVerifiedSiteId('');
-          setVerifiedSiteName('');
-          setErrors((previous) => ({ ...previous, siteId: true }));
-          if (response?.status !== 200 && response?.status !== 404) {
-            ToastUtil.error('사이트 검증 실패', '사이트 검증에 실패하였습니다. 관리자에게 문의해주시기 바랍니다.');
-            console.error('failed to verify siteId', JSON.stringify(response));
-          }
-        }
-      })
-      .finally(() => setIsSiteVerificationLoading(false));
-  };
-
-  const onSiteIdInputChange = (e) => {
-    if (verifiedSiteId.trim().length > 0) {
-      // siteId가 바뀌면 verified는 무조건 초기화
-      setVerifiedSiteId('');
-      setVerifiedSiteName('');
-    }
-    setSiteId(e.target.value);
-  };
-
   useEffect(() => {
     document.title = '회원가입 | Greenlight Admin';
   }, []);
@@ -196,32 +149,6 @@ export default function SigninPage() {
         </Card.Header>
         <Card.Content className="w-full min-w-0">
           <Form onSubmit={handleSignin} validationErrors={errors} className="flex flex-col gap-4">
-            <TextField name="siteId" type="text" isRequired className="w-full max-w-2xl" variant="default">
-              <Label className="text-base">사이트 코드</Label>
-              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  className="min-w-0 flex-1 ring-1 ring-neutral-200 focus:ring-2 focus:ring-accent"
-                  value={siteId}
-                  onChange={onSiteIdInputChange}
-                  placeholder="발급받은 사이트 코드를 입력하세요."
-                />
-                <Button
-                  className="w-full shrink-0 focus-visible:ring-2 focus-visible:ring-accent sm:w-auto"
-                  isPending={isSiteVerificationLoading}
-                  onPress={handleSiteIdVerification}
-                  isDisabled={siteId.trim().length === 0 || isSiteVerified}
-                >
-                  {isSiteVerificationLoading ? '' : isSiteVerified ? '검증완료' : '검증하기'}
-                </Button>
-              </div>
-              <Description className="text-sm">
-                {isSiteVerified
-                  ? `사이트 코드 검증완료${verifiedSiteName ? ` · ${verifiedSiteName}` : ''}`
-                  : '관리자에게 발급받은 사이트 코드를 확인해 주세요.'}
-              </Description>
-              <FieldError>유효하지 않거나 사용할 수 없는 사이트 코드입니다.</FieldError>
-            </TextField>
-
             <TextField
               name="userId"
               type="text"

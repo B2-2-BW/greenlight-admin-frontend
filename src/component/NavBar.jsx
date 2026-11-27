@@ -4,7 +4,6 @@ import logo from '/logo.png';
 import { matchPath, useNavigate } from 'react-router';
 import { useUserStore } from '../store/user.jsx';
 import { LoginUtil } from '../util/loginUtil.js';
-import { UserClient } from '../api/user/index.js';
 import { ToastUtil } from '../util/toastUtil.js';
 import { ENVIRONMENT_LABEL } from '../client/config.js';
 import { getProfileAppearance } from '../util/profileAppearance.js';
@@ -110,13 +109,11 @@ export default function NavBar({ isSidebarOpen = false, onSidebarToggle }) {
   };
 
   const handleLogout = () => {
-    UserClient.logout()
+    LoginUtil.logout()
       .then((res) => {
-        if (res.status === 200) {
+        if (res.status >= 200 && res.status < 300) {
           useUserStore.persist.clearStorage();
           clearUser();
-          LoginUtil.clearAccessToken();
-
           ToastUtil.success('로그아웃 성공', `정상적으로 로그아웃되었습니다.`);
           navigate('/login');
         } else {

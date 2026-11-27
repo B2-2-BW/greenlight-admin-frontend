@@ -9,6 +9,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
+        // target: 'https://admin-api-dev.greenlight-hdds.winten.im', // Spring Boot 포트
         target: 'http://localhost:28080', // Spring Boot 포트
         changeOrigin: true,
         // ✅ Nginx의 proxy_pass와 동일하게 /api 접두어 제거

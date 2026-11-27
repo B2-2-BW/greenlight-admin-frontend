@@ -1,11 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
-import { Button, Card, FieldError, Form, Input, Label, Switch, TextField } from '@heroui/react';
+import { Button, Card, FieldError, Form, Input, Label, TextField } from '@heroui/react';
 import logo from '/logo.png';
 import { LoginUtil } from '../util/loginUtil.js';
 import { UserClient } from '../api/user/index.js';
 import { ToastUtil } from '../util/toastUtil.js';
-import { usePreferenceStore } from '../store/preference.jsx';
 import { useUserStore } from '../store/user.jsx';
 import ForcedPasswordChangeDialog from '../component/mypage/ForcedPasswordChangeDialog.jsx';
 
@@ -17,11 +16,9 @@ export default function LoginPage() {
   const { search } = useLocation();
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberUser, setRememberUser] = useState(false);
   const [errors, setErrors] = useState({});
   const [passwordResetOpen, setPasswordResetOpen] = useState(false);
   const [pendingReset, setPendingReset] = useState(null);
-  const { updateLoginPreference } = usePreferenceStore();
 
   const { setUser } = useUserStore();
 
@@ -38,7 +35,14 @@ export default function LoginPage() {
       return;
     }
 
-    const response = await UserClient.login({ loginId, password, autoLogin: rememberUser });
+    let response;
+    try {
+      response = await LoginUtil.login({ loginId, password });
+    } catch (error) {
+      console.error('Invalid login response', error);
+      ToastUtil.error('로그인 실패', '로그인 정보를 확인하지 못했습니다.');
+      return;
+    }
 
     // 비밀번호 초기화 필요: 토큰/userStorage에 저장하지 않고 다이얼로그만 표시 (새로고침 시 소멸)
     if (isPasswordResetRequiredResponse(response)) {
@@ -47,7 +51,7 @@ export default function LoginPage() {
       return;
     }
 
-    if (response.status === 401 || response.status === 403 || response.status === 404) {
+    if (response?.status === 401 || response?.status === 403 || response?.status === 404) {
       ToastUtil.error('로그인 실패', response?.data?.detail ?? '아이디 또는 비밀번호가 잘못되었습니다.');
       return;
     } else if (!response?.data?.accessToken) {
@@ -56,7 +60,6 @@ export default function LoginPage() {
       return;
     }
 
-    LoginUtil.setAccessToken(response.data.accessToken);
     const loginResponse = await UserClient.me();
     if (loginResponse.status === 200) {
       setUser(loginResponse.data);
@@ -68,8 +71,6 @@ export default function LoginPage() {
       );
       return;
     }
-
-    updateLoginPreference({ autoLogin: rememberUser });
 
     const params = new URLSearchParams(search);
     const to = params.get('redirect') || '/'; // redirect가 있다면 해당 url로 없다면 /로 이동
@@ -129,15 +130,7 @@ export default function LoginPage() {
               <FieldError>사용자 비밀번호는 필수값입니다.</FieldError>
             </TextField>
 
-            <Switch className="mt-4 mb-8" name="rememberUser" isSelected={rememberUser} onChange={setRememberUser}>
-              <Switch.Content>
-                <Switch.Control>
-                  <Switch.Thumb />
-                </Switch.Control>
-                <span className="text-neutral-500">로그인 유지</span>
-              </Switch.Content>
-            </Switch>
-            <Button className="h-12" type="submit" fullWidth>
+            <Button className="mt-4 h-12" type="submit" fullWidth>
               <span className="text-medium">로그인</span>
             </Button>
           </Form>

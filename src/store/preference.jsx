@@ -12,7 +12,6 @@ export const usePreferenceStore = create(
     (set, get) => ({
       dashboardFilter: DEFAULT_DASHBOARD_FILTER,
       dashboardSort: {},
-      loginPreference: null,
       updateDashboardFilter: (filter) => {
         const current = get().dashboardFilter;
         set({ dashboardFilter: { ...current, ...filter } });
@@ -21,19 +20,19 @@ export const usePreferenceStore = create(
         const current = get().dashboardSort;
         set({ dashboardSort: { ...current, [key]: normalizeDashboardSort({ ...current[key], ...preference }) } });
       },
-      updateLoginPreference: (preference) => {
-        const current = get().loginPreference;
-        set({ loginPreference: { ...current, ...preference } });
-      },
-      clearLoginPreference: () => set({ loginPreference: null }),
     }),
     {
       name: 'preferenceStorage',
       storage: createJSONStorage(() => localStorage),
-      partialize: ({ dashboardFilter, dashboardSort, loginPreference }) => ({
+      version: 1,
+      migrate: (persistedState) => {
+        const preferences = { ...persistedState };
+        delete preferences.loginPreference;
+        return preferences;
+      },
+      partialize: ({ dashboardFilter, dashboardSort }) => ({
         dashboardFilter,
         dashboardSort,
-        loginPreference,
       }),
       merge: (persistedState, currentState) => ({
         ...currentState,
@@ -44,7 +43,6 @@ export const usePreferenceStore = create(
             normalizeDashboardSort(value),
           ])
         ),
-        loginPreference: persistedState?.loginPreference ?? currentState.loginPreference,
       }),
     }
   )

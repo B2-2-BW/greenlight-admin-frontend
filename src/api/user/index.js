@@ -51,12 +51,12 @@ const signin = async (body) => {
 const checkUserIdAvailable = (userId, signal) =>
   publicAxiosInstance.get('/users/availability', { params: { userId }, signal });
 
-const issueAccessToken = (params) => {
-  return publicAxiosInstance.post('/users/refresh', {}, { params, withCredentials: true });
+const issueAccessToken = (rotateRefresh) => {
+  return publicAxiosInstance.post('/users/refresh', { rotateRefresh }, { withCredentials: true });
 };
 
 const logout = () => {
-  return commonAxiosInstance.post('/users/logout', {}, { withCredentials: true });
+  return publicAxiosInstance.post('/users/logout', {}, { withCredentials: true });
 };
 
 const getUsers = ({ page = 1, size = 10, query = '', status, role, siteId, signal } = {}) =>
