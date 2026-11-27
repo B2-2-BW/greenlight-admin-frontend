@@ -2,11 +2,12 @@ import { useNavigate } from 'react-router';
 import { useCallback, useEffect, useState } from 'react';
 import RoomListTopContent from '../component/room/RoomListTopContent.jsx';
 import RoomListTable from '../component/room/RoomListTable.jsx';
-import { Chip } from '@heroui/react';
+import { Button, Chip } from '@heroui/react';
 import { TriangleExclamation } from '@gravity-ui/icons';
 import { useUserStore } from '../store/user.jsx';
 import { SiteClient } from '../api/site/index.js';
 import { getEffectiveSiteId } from '../util/siteUtil.js';
+import RoomBulkEditModal from '../component/room/RoomBulkEditModal.jsx';
 
 export default function RoomListPage() {
   const navigate = useNavigate();
@@ -15,6 +16,42 @@ export default function RoomListPage() {
   const user = useUserStore((state) => state.user);
   const selectedSiteId = useUserStore((state) => state.selectedSiteId);
   const siteId = getEffectiveSiteId(user, selectedSiteId);
+  const [editingSiteId, setEditingSiteId] = useState(null);
+  const [selectedRooms, setSelectedRooms] = useState(new Map());
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const role = user?.userRole ?? user?.role;
+  const canManageRooms = Boolean(siteId) && (role === 'SITE_ADMIN' || role === 'SUPER');
+  const isBulkEditing = canManageRooms && editingSiteId === siteId;
+
+  const changeSelection = (visibleRooms, selectedKeys) => {
+    setSelectedRooms((current) => {
+      const next = new Map(current);
+      for (const room of visibleRooms) {
+        if (selectedKeys === 'all' || selectedKeys.has(room.roomId)) {
+          next.set(room.roomId, room);
+        } else {
+          next.delete(room.roomId);
+        }
+      }
+      return next;
+    });
+  };
+
+  const stopBulkEdit = () => {
+    setIsBulkModalOpen(false);
+    setEditingSiteId(null);
+    setSelectedRooms(new Map());
+  };
+
+  const toggleBulkEdit = () => {
+    if (isBulkEditing) {
+      stopBulkEdit();
+      return;
+    }
+    setSelectedRooms(new Map());
+    setEditingSiteId(siteId);
+  };
 
   const onPress = (roomId) => {
     navigate(`/rooms/${roomId}`);
@@ -60,12 +97,42 @@ export default function RoomListPage() {
             </Chip>
           )}
         </div>
-        <RoomListTopContent filters={filters} onFiltersChange={setFilters} />
+        <RoomListTopContent
+          filters={filters}
+          onFiltersChange={setFilters}
+          isBulkEditing={isBulkEditing}
+          onToggleBulkEdit={canManageRooms ? toggleBulkEdit : undefined}
+        />
+        {isBulkEditing && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-separator p-3">
+            <p className="mr-auto text-sm font-medium" aria-live="polite">{selectedRooms.size}개 선택</p>
+            <Button size="sm" isDisabled={!selectedRooms.size} onPress={() => setIsBulkModalOpen(true)}>
+              선택 항목 수정
+            </Button>
+            <Button size="sm" variant="tertiary" onPress={stopBulkEdit}>
+              취소
+            </Button>
+          </div>
+        )}
         <RoomListTable
-          key={`${filters.search}-${filters.environment}-${filters.status}`}
+          key={JSON.stringify([siteId, filters.search, filters.environment, filters.status])}
           filters={filters}
           onPress={onPress}
+          isBulkEditing={isBulkEditing}
+          selectedRooms={selectedRooms}
+          onSelectionChange={changeSelection}
+          refreshVersion={refreshVersion}
         />
+        {isBulkEditing && isBulkModalOpen && (
+          <RoomBulkEditModal
+            rooms={[...selectedRooms.values()]}
+            onClose={() => setIsBulkModalOpen(false)}
+            onSaved={() => {
+              stopBulkEdit();
+              setRefreshVersion((version) => version + 1);
+            }}
+          />
+        )}
       </div>
     </>
   );

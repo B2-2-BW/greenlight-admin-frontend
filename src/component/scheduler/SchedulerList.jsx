@@ -77,9 +77,9 @@ export default function SchedulerList() {
   useEffect(() => {
     let cancelled = false;
 
-    const fetchSystemStatus = async () => {
+    const fetchSystemStatus = async ({ rotateRefresh } = {}) => {
       try {
-        const data = await SchedulerClient.getSchedulerStatusList();
+        const data = await SchedulerClient.getSchedulerStatusList({ rotateRefresh });
         if (!cancelled) {
           setSystemStatus(data);
           setCheckedAt(new Date().toISOString());
@@ -100,7 +100,10 @@ export default function SchedulerList() {
     };
 
     fetchSystemStatus();
-    const intervalId = window.setInterval(fetchSystemStatus, POLLING_INTERVAL_MS);
+    const intervalId = window.setInterval(
+      () => fetchSystemStatus({ rotateRefresh: false }),
+      POLLING_INTERVAL_MS
+    );
 
     return () => {
       cancelled = true;

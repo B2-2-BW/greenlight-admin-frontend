@@ -21,18 +21,17 @@ function PrivateRoute({ children }) {
         let accessToken = LoginUtil.getAccessToken();
 
         if (!accessToken) {
+          if (LoginUtil.isSessionEnded()) {
+            if (!cancelled) setAuthStatus('unauthenticated');
+            return;
+          }
           await LoginUtil.issueAndSetAccessToken();
           accessToken = LoginUtil.getAccessToken();
         }
 
-        let result = LoginUtil.validateJwt(accessToken);
-        if (!result?.valid && result?.expired) {
-          await LoginUtil.issueAndSetAccessToken();
-          accessToken = LoginUtil.getAccessToken();
-          result = LoginUtil.validateJwt(accessToken);
-        }
+        const result = LoginUtil.validateJwt(accessToken);
 
-        if (!result?.valid) {
+        if (!result?.valid && !result?.expired) {
           if (result?.error) {
             console.error(result.error);
           }
@@ -48,8 +47,7 @@ function PrivateRoute({ children }) {
             setUser(response.data);
             setAuthStatus('authenticated');
           } else {
-            LoginUtil.clearAccessToken();
-            clearUser();
+            LoginUtil.handleAuthFailure();
             setAuthStatus('unauthenticated');
           }
         }
@@ -57,8 +55,7 @@ function PrivateRoute({ children }) {
         console.error(error);
         if (!cancelled) {
           if (error?.response?.status === 401 || error?.response?.status === 403) {
-            LoginUtil.clearAccessToken();
-            clearUser();
+            LoginUtil.handleAuthFailure();
             setAuthStatus('unauthenticated');
           } else {
             setAuthStatus('service-error');

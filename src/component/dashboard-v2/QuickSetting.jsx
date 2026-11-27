@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  AlertDialog,
   Button,
   ButtonGroup,
   Description,
@@ -17,6 +16,7 @@ import { ToastUtil } from '../../util/toastUtil.js';
 import { useDashboard } from '../../provider/DashboardProvider.jsx';
 import { RoomClient } from '../../api/room/index.js';
 import { useUserStore } from '../../store/user.jsx';
+import RoomDisableAlert from '../room/RoomDisableAlert.jsx';
 
 const settingFields = [
   {
@@ -87,35 +87,6 @@ function QuickNumberSetting({ label, unit, description, value, steps, error, isP
         ))}
       </ButtonGroup>
     </div>
-  );
-}
-
-function DisableAlert({ isOpen, onOpenChange, onConfirm, isPending }) {
-  return (
-    <AlertDialog isOpen={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialog.Backdrop>
-        <AlertDialog.Container>
-          <AlertDialog.Dialog className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-[400px]">
-            <AlertDialog.CloseTrigger />
-            <AlertDialog.Header>
-              <AlertDialog.Icon status="danger" />
-              <AlertDialog.Heading>정말로 대기열을 비활성화 하시겠습니까?</AlertDialog.Heading>
-            </AlertDialog.Header>
-            <AlertDialog.Body>
-              <p>대기열이 비활성화되고 현재 대기중인 고객은 즉시 입장하게 됩니다.</p>
-            </AlertDialog.Body>
-            <AlertDialog.Footer>
-              <Button slot="close" variant="tertiary">
-                취소하기
-              </Button>
-              <Button variant="danger" onPress={onConfirm} isPending={isPending}>
-                {isPending ? '비활성화 중' : '대기열 비활성화'}
-              </Button>
-            </AlertDialog.Footer>
-          </AlertDialog.Dialog>
-        </AlertDialog.Container>
-      </AlertDialog.Backdrop>
-    </AlertDialog>
   );
 }
 
@@ -307,7 +278,7 @@ const QuickSetting = ({ room }) => {
         </Modal.Backdrop>
       </Modal>
 
-      <DisableAlert
+      <RoomDisableAlert
         isOpen={disableAlertState.isOpen}
         onOpenChange={disableAlertState.setOpen}
         onConfirm={disableRoom}

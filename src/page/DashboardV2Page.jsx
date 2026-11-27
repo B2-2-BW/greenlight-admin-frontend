@@ -21,12 +21,10 @@ import {
   sortDashboardRooms,
 } from '../util/dashboardSort.js';
 
-const calculateSummary = (result) => {
-  if (result?.detail == null) {
-    return {};
-  }
-  const values = Object.values(result.detail);
-  return values.reduce(
+const calculateSummary = (metrics) => {
+  if (metrics.length === 0) return undefined;
+
+  return metrics.reduce(
     (acc, curr) => {
       // 단순 총합 계산
       acc.estimatedWaitTime = Math.max(acc.estimatedWaitTime, curr.estimatedWaitTime);
@@ -83,10 +81,7 @@ export default function DashboardV2Page() {
 
   const [dashboardTraffic, setDashboardTraffic] = useState({});
 
-  const isFetching = useRef(false);
-
   const roomVersion = useRef('-');
-  const metricVersion = useRef('-');
 
   const navigate = useNavigate();
 
@@ -95,6 +90,9 @@ export default function DashboardV2Page() {
   const sortKey = getDashboardSortKey(user?.userId, siteId, dashboardFilter.roomEnvironment);
   const dashboardSort = sortPreferences[sortKey] ?? DEFAULT_DASHBOARD_SORT;
   const sortedRooms = useMemo(() => sortDashboardRooms(roomList, dashboardSort), [roomList, dashboardSort]);
+  const activeRooms = useMemo(() => roomList.filter((room) => room.enabled === true), [roomList]);
+  const metricRooms = activeRooms.filter((room) => dashboardTraffic.detail?.[room.roomId] != null);
+  const dashboardSummary = calculateSummary(metricRooms.map((room) => dashboardTraffic.detail[room.roomId]));
 
   const changeSortMode = (mode) => {
     updateDashboardSort(sortKey, {
@@ -126,7 +124,7 @@ export default function DashboardV2Page() {
     }
 
     try {
-      const res = await SiteClient.findSite(siteId);
+      const res = await SiteClient.findSite(siteId, { rotateRefresh: false });
       if (res?.status !== 200 || typeof res.data?.queueEnabled !== 'boolean') {
         throw new Error('Failed to fetch site information.');
       }
@@ -150,7 +148,7 @@ export default function DashboardV2Page() {
         param.enabled = dashboardFilter?.enabled.includes('true');
       }
 
-      const roomResponse = await RoomClient.getRoomList(param);
+      const roomResponse = await RoomClient.getRoomList(param, { rotateRefresh: false });
       if (!Array.isArray(roomResponse.data)) {
         throw new Error('Failed to fetch room list.');
       }
@@ -160,7 +158,7 @@ export default function DashboardV2Page() {
       setIsInitialLoadError(false);
       setConnectionErrors((current) => ({
         rooms: false,
-        metrics: roomResponse.data.length > 0 && current.metrics,
+        metrics: roomResponse.data.some((room) => room.enabled === true) && current.metrics,
       }));
     } catch (error) {
       if ((error.response?.status ?? error.status) === 304) {
@@ -203,52 +201,50 @@ export default function DashboardV2Page() {
   }, []);
 
   useEffect(() => {
-    // 데이터를 가져오는 비동기 함수
+    if (!siteId || activeRooms.length === 0) return;
+
+    let isFetching = false;
+    let cancelled = false;
+    let metricVersion = '-';
+    const roomIdList = activeRooms.map((room) => room.roomId);
+
     const fetchDashboardDetail = async () => {
-      if (isFetching.current || roomVersion.current === '-' || roomList.length === 0) {
-        return;
-      }
-      isFetching.current = true;
-      const roomIdList = roomList.map((r) => r.roomId) || [];
+      if (isFetching || roomVersion.current === '-') return;
+      isFetching = true;
 
-      DashboardClient.getDashboardDetail({ version: metricVersion.current, roomIdList: roomIdList })
-        .then((res) => {
-          const result = res.data;
-          metricVersion.current = result.version;
-
-          result.summary = calculateSummary(result);
-          setDashboardTraffic(result);
+      try {
+        const { data } = await DashboardClient.getDashboardDetail({ version: metricVersion, roomIdList });
+        if (cancelled) return;
+        metricVersion = data.version;
+        setDashboardTraffic(data);
+        setConnectionErrors((current) => ({ ...current, metrics: false }));
+      } catch (error) {
+        if (cancelled) return;
+        if ((error.response?.status ?? error.status) === 304) {
           setConnectionErrors((current) => ({ ...current, metrics: false }));
-        })
-        .catch((error) => {
-          if ((error.response?.status ?? error.status) === 304) {
-            setConnectionErrors((current) => ({ ...current, metrics: false }));
-          } else {
-            console.error('Polling error:', error);
-            setConnectionErrors((current) => ({ ...current, metrics: true }));
-          }
-        })
-        .finally(() => {
-          isFetching.current = false;
-        });
+        } else {
+          console.error('Polling error:', error);
+          setConnectionErrors((current) => ({ ...current, metrics: true }));
+        }
+      } finally {
+        isFetching = false;
+      }
     };
 
-    // 처음 마운트 시 한 번 실행
-    metricVersion.current = '-';
     fetchDashboardDetail();
-
-    // 1초(1000ms)마다 fetchDashboardDetail 실행
     const intervalId = setInterval(fetchDashboardDetail, 3000);
 
-    // 컴포넌트 언마운트 시 인터벌 제거 (메모리 누수 방지)
-    return () => clearInterval(intervalId);
-  }, [roomList, dashboardFilter, siteId]);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [activeRooms, dashboardFilter, siteId]);
 
   const mainRoom = {
     name: '전체 대기열 통합',
-    capacity: roomList.reduce((acc, cur) => acc + (cur.capacity || 0), 0),
+    capacity: (metricRooms.length > 0 ? metricRooms : activeRooms).reduce((sum, room) => sum + (room.capacity ?? 0), 0),
   };
-  const isReconnecting = connectionErrors.rooms || connectionErrors.metrics;
+  const isMetricsReconnecting = activeRooms.length > 0 && connectionErrors.metrics;
 
   if (!siteId || isPageLoading)
     return (
@@ -288,7 +284,7 @@ export default function DashboardV2Page() {
                 다시 불러오기
               </Button>
             </DashboardOverlay>
-          ) : isReconnecting ? (
+          ) : connectionErrors.rooms ? (
             <DashboardOverlay>
               <Spinner color="accent" size="lg" aria-label="연결중입니다..." />
               <p
@@ -344,9 +340,10 @@ export default function DashboardV2Page() {
               <section className="md:h-full">
                 <PipeCard
                   mode="main"
-                  trafficData={dashboardTraffic?.summary}
+                  trafficData={dashboardSummary}
                   room={mainRoom}
-                  emitSignal={dashboardTraffic?.version}
+                  emitSignal={dashboardTraffic.version}
+                  isMetricsReconnecting={isMetricsReconnecting}
                 />
               </section>
 
@@ -358,9 +355,10 @@ export default function DashboardV2Page() {
                       room={room}
                       index={index}
                       group={sortKey}
-                      disabled={isReconnecting}
-                      trafficData={dashboardTraffic?.detail?.[room.roomId]}
-                      emitSignal={dashboardTraffic?.version}
+                      disabled={connectionErrors.rooms}
+                      trafficData={room.enabled === true ? dashboardTraffic.detail?.[room.roomId] : undefined}
+                      emitSignal={dashboardTraffic.version}
+                      isMetricsReconnecting={room.enabled === true && isMetricsReconnecting}
                     />
                   ))}
                 </section>
